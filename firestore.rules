@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Good Grace's Cafe: anyone with the link can read and write, but only to these three places,
+// and only with the expected shapes and sizes. Everything else is denied.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // One document holds all settings (menu, prices, staffing, calendar) as a JSON string.
+    match /config/main {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasOnly(['json', 'at'])
+                            && request.resource.data.json is string
+                            && request.resource.data.json.size() < 900000
+                            && request.resource.data.at is string;
+      allow delete: if false;
+    }
+
+    // Sales entries: tap-to-log tickets and uploaded sales files.
+    match /sales/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.kind in ['tap', 'upload']
+                    && request.resource.data.at is string
+                    && request.resource.data.lines is list
+                    && request.resource.data.lines.size() <= 700;
+      allow delete: if true;
+      allow update: if false;
+    }
+
+    // Stock events: deliveries and counts.
+    match /stock/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.type in ['receive', 'count']
+                    && request.resource.data.item is string
+                    && request.resource.data.qty is number
+                    && request.resource.data.at is string;
+      allow delete: if true;
+      allow update: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
