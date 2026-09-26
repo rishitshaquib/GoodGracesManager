@@ -861,32 +861,6 @@ tr.batch-off td .in{opacity:.5}
       </div>
     </div>
   </div>
-  <h2 class="pagehead">Benchmark: Silliman buttery</h2>
-  <div class="cols c-side">
-    <div>
-      <div class="sec">
-        <h2><span class="ic" style="--c:#A2845E" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 8h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5V8Z"/><path d="M16 9h1.5a2.5 2.5 0 0 1 0 5H16"/></svg></span>What they sold</h2>
-        <p class="hint" style="margin-top:0">Silliman College's cafe, Sep 18 to 24, 2026. Item report for the drinks, order export for Monday to Thursday. Daytime is 9am to 5pm; the buttery also runs 9pm to midnight, which is mostly food.</p>
-        <div class="wstat" id="benchStats"></div>
-        <h3>Busiest hours, weekday daytime</h3>
-        <svg class="chart" id="benchChart" viewBox="0 0 520 140"></svg>
-        <h3>Top drinks</h3>
-        <div class="scroll"><table class="t" id="benchTop"></table></div>
-      </div>
-    </div>
-    <div>
-      <div class="sec">
-        <h2><span class="ic" style="--c:#5856D6" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>Our plan next to theirs</h2>
-        <div class="scroll"><table class="t" id="benchCmp"></table></div>
-        <div class="chips" style="margin-top:12px">
-          <button class="chip" data-act="benchApply" data-b="addons">Use their add-on rates</button>
-          <button class="chip" data-act="benchApply" data-b="mix">Use their menu mix</button>
-          <button class="chip" data-act="benchApply" data-b="shape">Give Saturday and Sunday their hourly shape</button>
-        </div>
-        <p class="toast" id="benchToast" role="status"></p>
-      </div>
-    </div>
-  </div>
 </section>
 
 <!-- ============ INVENTORY AND INGREDIENTS ============ -->
@@ -2227,7 +2201,6 @@ function recalc(){
 
   renderTrack(M);
   renderPayback(M);
-  renderBench(M);
   UI.M = M;
   const ae = document.activeElement;
   if (!($("batchBody") && $("batchBody").contains(ae)) && !($("batchSliders") && $("batchSliders").contains(ae) && ae.type !== "range")) renderBatch();
@@ -2966,15 +2939,6 @@ document.addEventListener("click", e => {
     if (inLab(x.name)){ toast("labToast", `${x.name} is already in the lab.`); return; }
     S.drafts.push({name:x.name, season:seasonGuess(x.name), sec:"specialty", price:x.price, iced:x.iced, sold:5, addin:"", recipe:(x.lines || []).map(l => [l.id, l.q, l.addin, l.serve]), budgetHot:0, budgetIced:0});
     markDirty(); renderLab(); recalc(); toast("labToast", `${x.name} copied into the lab.`); return; }
-  if (a === "benchApply"){ const b = t.dataset.b;
-    if (b === "addons"){ Object.assign(S.addons, {oatPct:SILL.oat, almPct:SILL.alm, syrupAttach:SILL.syr, foamAttach:SILL.foam}); toast("benchToast", `Add-on rates set to theirs: oat ${SILL.oat}%, almond ${SILL.alm}%, syrup ${SILL.syr}%, cold foam ${SILL.foam}%.`); }
-    if (b === "mix"){ let n = 0; S.drinks.forEach(d => { const m = SILL.mix.find(([re]) => re.test(d.name)); if (m){ d.sold = m[1]; n++; } }); renderMenu(); toast("benchToast", `Menu mix updated for ${n} drinks from their week.`); }
-    if (b === "shape"){ const w = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21].map(h => SILL.shape[h] || 0), wt = w.reduce((a,v) => a + v, 0);
-      ["sat","sun"].forEach(k => { const tot = S.pilot.curve[k].reduce((a,h) => a + (h.d || 0), 0), raw = w.map(v => v / wt * tot), fl = raw.map(Math.floor);
-        let left = Math.round(tot) - fl.reduce((a,v) => a + v, 0); raw.map((v,i) => [v - fl[i], i]).sort((a,b) => b[0] - a[0]).slice(0, Math.max(0, left)).forEach(([,i]) => fl[i]++);
-        S.pilot.curve[k] = S.pilot.curve[k].map((h,i) => ({...h, d:fl[i] || 0})); });
-      renderCurve(); toast("benchToast", "Saturday and Sunday keep their totals with Silliman's hourly shape, 9am to 5pm."); }
-    markDirty(); syncRanges(); renderHabits(); renderBatch(); recalc(); return; }
   if (a === "dpClose"){ closeDay(); return; }
   if (a === "dpShow"){ openDay(t.dataset.d); return; }
   if (a === "dpOpen"){ const d = UI.dayPanel; paintDates([d], t.dataset.v); renderDayPanel(); return; }
@@ -3355,60 +3319,6 @@ function applyWeek(wk){
     swapSpecialty(k, "lab:" + idx); n++; });
   UI.openDrink.clear(); markDirty(); renderMenu(); renderBatch(); recalc();
   return n;
-}
-
-
-/* ------------------------------------------------ Silliman benchmark */
-const SILL = {
-  drinks:622, drinkNet:2089, days:6.6, dayOrders:86, dayRev:302, dayTicket:3.50, nightOrders:74, nightRev:251, single:95, card:98,
-  oat:20, alm:8, syr:14, foam:4,
-  shape:{9:5.3, 10:17.7, 11:9.0, 12:9.3, 13:11.7, 14:13.3, 15:13.3, 16:6.7},
-  top:[["Latte",85,3.00],["Shaken espresso",63,2.75],["Chai latte",58,3.50],["Pumpkin spiced latte",45,3.75],["Matcha latte",45,3.50],["Banana bread latte",32,4.00],
-       ["Cappuccino",30,2.25],["Maple cinnamon latte",29,4.00],["Apple crisp latte",29,3.50],["London Fog",27,2.50],["Americano",25,1.50],["Spanish latte",24,3.50],
-       ["Cold brew",23,2.00],["Sillimander latte",18,4.50],["Strawberry matcha",13,4.75],["Mocha",12,3.50]],
-  // their week mapped onto our menu, out of 100
-  mix:[[/^latte$/i,29],[/cappuccino/i,6],[/americano/i,11],[/^chai/i,13],[/^matcha latte$/i,9],[/london fog/i,5],[/banana bread/i,7],[/caramel apple/i,6],[/brown sugar shaken/i,12],[/strawberry matcha/i,2]]
-};
-function renderBench(M){
-  if (!$("benchCmp")) return;
-  const p = M.per, P = M.pilot, A = EA || S.addons;
-  const perDay = SILL.dayOrders * 1.05;
-  $("benchStats").innerHTML = `
-    <div><div class="l">Drinks a week</div><div class="v">${F.int(SILL.drinks)}</div></div>
-    <div><div class="l">Daytime orders a day</div><div class="v">${SILL.dayOrders}</div></div>
-    <div><div class="l">Daytime sales a day</div><div class="v">${F.usd0(SILL.dayRev)}</div></div>
-    <div><div class="l">Average drink</div><div class="v">${F.usd2(SILL.drinkNet / SILL.drinks)}</div></div>
-    <div><div class="l">Average order</div><div class="v">${F.usd2(SILL.dayTicket)}</div></div>
-    <div><div class="l">Paid by card</div><div class="v">${SILL.card}%</div></div>`;
-  // chart
-  const hrs = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21], vals = hrs.map(h => SILL.shape[h] || 0);
-  const W = 520, H = 140, m = {l:26, r:6, t:16, b:22}, iw = W - m.l - m.r, ih = H - m.t - m.b, mx = 20, bw = iw / hrs.length, y = v => m.t + ih - v / mx * ih;
-  let g = ""; [0, 10, 20].forEach(v => g += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${m.l - 5}" y="${y(v) + 4}" text-anchor="end">${v}</text>`);
-  vals.forEach((v,i) => { const x = m.l + i * bw + bw * .14, w = bw * .72;
-    if (v > 0) g += `<rect class="b-dem" x="${x}" y="${y(v)}" width="${w}" height="${m.t + ih - y(v)}"/><text class="vl" x="${x + w / 2}" y="${y(v) - 3}" text-anchor="middle">${Math.round(v)}</text>`;
-    if (i % 2 === 0) g += `<text class="ax" x="${x + w / 2}" y="${H - 5}" text-anchor="middle">${tfmt(hrs[i])}</text>`; });
-  $("benchChart").innerHTML = g;
-  const tot = SILL.drinks;
-  $("benchTop").innerHTML = `<thead><tr><th class="l">Drink</th><th>Sold</th><th>Share</th><th>Their price</th></tr></thead><tbody>`
-    + SILL.top.map(([n,c,pr]) => `<tr><td class="l">${n}</td><td>${c}</td><td>${F.pct(c / tot * 100)}</td><td>${F.usd2(pr)}</td></tr>`).join("") + `</tbody>`;
-  // comparison
-  const nonCore = S.drinks.reduce((s,d,k) => s + (secOf(d) !== "core" ? (M.drinks[k].w || 0) : 0), 0) * 100;
-  const pc = S.pilot.curve, dayMax = Math.max(...pc.sat.map(h => h.d || 0), ...pc.sun.map(h => h.d || 0));
-  const row = (label, ours, theirs, means, flag) => `<tr><td class="l">${label}</td><td>${ours}</td><td>${theirs}</td><td class="l note-sm${flag ? " flag" : ""}" style="min-width:220px">${means}</td></tr>`;
-  const r1 = P.D / 2, gap = p.price / (SILL.drinkNet / SILL.drinks) - 1;
-  $("benchCmp").innerHTML = `<thead><tr><th class="l"></th><th>Our plan</th><th>Silliman</th><th class="l">What it means</th></tr></thead><tbody>`
-    + row("Drinks a service day", F.int(r1), `About ${F.int(perDay)}`, r1 <= perDay * 1.1 ? "In range for an established Yale cafe. Theirs is a weekday with a regular crowd, so a new weekend pop-up may start lower." : "Above what an established buttery sells on a weekday. Treat it as a stretch goal.", r1 > perDay * 1.1)
-    + row("Average drink price", F.usd2(p.price), F.usd2(SILL.drinkNet / SILL.drinks), `We charge about ${F.pct(gap * 100)} more per drink. Their latte is $3.00 and chai $3.50, so expect price-sensitive students to compare.`, gap > 0.3)
-    + row("Revenue a day", F.usd0(r1 * p.R), `${F.usd0(SILL.dayRev)} daytime`, "Our higher prices mean fewer drinks can match their daytime take.")
-    + row("Oat milk, of milk drinks", F.pct(A.oatPct), `${SILL.oat}%`, (+A.oatPct || 0) > SILL.oat * 1.5 ? "We assume about twice their rate. That overstates both add-on revenue and oat milk to buy." : "Close to theirs.", (+A.oatPct || 0) > SILL.oat * 1.5)
-    + row("Almond milk, of milk drinks", F.pct(A.almPct), `${SILL.alm}%`, "Almond is a small add-on either way.")
-    + row("Drinks with added syrup", F.pct(A.syrupAttach), `${SILL.syr}%`, (+A.syrupAttach || 0) > SILL.syr * 1.4 ? "They sell flavored lattes as menu items, so fewer people add syrup. Our rate looks high." : "Close to theirs.", (+A.syrupAttach || 0) > SILL.syr * 1.4)
-    + row("Cold foam, of iceable drinks", F.pct(A.foamAttach), `${SILL.foam}%`, (+A.foamAttach || 0) > SILL.foam * 2 ? "Cold foam barely sells there. Our rate is several times theirs." : "Close to theirs.", (+A.foamAttach || 0) > SILL.foam * 2)
-    + row("Specialty and signature share", F.pct(nonCore), "43%", nonCore < 30 ? "Their seasonal lattes and shaken espresso are about 4 in 10 drinks. Specialty drinks likely sell more than we plan, which matters for the batch planner." : "In line with theirs.", nonCore < 30)
-    + row("Banana bread latte", F.pct(((M.drinks[S.drinks.findIndex(d => /banana bread/i.test(d.name))] || {}).w || 0) * 100), `${F.pct(32 / tot * 100)}, at $4.00`, "Their version sold 32 in a week. Good sign for ours.")
-    + row("Busiest hour", `${F.int(dayMax)} drinks`, "18 orders at 10am", "They spike at 10am, dip at lunch, then hold 12 to 13 an hour until 4pm.")
-    + row("Orders with one item", "", `${SILL.single}%`, "Almost every order is a single drink, so one swipe per drink is right.")
-    + `</tbody>`;
 }
 
 
