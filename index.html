@@ -76,7 +76,7 @@ main{max-width:1320px;margin:0 auto;padding:8px 24px 40px}
 .lede{font-size:15px;color:var(--label2);margin:6px 4px 18px;max-width:78ch}
 .lede b{color:var(--label);font-weight:600}
 
-.cols{display:grid;gap:18px;align-items:start}
+.cols{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
 .cols > div{display:flex;flex-direction:column;gap:18px}
 .c-even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .c-menu{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
@@ -238,12 +238,17 @@ tr.open .drink .car{transform:rotate(90deg);background:var(--tint);color:#fff}
 tr.drawer td{padding:4px 0 14px;text-align:left}
 .rec{background:var(--fill);border-radius:16px;padding:14px 16px 16px;max-width:720px}
 .rec .in{background:var(--tile)}
-.rec-h,.rec-r{display:grid;grid-template-columns:minmax(140px,1fr) 74px 36px 92px 66px 40px 28px;gap:8px;align-items:center}
-.rec-h{font-size:12px;color:var(--label2);font-weight:600;padding-bottom:6px;border-bottom:.5px solid var(--sep)}
-.rec-r{padding:5px 0}
-.rec-r .u{font-size:13px;color:var(--label2)}
-.rec-r .calc,.rec-h .r{text-align:right}
-.rec-h .c,.rec-r .c{text-align:center}
+.rcb{background:var(--tile);border-radius:12px;padding:2px 12px 10px}
+.rc-row{display:grid;grid-template-columns:minmax(0,1fr) auto 62px;gap:10px;align-items:center;padding:8px 0;border-bottom:.5px solid var(--sep);font-size:14px}
+.rc-row b{font-weight:600;white-space:nowrap;text-align:right}
+.rc-row .calc{text-align:right;color:var(--label2);font-weight:500}
+.rc-row.ed{grid-template-columns:minmax(0,1.6fr) 68px 46px 80px auto 58px 28px;gap:6px;padding:5px 0}
+.rc-row.ed .in{background:var(--fill)}
+.rcb > .btn{margin-top:8px}
+.rc-tot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;padding-top:10px;font-size:14px}
+.rc-tot b{font-weight:600}
+.rc-tot .btn{margin-left:auto}
+@media (max-width:640px){.rc-row.ed{grid-template-columns:minmax(0,1fr) 64px 44px}.rc-row.ed > select:first-child{grid-column:1/-1}.rc-row.ed .calc{display:none}}
 .rec-f{display:flex;justify-content:space-between;padding:6px 80px 0 0;font-size:14px;color:var(--label2)}
 .rec-alt{margin-top:14px}
 .rec-alt td,.rec-alt th{font-size:13px}
@@ -277,7 +282,7 @@ tr.drawer td{padding:4px 0 14px;text-align:left}
 .opt.wide .segc{white-space:normal;flex-wrap:wrap;max-width:100%}
 .spsy{display:flex;flex-wrap:wrap;gap:6px}
 .spsy .tog + .tog{margin-left:0}
-.spsy .tog{background:none;box-shadow:inset 0 0 0 1.5px var(--orange);color:var(--orange)}
+.spsy .tog.sp{box-shadow:inset 0 0 0 1.5px var(--orange);color:var(--orange-t)}
 .spsy .tog.on{background:var(--orange);color:#fff}
 .stepper{display:inline-flex;align-items:center;background:var(--fill2);border-radius:9px}
 .stepper button{border:0;background:none;width:34px;height:30px;font-size:18px;cursor:pointer;color:var(--label)}
@@ -362,10 +367,78 @@ details.buy[open] summary{margin-bottom:10px}
 .foot .logo{height:56px;width:auto;aspect-ratio:1455.13/588.32}
 .foot p{margin:0;font-size:13px;color:var(--label2)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.syr{background:var(--fill);border-radius:14px;padding:12px 14px;margin-top:12px}
+.syr-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.syr-h b{font-size:16px;font-weight:600}
+.syr-per{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--label2)}
+.syr-sold{font-size:13px;margin:6px 0 10px}
+.syr-sold b{font-weight:600}
+.syr-line{display:grid;grid-template-columns:minmax(0,1fr) 76px 64px 28px;gap:6px;align-items:center;margin-bottom:6px;font-size:14px}
+.syr-line.syr-yield{grid-template-columns:auto 80px auto;justify-content:start}
+.syr-line .in{background:var(--tile)}
+.syr .srow{margin-top:10px}
+.syr-make{font-size:14px;margin:4px 0 6px}
+.syr-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:760px){.syr-2{grid-template-columns:minmax(0,1fr)}}
+.syr-ed{margin-left:auto}
+.syr h4{margin:12px 0 6px;font-size:12px;font-weight:600;color:var(--label2)}
+.syr h4:first-child{margin-top:0}
+.rcard{list-style:none;margin:0;padding:0;background:var(--tile);border-radius:12px}
+.rcard li{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:.5px solid var(--sep);font-size:14px}
+.rcard li:last-child{border-bottom:0}
+.rcard li b{font-weight:600;text-align:right}
+.rc-steps{margin:10px 0 0;padding-left:20px;font-size:13px;color:var(--label2)}
+.rc-steps li{margin-bottom:4px}
+.syr-line.sl5,.rc-hd{grid-template-columns:minmax(0,1.6fr) 64px 58px 64px 28px}
+.rc-hd{display:grid;gap:6px;font-size:12px;color:var(--label2);font-weight:600;margin:10px 0 4px}
+.rcard-ed > label{display:block;margin:6px 0}
+.rc-stl textarea{display:block;margin-top:4px;text-align:left;font-weight:500;color:var(--label);resize:vertical}
+.addin{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.wknav{display:flex;align-items:center;gap:10px}
+.wk-sub{display:block;font-size:13px;font-weight:500;color:var(--label2);letter-spacing:0}
+.opt{position:relative}
+.gear{position:absolute;top:4px;right:4px;border:0;background:none;width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--label2);cursor:pointer}
+.gear:hover,.gear.on{background:var(--fill2);color:var(--label)}
+.gear svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sypick{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;padding-top:10px;border-top:.5px solid var(--sep);font-size:14px}
+.sypick .note-sm{flex:1 1 100%}
+.sypick label{display:flex;align-items:center;gap:6px}
+#labBody{max-height:440px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
+.wday{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 0;border-bottom:.5px solid var(--sep);font-size:14px}
+.wday:last-child{border-bottom:0}
+.wday.off{grid-template-columns:96px 1fr;color:var(--label2)}
+.wd-d{font-weight:600}.wd-d.now{color:var(--tint)}
+.wd-h{margin-bottom:3px}
+.wd-s{font-size:13px}
+@media (max-width:640px){
+  .mast{padding:16px 16px 4px}.mast h1 .logo{height:46px}
+  .steps-in{padding:0 16px}
+  main{padding:8px 16px 32px}
+  .sec{padding:14px 14px 16px;border-radius:16px}
+  .sec h2{font-size:17px}
+  .tile-h{flex-wrap:wrap;gap:8px}
+  .kpis,.kpis.k5,.kpis.k3{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .kpi{padding:12px}.kpi .v{font-size:21px}
+  .hnext{padding:14px 16px}.hnext .big{font-size:22px}
+  .fields{grid-template-columns:minmax(0,1fr) 110px}
+  .frm{grid-template-columns:minmax(0,1fr)}
+  .opts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .opt .segc,.segc{white-space:normal;flex-wrap:wrap;max-width:100%}
+  .dgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .dbtn{min-height:88px;padding:10px}
+  .tline{grid-template-columns:minmax(0,1fr) auto auto;gap:6px}
+  table.t td{padding:7px 4px;font-size:13px}
+  table.t th{padding:7px 4px}
+  .calgrid{grid-template-columns:minmax(0,1fr)}
+  .wday,.wday.off{grid-template-columns:78px minmax(0,1fr)}
+  .wday .btn{grid-column:2;justify-self:start}
+  .syr-line{grid-template-columns:minmax(0,1fr) 64px 60px 28px}
+  .syr-line.sl5,.rc-hd{grid-template-columns:minmax(0,1fr) 52px 48px 56px 28px}
+  .wknav h2{font-size:17px}
+  .syr-per{margin-left:0}
+}
 
 .tile-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.rec-r.ro{font-size:14px;padding:7px 0;border-bottom:.5px solid var(--sep)}
-.rec-r.ro:last-of-type{border-bottom:0}
 #menuBody tr.editing td{background:none}
 
 .pagehead{font-size:24px;font-weight:700;letter-spacing:-.02em;margin:34px 4px 14px}
@@ -485,7 +558,6 @@ details.fold[open] summary{margin-bottom:8px}
 .dbars i.plan{background:none;box-shadow:inset 0 0 0 1.5px var(--tint)}
 .dbars span{margin-top:4px}
 .specrow{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:center;margin-bottom:8px;font-size:14px}
-tr.batch-off td{color:var(--label3)}
 .calbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
 .calgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;touch-action:none;user-select:none;-webkit-user-select:none}
 .calm h4{margin:0 0 6px;font-size:14px;font-weight:600}
@@ -563,10 +635,7 @@ tr.cathead .cs{font-weight:400;color:var(--label2);margin-left:8px;font-size:12p
 .kind{font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;color:#fff}
 .kind.pilot{background:var(--orange)} .kind.ops{background:var(--tint)}
 td.note-sm.flag{color:var(--orange-t);font-weight:600}
-#batchBody tr.nob td{border-bottom:0}
-#batchBody td{vertical-align:top}
 .nw{white-space:nowrap}
-tr.batch-off td .in{opacity:.5}
 @media (max-width:800px){.kpis.k3{grid-template-columns:1fr}}
 </style>
 <meta name="robots" content="noindex, nofollow">
@@ -618,17 +687,18 @@ tr.batch-off td .in{opacity:.5}
 
 <!-- ============ HOME ============ -->
 <section class="pane on" id="pane-home">
-  <div class="hnext" id="homeNext"></div>
-  <div class="kpis k5" id="homeKpis"></div>
-  <div class="cols c-track">
+  <div class="sec">
+    <div class="tile-h"><div class="wknav"><button class="x" data-act="homeWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="homeWeekTitle">This week</h2><button class="x" data-act="homeWk" data-v="1" aria-label="Next week">›</button></div><button class="btn ghost sm" data-act="homeWk" data-v="0">Back to this week</button></div>
+    <div class="cols c-even" style="margin-top:10px">
+      <div><div id="homeWeek"></div></div>
+      <div><div id="homeMenu"></div></div>
+    </div>
+  </div>
+  <div class="cols c-even" style="margin-top:18px">
     <div>
       <div class="sec">
-        <div class="tile-h"><h2><span class="ic" style="--c:#FF3B30" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg></span>Needs attention</h2></div>
-        <div id="homeTodo"></div>
-      </div>
-      <div class="sec">
-        <div class="tile-h"><h2><span class="ic" style="--c:#5856D6" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Next two weeks</h2><button class="btn ghost sm" data-act="tab" data-tab="shifts">Schedule</button></div>
-        <div id="homeDays"></div>
+        <div class="tile-h"><h2><span class="ic" style="--c:#007AFF" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2.5l2.2 11.2h10.6L20.5 8H7"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span><span id="homeOrderTitle">To reorder</span></h2><button class="btn ghost sm" data-act="tab" data-tab="inventory">Order lists</button></div>
+        <div id="homeOrder"></div>
       </div>
     </div>
     <div>
@@ -636,14 +706,6 @@ tr.batch-off td .in{opacity:.5}
         <div class="tile-h"><h2><span class="ic" style="--c:#FF9500" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 20V11M11 20V5M17 20v-7M3 20h18"/></svg></span>Drinks by week</h2><button class="btn ghost sm" data-act="tab" data-tab="analytics">Analytics</button></div>
         <svg class="chart" id="homeChart" viewBox="0 0 640 200"></svg>
         <div class="legend"><span><i style="background:var(--orange)"></i>Sold</span><span><i style="background:none;box-shadow:inset 0 0 0 1.5px var(--tint)"></i>Planned</span></div>
-      </div>
-      <div class="sec">
-        <div class="tile-h"><h2><span class="ic" style="--c:#FF9500" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z"/></svg></span>This week's specialty</h2><button class="btn ghost sm" data-act="tab" data-tab="menu">Menu</button></div>
-        <div id="homeSpec"></div>
-      </div>
-      <div class="sec">
-        <div class="tile-h"><h2><span class="ic" style="--c:#34C759" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 6.5C16 5 14 4 12 4c-3 0-5 1.5-5 3.8C7 13 17 11 17 16c0 2.3-2 4-5 4-2.3 0-4.3-1-5.3-2.7"/></svg></span>Money</h2></div>
-        <div id="homeMoney"></div>
       </div>
     </div>
   </div>
@@ -663,8 +725,7 @@ tr.batch-off td .in{opacity:.5}
           <div class="opts">
             <div class="opt"><span class="ol">Serve</span><div class="segc sm" id="optIce"></div></div>
             <div class="opt"><span class="ol">Milk</span><div class="segc sm" id="optMilk"></div></div>
-            <div class="opt wide"><span class="ol">Syrup</span><div class="segc sm" id="optSyrup"></div></div>
-            <div class="opt wide" id="optSpecRow"><span class="ol">Specialty syrup</span><div class="spsy" id="optSpec"></div></div>
+            <div class="opt wide"><span class="ol">Syrup</span><button class="gear" id="syGear" data-act="syGear" aria-label="Choose the syrups stocked this week" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button><div class="spsy" id="optSyrup"></div><div class="sypick" id="syPick" hidden></div></div>
             <div class="opt"><span class="ol">Extras</span><button class="tog" data-act="opt" data-o="fo">Cold foam</button></div>
             <div class="opt"><span class="ol">Quantity</span><div class="stepper"><button data-act="qty" data-d="-1" aria-label="Fewer">−</button><span id="optQty">1</span><button data-act="qty" data-d="1" aria-label="More">+</button></div></div>
           </div>
@@ -699,6 +760,8 @@ tr.batch-off td .in{opacity:.5}
       <div class="sec">
         <h2><span class="ic" style="--c:#5856D6" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg></span>Recent entries</h2>
         <table class="t"><tbody id="recentBody"></tbody></table>
+        <h3>Syrups chosen</h3>
+        <table class="t"><tbody id="syrupTally"></tbody></table>
       
       </div>
     </div>
@@ -901,6 +964,11 @@ tr.batch-off td .in{opacity:.5}
         <p class="toast" id="buyToast" role="status" style="margin:0 0 6px"></p>
         <div id="orderList"></div>
       </div>
+    <div class="sec" style="margin-top:18px">
+        <div class="tile-h"><h2><span class="ic" style="--c:#FF9500" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z"/></svg></span>Specialty order sheet</h2><button class="btn ghost sm" data-act="tab" data-tab="menu">Syrup recipes</button></div>
+        <p class="hint" style="margin-top:0" id="specOrderHint"></p>
+        <div id="specOrder"></div>
+    </div>
   </div>
   <div class="cols" style="margin-top:18px">
     <div>
@@ -954,30 +1022,6 @@ tr.batch-off td .in{opacity:.5}
         <p class="toast" id="labToast" role="status" style="margin:0 0 8px"></p>
         <div id="labBody"></div>
       </div>
-      <div class="sec">
-        <div class="tile-h"><h2><span class="ic" style="--c:#A2845E" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/></svg></span>Specialty archive</h2><button class="btn ghost sm" data-act="archSave">Save this week</button></div>
-        <p class="toast" id="archToast" role="status" style="margin:0 0 8px"></p>
-        <div id="archBody"></div>
-      </div>
-      <div class="sec">
-        <h2><span class="ic" style="--c:#FF9500" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z"/></svg></span>Specialty batch planner</h2>
-        <p class="hint" style="margin-top:0">Buys the specialty-only add-ins for one weekend and assumes whatever you open gets used or tossed that weekend. Add-ins from core stock, like syrup and cinnamon, come off the regular reorder. Shelf-stable drinks stay out of the batch. The coffee or matcha base comes from core stock.</p>
-        <div id="batchSliders"></div>
-        <div class="scroll"><table class="t">
-          <thead><tr><th class="l"></th><th class="l">Drink and base</th><th>Make</th><th class="l">Add-in</th><th>Need</th><th class="l">Buy</th><th>One pack makes</th><th>Cost</th></tr></thead>
-          <tbody id="batchBody"></tbody>
-        </table></div>
-        <div class="chips" style="margin-top:10px"><button class="chip" data-act="batchSync">Set every drink back to the target</button></div>
-        <h3>Buy for the weekend</h3>
-        <div class="scroll"><table class="t" id="batchBuy"></table></div>
-      </div>
-      <div class="sec">
-        <h2><span class="ic" style="--c:#AF52DE" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z"/></svg></span>Add-ons</h2>
-        <div class="scroll"><table class="t">
-          <thead><tr><th class="l">Add-on</th><th>Charge</th><th>Cost</th><th>Profit</th><th>Margin</th><th class="l">Build</th></tr></thead>
-          <tbody id="addonBody"></tbody>
-        </table></div>
-      </div>
     </div>
     <div>
       <div class="sec">
@@ -989,7 +1033,24 @@ tr.batch-off td .in{opacity:.5}
         <h2><span class="ic" style="--c:#FF2D55" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/></svg></span>Fees and allocations</h2>
         <div id="feeSliders"></div>
       </div>
+      <div class="sec">
+        <h2><span class="ic" style="--c:#AF52DE" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z"/></svg></span>Add-ons</h2>
+        <div class="scroll"><table class="t">
+          <thead><tr><th class="l">Add-on</th><th>Charge</th><th>Cost</th><th>Profit</th><th>Margin</th><th class="l">Build</th></tr></thead>
+          <tbody id="addonBody"></tbody>
+        </table></div>
+      </div>
     </div>
+  </div>
+  <div class="sec" style="margin-top:18px">
+    <h2><span class="ic" style="--c:#FF9500" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z"/></svg></span>Specialty drinks this week</h2>
+    <p class="hint" style="margin-top:0" id="specHint"></p>
+    <div id="specBody"></div>
+  </div>
+  <div class="sec" style="margin-top:18px">
+    <div class="tile-h"><h2><span class="ic" style="--c:#AF52DE" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.5 15h9"/></svg></span>Custom syrups</h2><button class="btn ghost sm" data-act="syrNew">New syrup</button></div>
+    <p class="hint" style="margin-top:0">One pump is 0.25 oz. Set the pumps per drink on each syrup and the cost per drink and drinks per batch follow. Flavored syrups start from the simple syrup base, 3 cups sugar and 3 cups water reduced to 4 cups, and the flavoring counts as additional cost.</p>
+    <div id="syrBody"></div>
   </div>
 </section>
 
@@ -1190,6 +1251,16 @@ const S = {
   team:   [],     // people: {name, days:[weekday numbers they can usually work, 0 = Sunday]}
   days:   {},     // per cafe day: {kind:"pilot"|"ops", open, close, n, names:[one string per shift]}
   weeks:  {},     // per week (Monday date): {spec:[specialty drink names planned for each slot]}
+  syr:    {drinks:{}},   // specialty drinks keyed by normalized name: {syrup: custom syrup id or "", n: syrup batches this week, or drinks when there's no syrup}
+  syrups: [                // custom syrups: yield in oz, pumps per drink at 0.25 oz, lines {item, qty, unit, cost of that amount}; base = simple syrup plus flavoring
+    {id:"simple", name:"Simple syrup", base:false, yield:32, pumps:2, lines:[{item:"Granulated sugar", qty:3, unit:"cup", cost:0}, {item:"Water", qty:3, unit:"cup", cost:0}],
+     steps:"Heat equal parts sugar and water, stirring until the sugar dissolves.\nReduce to 4 cups.\nCool and bottle."},
+    {id:"bananabread", name:"Banana bread syrup", base:false, yield:12, pumps:3, lines:[
+      {item:"Water", qty:1, unit:"cup", cost:0}, {item:"Overripe banana, mashed", qty:1, unit:"each", cost:0}, {item:"Brown sugar, packed", qty:0.75, unit:"cup", cost:0},
+      {item:"Granulated sugar", qty:0.25, unit:"cup", cost:0}, {item:"Maple syrup", qty:0.25, unit:"cup", cost:0}, {item:"Cinnamon sticks", qty:2, unit:"each", cost:0},
+      {item:"Nutmeg", qty:0.25, unit:"tsp", cost:0}, {item:"Salt", qty:0.25, unit:"tsp", cost:0}, {item:"Vanilla extract", qty:1, unit:"tsp", cost:0}],
+     steps:"Stir together water, mashed banana, brown sugar, white sugar, maple syrup, cinnamon sticks, nutmeg, and salt in a medium saucepan and heat to a simmer.\nOnce simmering, allow to simmer for 5 minutes, stirring occasionally.\nRemove from heat and allow to cool for 15 minutes at room temperature.\nAfter cooling time, strain the solids from the syrup, reserving the syrup and discarding the solids.\nStir in the vanilla extract and transfer to a syrup bottle or mason jar. Store in the fridge for up to 2 weeks."}
+  ],
   batch:  {target:50, budget:60, drinks:{}},   // specialty batch planner; drinks keyed by normalized name: {on, n}   // one-time costs to pay back from sales
   track:  {useSales:true, dates:["2026-10-03","2026-10-04","2026-10-10","2026-10-11","2026-10-17","2026-10-18","2026-10-24","2026-10-25"], cover:2, buffer:25},
   exp:    {wdOpen:9, wdClose:17, wkOpen:10, wkClose:19, wdDays:5, wkDays:2,
@@ -1220,6 +1291,17 @@ function ingOpts(sel){
   const grp = (label, xs) => xs.length ? `<optgroup label="${label}">${xs.map(g => `<option value="${g.id}"${g.id === sel ? " selected" : ""}>${esc(g.name)}</option>`).join("")}</optgroup>` : "";
   return grp("Core stock, on reorder", S.ingredients.filter(g => !isSpecIng(g))) + grp("Specialty only", S.ingredients.filter(isSpecIng));
 }
+/* custom syrups ride in recipes as "syr:<id>" lines dosed in pumps: they carry cost into COGS but are never stocked or ordered */
+const SYR_PFX = "syr:", PUMP_OZ = 0.25;
+const isSyrLine = id => String(id || "").startsWith(SYR_PFX);
+const syrupOfLine = id => isSyrLine(id) ? (S.syrups || []).find(s => SYR_PFX + s.id === id) || null : null;
+const lineName = id => { if (isSyrLine(id)){ const s = syrupOfLine(id); return s ? s.name : "Missing syrup"; } const g = S.ingredients.find(x => x.id === id); return g ? g.name : id; };
+const lineUnit = id => isSyrLine(id) ? "pumps" : ((S.ingredients.find(x => x.id === id) || {}).unit || "");
+function recOpts(sel){
+  const known = S.ingredients.some(g => g.id === sel) || !!syrupOfLine(sel);
+  return (sel && !known ? `<option value="${esc(sel)}" selected>${esc(isSyrLine(sel) ? "Missing syrup" : sel + ", not in ingredients")}</option>` : "") + ingOpts(sel)
+    + ((S.syrups || []).length ? `<optgroup label="Custom syrups, in pumps, never ordered">${S.syrups.map(s => `<option value="${SYR_PFX}${esc(s.id)}"${SYR_PFX + s.id === sel ? " selected" : ""}>${esc(s.name)}</option>`).join("")}</optgroup>` : "");
+}
 const SEASONS = [["fall","Fall"],["winter","Winter"],["spring","Spring"],["summer","Summer"],["any","Any season"]];
 const seasonGuess = n => /apple|pumpkin|cider|maple|banana|chai|spice/i.test(n) ? "fall" : /peppermint|gingerbread|eggnog|cocoa|mocha/i.test(n) ? "winter"
   : /strawberry|lavender|rose|honey|cherry/i.test(n) ? "spring" : /mango|lemon|coconut|peach|watermelon|lime/i.test(n) ? "summer" : "any";
@@ -1228,6 +1310,10 @@ const SERVE_TAG = {hot:"Hot", iced:"Iced", both:"Hot and iced"};
 S.drafts = S.drinks.filter(d => d.sec === "specialty").map(labCopy);
 const DEF_URLS = {};
 S.ingredients.forEach(i => { if (i.url) DEF_URLS[i.id] = i.url; });
+/* Current cafe data, exported Sep 27, 2026 (same as seed-config.json). Replaces the built-in defaults above. */
+const CAFE_DATA = {"v":4,"ingredients":[{"id":"beans","name":"Espresso beans, Lavazza","price":178.99,"size":5987,"unit":"g","vendor":"WebstaurantStore","vol":0.1111111111111111,"url":"https://www.webstaurantstore.com/lavazza-gran-espresso-whole-bean-espresso-2-2-lb-case/110LVEGRANWKT.html","kind":"core","cat":"coffee"},{"id":"milk","name":"2% milk","price":3.25,"size":128,"unit":"oz","vendor":"BJs","vol":1,"url":"https://www.bjs.com/product/wellsley-farms-2-reduced-fat-milk-1-gal/3000000000000139573","kind":"core","cat":"milk"},{"id":"wholemilk","name":"Whole milk","price":3.45,"size":128,"unit":"oz","vendor":"BJs","vol":1,"url":"https://www.bjs.com/product/wellsley-farms-whole-milk-1-gal/3000000000000139571/","kind":"core","cat":"milk"},{"id":"oat","name":"Oat milk, Califia","price":14.99,"size":192,"unit":"oz","vendor":"Costco","vol":1,"kind":"core","url":"https://www.costco.com/p/-/califia-farms-cafe-oat-milk-32-fl-oz-6-count/100710341?langId=-1","cat":"milk"},{"id":"almond","name":"Almond milk, Califia","price":17.99,"size":192,"unit":"oz","vendor":"Costco","vol":1,"kind":"core","url":"https://www.costco.com/p/-/califia-farms-cafe-almond-milk-32-oz-6-count/100577527?langId=-1","cat":"milk"},{"id":"cream","name":"Heavy Cream","price":4.29,"size":32,"unit":"oz","vendor":"BJs","vol":1,"kind":"core","url":"https://www.bjs.com/product/wellsley-farms-heavy-whipping-cream-32-oz/3000000000002440779/","cat":"milk"},{"id":"matcha","name":"Barista Grade Matcha","price":33.99,"size":100,"unit":"g","vendor":"Naoki","vol":0,"url":"https://naokimatcha.com/products/barista-blend-matcha?variant=51639660151087","kind":"core","cat":"tea"},{"id":"chai","name":"Chai concentrate, Tazo","price":35.49,"size":192,"unit":"oz","vendor":"WebstaurantStore","vol":1,"url":"https://www.webstaurantstore.com/tazo-32-fl-oz-chai-tea-latte-1-1-concentrate-case/711TAZ1733CS.html?utm_source=google&utm_medium=cpc&gbraid=0AAAAAD_Dx-vZeJstYol8q90q7fkXEdMl9&gclid=Cj0KCQjwlNPVBhCMARIsAPZ5RqiiAjSdgA_opLIo2nmE3oXQYfAD6HnobHuSoU1X7IQmwSPVzDY00sIaAmv8EALw_wcB","kind":"core","cat":"tea"},{"id":"tea","name":"Earl Grey tea bags","price":24.49,"size":96,"unit":"bag","vendor":"WebstaurantStore","vol":0,"url":"https://www.webstaurantstore.com/tazo-organic-earl-grey-tea-bags-case/110TAZTBEARCS.html","kind":"core","cat":"tea"},{"id":"cider","name":"Apple cider","price":4.99,"size":128,"unit":"oz","vendor":"BJs","vol":1,"url":"https://www.bjs.com/product/wellsley-farms-apple-cider-1-gal/3000000000000162429/","kind":"specialty","cat":"mixin"},{"id":"strawberry","name":"Frozen Strawberries","price":13.99,"size":64,"unit":"oz","vendor":"BJs","vol":1,"url":"https://www.bjs.com/product/wymans-frozen-sliced-strawberries-4-lbs/3000000000004795249/","kind":"core","cat":"mixin"},{"id":"c1790286298153","kind":"core","name":"Monin Vanilla Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/vanilla-syrup?variant=48173907771712","vol":1,"custom":true,"cat":"mixin"},{"id":"c1790286443536","kind":"core","name":"Monin Caramel Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/caramel-syrup","vol":1,"custom":true,"cat":"mixin"},{"id":"c1790286602131","kind":"core","name":"Monin Brown Sugar Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/spiced-brown-sugar-syrup?variant=48173915472192","vol":1,"custom":true,"cat":"mixin"},{"id":"c1790286655331","kind":"core","name":"Monin Pumpkin Spice Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/pumpkin-spice-syrup?variant=48173896794432","vol":1,"custom":true,"cat":"mixin"},{"id":"lavender","kind":"specialty","cat":"mixin","name":"Monin Lavender Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/lavender-syrup","vol":1,"custom":true},{"id":"honey","kind":"specialty","cat":"mixin","name":"Monin Honey Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/honey-syrup","vol":1,"custom":true},{"id":"cinnamonsyr","kind":"specialty","cat":"mixin","name":"Monin Cinnamon Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://webstaurantstore.com/monin-1-liter-premium-cinnamon-flavoring-syrup/544SYPFR012F.html","vol":1,"custom":true},{"id":"peppermint","kind":"specialty","cat":"mixin","name":"Monin Peppermint Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/collections/all-syrups-1-liter-plastic-bottle","vol":1,"custom":true},{"id":"gingerbread","kind":"specialty","cat":"mixin","name":"Monin Gingerbread Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/collections/all-syrups-1-liter-plastic-bottle","vol":1,"custom":true},{"id":"mocha","kind":"specialty","cat":"mixin","name":"Ghirardelli Chocolate Sauce (64 oz)","price":22,"size":64,"unit":"oz","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/ghirardelli-64-fl-oz-sweet-ground-chocolate-cocoa-flavoring-sauce/40862052.html","vol":1,"custom":true},{"id":"whitemocha","kind":"specialty","cat":"mixin","name":"Ghirardelli White Chocolate Sauce (64 oz)","price":24,"size":64,"unit":"oz","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/ghirardelli-64-fl-oz-white-chocolate-flavoring-sauce/40862051.html","vol":1,"custom":true},{"id":"cinnamon","kind":"specialty","cat":"mixin","name":"Ground cinnamon (16 oz)","price":6,"size":16,"unit":"oz","vendor":"BJs","url":"https://www.bjs.com/product/wellsley-farms-ground-cinnamon-16-oz/3000000000003894251/","vol":0,"custom":true}],"packaging":[{"id":"cup_cold","name":"16 oz Iced Drink Cup","price":66.49,"size":1000,"kit":"iced","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/cup-16-oz-heavy-weight-clear-1m-case/500CC16HW.html"},{"id":"lid_cold","name":"Flat Lid, No Straw","price":36.99,"size":1000,"kit":"iced","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/choice-9-12-16-20-and-24-oz-clear-sip-through-lid-with-extra-wide-opening-case/500LSTRWLW.html"},{"id":"cup_hot","name":"12 oz hot cup","price":50.99,"size":500,"kit":"hot","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/choice-12-oz-white-smooth-double-walled-paper-hot-cup-case/50012DWALLW.html"},{"id":"lid_hot","name":"12 oz Hot Cup Lid","price":30.49,"size":1000,"kit":"hot","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/choice-8-oz-squat-to-24-oz-white-hot-paper-cup-travel-lid-case/500L1020W.html"},{"id":"sleeve","name":"Kraft Coffee Cup Sleeve","price":39.49,"size":1200,"kit":"hot","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/ecochoice-8-oz-kraft-coffee-cup-sleeve-jacket-clutch-case/500COLLAR8BR.html"},{"id":"napkin","name":"Napkin","price":24.99,"size":8000,"kit":"both","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/choice-kraft-natural-tall-fold-dispenser-napkin-case/966TALLFLDN.html"}],"drinks":[{"name":"Latte","sec":"core","price":4.5,"sold":24,"iced":60,"recipe":[["milk",7],["beans",18]]},{"name":"Cappuccino","sec":"core","price":4,"sold":5,"iced":0,"recipe":[["milk",4],["beans",18]]},{"name":"Americano","sec":"core","price":3.5,"sold":9,"iced":60,"recipe":[["beans",18]]},{"name":"Chai Latte","sec":"core","price":5,"sold":11,"iced":60,"recipe":[["milk",4.5],["chai",4.5]]},{"name":"Matcha Latte","sec":"core","price":5,"sold":7,"iced":60,"recipe":[["milk",7],["matcha",3]]},{"name":"London Fog","sec":"core","price":3.5,"sold":4,"iced":30,"recipe":[["milk",5],["tea",1],["c1790286298153",0.25,false,"both"]]},{"name":"Banana Bread Latte","sec":"specialty","price":4.5,"sold":10,"iced":100,"recipe":[["milk",6],["beans",18]],"budgetHot":0,"budgetIced":4.81,"addin":"0.75 oz banana bread syrup"},{"name":"Caramel Apple Spice Cider","sec":"specialty","price":4,"sold":9,"iced":0,"recipe":[["cider",10,true]],"budgetHot":7.99,"budgetIced":0,"addin":"Cider, 2 pumps caramel and cinnamon"},{"name":"Brown Sugar Shaken Espresso","sec":"signature","price":4.5,"sold":18,"iced":100,"recipe":[["milk",6],["beans",18],["c1790286602131",0.75,true]],"budgetHot":0,"budgetIced":3.41,"addin":"3 pumps brown sugar syrup"},{"name":"Strawberry Matcha Latte","sec":"signature","price":5,"sold":3,"iced":100,"recipe":[["milk",6,false,"both"],["beans",18,false,"both"],["strawberry",2,true]],"budgetHot":0,"budgetIced":3.78,"addin":"2 oz strawberry puree blended in house"}],"drafts":[{"name":"Banana Bread Latte","sec":"specialty","price":4.5,"iced":100,"sold":6,"recipe":[["milk",6],["beans",18],["banana",0.75,true]],"addin":"0.75 oz banana bread syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall"},{"name":"Caramel Apple Spice Cider","sec":"specialty","price":4,"iced":0,"sold":5,"recipe":[["cider",10,true],["syrup",0.5,true],["cinnamon",0.02,true]],"addin":"Cider, 2 pumps caramel and cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall"},{"name":"Lavender London Fog","sec":"specialty","price":4.25,"iced":30,"sold":5,"recipe":[["milk",5,false],["tea",1,false],["lavender",0.5,true]],"addin":"0.5 oz lavender syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Swap vanilla for lavender in the fog"},{"name":"Hot Apple Cider with Brown Sugar","sec":"specialty","price":4,"iced":0,"sold":5,"recipe":[["cider",10,true],["c1790286602131",0.5,true],["cinnamon",0.02,true]],"addin":"10 oz apple cider, 0.5 oz brown sugar syrup, 0.02 oz ground cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"Simpler version of the caramel apple cider"},{"name":"Vanilla Sweet Cream Americano","sec":"specialty","price":4.5,"iced":100,"sold":5,"recipe":[["beans",18,false],["cream",1,false],["milk",0.5,false],["c1790286298153",0.5,true]],"addin":"0.5 oz vanilla syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Uses the cold foam build on an americano"},{"name":"Salted Caramel Cream Americano","sec":"specialty","price":4.75,"iced":100,"sold":5,"recipe":[["beans",18,false],["cream",1.5,false],["milk",0.5,false],["c1790286443536",0.5,true]],"addin":"0.5 oz caramel syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Cheapest build with a premium feel"},{"name":"White Chocolate Mocha","sec":"specialty","price":5.25,"iced":50,"sold":5,"recipe":[["milk",6,false],["beans",18,false],["whitemocha",1,true]],"addin":"1 oz ghirardelli white chocolate sauce","aliases":[],"budgetHot":0,"budgetIced":0,"season":"winter","note":"Needs white chocolate sauce"},{"name":"Lavender Latte","sec":"specialty","price":5,"iced":60,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["lavender",0.75,true]],"addin":"0.75 oz lavender syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Needs Monin lavender"},{"name":"Mocha","sec":"specialty","price":5,"iced":60,"sold":5,"recipe":[["milk",6,false],["beans",18,false],["mocha",1,true]],"addin":"1 oz ghirardelli chocolate sauce","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Needs chocolate sauce. Unlocks hot chocolate too"},{"name":"Gingerbread Latte","sec":"specialty","price":5,"iced":40,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["gingerbread",0.75,true]],"addin":"0.75 oz gingerbread syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"winter","note":"Holiday option with one new bottle"},{"name":"Pumpkin Spice Latte","sec":"specialty","price":5,"iced":50,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["c1790286655331",0.75,true],["cinnamon",0.02,true]],"addin":"0.75 oz pumpkin spice syrup, 0.02 oz ground cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"Fall anchor. You already stock the syrup"},{"name":"Cinnamon Dolce Latte","sec":"specialty","price":5,"iced":50,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["cinnamonsyr",0.5,true],["c1790286602131",0.25,true],["cinnamon",0.02,true]],"addin":"0.5 oz cinnamon syrup, 0.25 oz brown sugar syrup, 0.02 oz ground cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"Needs Monin cinnamon"},{"name":"Pumpkin Chai","sec":"specialty","price":5.25,"iced":50,"sold":5,"recipe":[["milk",4.5,false],["chai",4.5,false],["c1790286655331",0.5,true]],"addin":"0.5 oz pumpkin spice syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"Coffee-free fall option"},{"name":"Vanilla Latte","sec":"specialty","price":4.75,"iced":60,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["c1790286298153",0.75,true]],"addin":"0.75 oz vanilla syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Top seller everywhere. Uses what you stock"},{"name":"Peppermint Mocha","sec":"specialty","price":5.5,"iced":40,"sold":5,"recipe":[["milk",6,false],["beans",18,false],["mocha",1,true],["peppermint",0.5,true]],"addin":"1 oz ghirardelli chocolate sauce, 0.5 oz peppermint syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"winter","note":"Holiday anchor"},{"name":"Caramel Macchiato","sec":"signature","price":5,"iced":70,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["c1790286298153",0.5,true],["c1790286443536",0.5,true]],"addin":"0.5 oz vanilla syrup, 0.5 oz caramel syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Layered, vanilla base with caramel on top"},{"name":"Hot Chocolate","sec":"specialty","price":3.5,"iced":0,"sold":5,"recipe":[["milk",8,false],["mocha",1.5,true]],"addin":"1.5 oz ghirardelli chocolate sauce","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"No espresso, so it's fast on the bar"},{"name":"Honey Oat Latte","sec":"specialty","price":5.25,"iced":60,"sold":5,"recipe":[["oat",7,false],["beans",18,false],["honey",0.5,true]],"addin":"0.5 oz honey syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Oat built in. Price includes the oat upcharge"},{"name":"Strawberry Vanilla Latte","sec":"specialty","price":5.25,"iced":100,"sold":5,"recipe":[["milk",6,false],["beans",18,false],["strawberry",2,true],["c1790286298153",0.5,true]],"addin":"2 oz frozen strawberries, 0.5 oz vanilla syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Reuses the strawberry puree from the matcha"},{"name":"Brown Sugar Oat Shaken Espresso","sec":"signature","price":5,"iced":100,"sold":5,"recipe":[["oat",6,false],["beans",18,false],["c1790286602131",0.75,true],["cinnamon",0.02,true]],"addin":"0.75 oz brown sugar syrup, 0.02 oz ground cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Oat version of your best signature. Price includes the oat upcharge"},{"name":"Vanilla Matcha Latte","sec":"specialty","price":5.25,"iced":70,"sold":5,"recipe":[["milk",7,false],["matcha",3,false],["c1790286298153",0.5,true]],"addin":"0.5 oz vanilla syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Sweetened matcha. Matcha drives the cost"},{"name":"Dirty Chai","sec":"specialty","price":5.5,"iced":60,"sold":5,"recipe":[["milk",4.5,false],["chai",4.5,false],["beans",18,false]],"addin":"","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Chai latte plus a double shot"},{"name":"Honey Lavender Matcha","sec":"signature","price":5.5,"iced":70,"sold":5,"recipe":[["milk",7,false],["matcha",3,false],["lavender",0.5,true],["honey",0.25,true]],"addin":"0.5 oz lavender syrup, 0.25 oz honey syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Needs lavender and honey"}],"retired":[],"archive":[{"week":"2026-09-21","at":"2026-09-26T18:12:49.528Z","name":"Banana Bread Latte","sec":"specialty","price":4.5,"iced":100,"cogs":0.805,"margin":0.821,"addin":0,"recipe":"2% milk 6 oz, Espresso beans, Lavazza 18 g","lines":[{"id":"milk","q":6,"addin":false,"serve":"both"},{"id":"beans","q":18,"addin":false,"serve":"both"}],"retired":false},{"week":"2026-09-21","at":"2026-09-26T18:12:49.528Z","name":"Caramel Apple Spice Cider","sec":"specialty","price":4,"iced":0,"cogs":0.558,"margin":0.86,"addin":0.39,"recipe":"Apple cider 10 oz","lines":[{"id":"cider","q":10,"addin":true,"serve":"both"}],"retired":false}],"addons":{"altCharge":0.5,"syrupAttach":14,"syrupCharge":0.25,"syrupOz":0.75,"foamAttach":4,"foamCharge":0.5,"shotCharge":1,"oatPct":20,"almPct":8,"almCharge":0.5,"wholePct":85},"fees":{"cardPct":2.7,"cardFix":0.1,"txn":1,"feePct":30,"charityPct":10},"pilot":{"weekends":4,"sponsor":250,"perMonth":4,"perTerm":13,"cap":0.5,"pool":20,"curve":{"sat":[{"d":2,"peak":"","note":""},{"d":8,"peak":"","note":""},{"d":14,"peak":"","note":""},{"d":16,"peak":"","note":""},{"d":14,"peak":"","note":""},{"d":10,"peak":"","note":""},{"d":7,"peak":"","note":""},{"d":5,"peak":"","note":""},{"d":4,"peak":"","note":""},{"d":3,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""}],"sun":[{"d":0,"peak":"","note":""},{"d":4,"peak":"","note":""},{"d":6,"peak":"","note":""},{"d":8,"peak":"","note":""},{"d":10,"peak":"","note":""},{"d":11,"peak":"","note":""},{"d":12,"peak":"","note":""},{"d":12,"peak":"","note":""},{"d":11,"peak":"","note":""},{"d":10,"peak":"","note":""},{"d":8,"peak":"","note":""},{"d":6,"peak":"","note":""},{"d":4,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""}]}},"buy":[{"v":"Costco","item":"Califia Farms Cafe Oat, barista","pack":"6 x 32 oz","qty":2,"price":14.99,"on":true,"st":[["oat",192]]},{"v":"Costco","item":"Califia Farms Cafe Almond, barista","pack":"6 x 32 oz","qty":1,"price":17.99,"on":true,"st":[["almond",192]]},{"v":"Costco","item":"Kirkland Signature 2% milk","pack":"1 gallon","qty":1,"price":3.91,"on":true,"st":[["milk",128]]},{"v":"Costco","item":"Kirkland Signature whole milk","pack":"1 gallon","qty":5,"price":3.99,"on":true,"st":[["wholemilk",128]]},{"v":"Costco","item":"Land O'Lakes heavy whipping cream","pack":"32 oz","qty":2,"price":4.13,"on":true,"st":[["cream",32]]},{"v":"Costco","item":"Kirkland organic strawberries, frozen","pack":"4 lb bag","qty":1,"price":11.67,"on":true,"st":[["strawberry",61]]},{"v":"Costco","item":"Kirkland Signature apple cider","pack":"2 x 1 gallon","qty":1,"price":9.99,"on":true,"st":[["cider",256]]},{"v":"Amazon","item":"Ice scoop","pack":"","qty":1,"price":6.59,"on":true},{"v":"Amazon","item":"Swing top bottle","pack":"","qty":1,"price":12.99,"on":true},{"v":"Amazon","item":"Bottle funnels","pack":"","qty":1,"price":5.99,"on":true},{"v":"Amazon","item":"Espresso knock box","pack":"","qty":1,"price":29.98,"on":true},{"v":"Amazon","item":"WDT espresso leveler","pack":"","qty":1,"price":19.99,"on":true},{"v":"Amazon","item":"Spring loaded espresso tamper","pack":"","qty":1,"price":29.99,"on":true},{"v":"Amazon","item":"Espresso and matcha scale","pack":"","qty":1,"price":30.39,"on":true},{"v":"Amazon","item":"Espresso shot cups","pack":"","qty":1,"price":15.99,"on":true},{"v":"Amazon","item":"Milk frothing pitchers","pack":"","qty":1,"price":23.99,"on":true},{"v":"Amazon","item":"12 oz plastic squeeze bottles","pack":"6 pack","qty":1,"price":9.85,"on":true},{"v":"Amazon","item":"Mesh strainer, 7 inch","pack":"","qty":1,"price":12.63,"on":true},{"v":"Amazon","item":"Handheld milk frother, drink whisk","pack":"","qty":1,"price":23.39,"on":true},{"v":"Amazon","item":"Clear drink shakers, measuring shots","pack":"2 pack","qty":1,"price":16.99,"on":true},{"v":"Amazon","item":"Rolling cooler (if Hopper has none)","pack":"","qty":1,"price":124.99,"on":true},{"v":"Amazon","item":"Hot cups, lids, sleeves, stirrers, 12 oz","pack":"100 ct","qty":1,"price":19.99,"on":true,"st":[["cup_hot",100],["lid_hot",100],["sleeve",100]]},{"v":"Amazon","item":"Iced cups and lids, 16 oz","pack":"200 ct","qty":1,"price":29.95,"on":true,"st":[["cup_cold",200],["lid_cold",200]]},{"v":"Amazon","item":"Tazo chai concentrate, 32 oz","pack":"4 pack","qty":1,"price":23.52,"on":true,"st":[["chai",128]]},{"v":"Amazon","item":"Lavazza Gran Espresso, whole bean 2.2 lb","pack":"2 pack","qty":1,"price":65.99,"on":true,"st":[["beans",1996]]},{"v":"Amazon","item":"Matcha ceremonial blend, 100 g","pack":"2 pack","qty":1,"price":79.98,"on":true,"st":[["matcha",200]]},{"v":"Monin","item":"Five syrups plus pumps","pack":"5 x 750 ml","qty":1,"price":78.75,"on":true,"st":[["syrup",126.8]]}],"charges":[{"name":"Reusable bar tools and cooler","amount":363.75}],"ops":{"open":8,"close":17,"shiftN":2},"cal":{"rules":[],"open":["2026-10-03","2026-10-10","2026-10-11","2026-10-17","2026-10-18","2026-10-31","2026-11-01"],"closed":[]},"pattern":{"0":[{"start":10,"end":13,"seats":2},{"start":13,"end":15,"seats":2},{"start":15,"end":18,"seats":2}],"5":[{"start":8,"end":12.5,"seats":2},{"start":12.5,"end":17,"seats":2}],"6":[{"start":10,"end":13,"seats":2},{"start":13,"end":15,"seats":2},{"start":15,"end":18,"seats":2}]},"orders":{"2026-09-28":{"qty":{"milk":2,"cider":2,"wholemilk":4,"c1790286443536":1,"c1790286655331":1,"matcha":2,"oat":2},"notes":{"BJs":""}}},"team":[{"name":"Rishit Shaquib","days":[6,0]},{"name":"Karen Mei","days":[6,0]},{"name":"Rachel Mak","days":[6,0]},{"name":"Ted Clarke","days":[6,0]}],"days":{"2026-10-03":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","","","",""]},"2026-10-04":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-10":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-11":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-17":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-18":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-24":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-25":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-06":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-07":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-08":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-09":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-12":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-13":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-14":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-15":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-16":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-19":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-20":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-21":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-22":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-23":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-09-24":{"kind":"pilot","open":8,"close":17,"n":2,"names":["",""]},"2026-10-31":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-01":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-09-26":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-09-27":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-07":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-08":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-14":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-15":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-21":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-22":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-28":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-29":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-12-05":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-12-06":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-12-12":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-12-13":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18}},"weeks":{},"batch":{"target":50,"budget":60,"drinks":{"bananabreadlatte":{"on":true,"n":null},"caramelapplespicecider":{"on":true,"n":null},"brownsugarshakenespresso":{"on":false,"n":null},"strawberrymatchalatte":{"on":true,"n":null}}},"track":{"dates":["2026-10-03","2026-10-10","2026-10-11","2026-10-17","2026-10-18","2026-10-31","2026-11-01"],"cover":1,"buffer":25,"useSales":false},"exp":{"wdOpen":9,"wdClose":17,"wkOpen":10,"wkClose":19,"wdDays":5,"wkDays":2,"shiftN":4,"staff":{"wd":[1,1,1,1,1,1],"wk":[1,1,1,1,1,1]},"tput":15,"wage":17,"mgrRate":18,"mgrHrs":5,"load":0,"budget":6000,"curve":{"wd":[0,0,0,17.1,19.9,17.1,19.9,17.1,14.1,11.4,8.5,0,0,0,0,0],"wk":[0,0,2,5.5,10.1,12.7,14.5,15.2,13.9,12,9.5,8.3,3.9,2,0,0]}}};
+Object.keys(CAFE_DATA).forEach(k => { if (k in S) S[k] = CAFE_DATA[k]; });
+const SYRUP_DEF = JSON.stringify(S.syrups);
 const cleanUrl = u => { u = String(u || "").trim(); if (!u) return ""; return /^https?:\/\//i.test(u) ? u : "https://" + u; };
 const DRINK_ICON = {cup:"<path d=\"M5 8h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5V8Z\"/><path d=\"M16 9h1.5a2.5 2.5 0 0 1 0 5H16\"/><path d=\"M8 3v2M11 3v2\"/>", glass:"<path d=\"M6 3h12l-1.5 17a1.5 1.5 0 0 1-1.5 1.4H9a1.5 1.5 0 0 1-1.5-1.4L6 3Z\"/><path d=\"M7 9h10\"/>"};
 const EMIN = 6, EN = 16;   // expansion curve: hourly slots 6 am through 9 pm
@@ -1346,9 +1432,8 @@ const manualTotal = key => S.pilot.curve[key].reduce((s,h) => s + (h.d || 0), 0)
 /* ------------------------------------------------ specialty archive */
 const weekOf = s => { const d = toDate(s), dow = (d.getDay() + 6) % 7; return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow)); };
 function snapshotDrink(M, d, r){
-  const ingName = id => { const g = S.ingredients.find(x => x.id === id); return g ? g.name : id; };
   return {name:d.name, sec:secOf(d), price:d.price, iced:+d.iced || 0, cogs:Math.round(r.cogs * 1000) / 1000, margin:Math.round(r.margin * 1000) / 1000,
-          addin:Math.round(r.specialty * 1000) / 1000, recipe:d.recipe.map(x => ingName(x[0]) + " " + x[1] + " " + ((S.ingredients.find(g => g.id === x[0]) || {}).unit || "")).join(", "),
+          addin:Math.round(r.specialty * 1000) / 1000, recipe:d.recipe.map(x => lineName(x[0]) + " " + x[1] + " " + lineUnit(x[0])).join(", "),
           lines:d.recipe.map(x => ({id:x[0], q:x[1], addin:!!x[2], serve:x[3] || "both"}))};
 }
 function archiveWeek(){
@@ -1365,7 +1450,7 @@ function model(){
   const map = {};
   S.ingredients.forEach(i => map[i.id] = i);
   S.packaging.forEach(p => map[p.id] = p);
-  const rawUnit = id => { const i = map[id]; return i && i.size > 0 ? i.price / i.size : 0; };
+  const rawUnit = id => { if (isSyrLine(id)){ const s = syrupOfLine(id); return s ? syrupCalc(s).perPump : 0; } const i = map[id]; return i && i.size > 0 ? i.price / i.size : 0; };
   const wf = wholeF(), unit = id => id === "milk" && map.wholemilk ? wf * rawUnit("wholemilk") + (1 - wf) * rawUnit("milk") : rawUnit(id);   // dairy is mostly whole milk
   const kit = k => S.packaging.filter(p => p.kit === k || p.kit === "both").reduce((s,p) => s + unit(p.id), 0);
   const icedKit = kit("iced"), hotKit = kit("hot");                         // Inputs!E36, E37
@@ -1389,7 +1474,7 @@ function model(){
   const soldTotal = S.drinks.reduce((s,d,k) => s + soldOf(k), 0);
   const priceIcedOf = d => d.price;   // one price, hot or iced
   const calcDrink = (d, iF, w) => {
-    const lines = d.recipe.map(r => ({id:r[0], q:r[1] || 0, addin:!!r[2], serve:r[3] || "both", cost:(r[1] || 0) * unit(r[0]), unitLbl: map[r[0]] ? map[r[0]].unit : ""}));
+    const lines = d.recipe.map(r => ({id:r[0], q:r[1] || 0, addin:!!r[2], serve:r[3] || "both", cost:(r[1] || 0) * unit(r[0]), unitLbl:lineUnit(r[0])}));
     const inHot = l => l.serve !== "iced", inIced = l => l.serve !== "hot";
     const sum = (f, g) => lines.filter(f).reduce((s,l) => s + g(l), 0);
     const hot  = {price:d.price,        ing:sum(inHot,  l => l.cost), pkg:hotKit,  add:sum(l => inHot(l)  && l.addin, l => l.cost), milk:sum(l => inHot(l)  && l.id === "milk", l => l.q)};
@@ -1397,7 +1482,7 @@ function model(){
     [hot, iced].forEach(s => { s.cogs = s.ing + s.pkg; s.margin = s.price > 0 ? (s.price - s.cogs) / s.price : 0; });
     const blend = k => iF * iced[k] + (1 - iF) * hot[k];
     const price = blend("price"), ingCost = blend("ing"), pkg = blend("pkg"), cogs = blend("cogs"), specialty = blend("add"), milkOz = blend("milk");
-    const vol = sum(inIced, l => l.q * (map[l.id] && map[l.id].vol != null ? map[l.id].vol : 0));
+    const vol = sum(inIced, l => l.q * (isSyrLine(l.id) ? PUMP_OZ : map[l.id] && map[l.id].vol != null ? map[l.id].vol : 0));
     const fit = iF === 0 ? {t:"Hot only", c:"hot"} : vol > CUP_OZ + 1e-9 ? {t:`Over by ${(vol - CUP_OZ).toFixed(1)} oz`, c:"over"} : Math.abs(vol - CUP_OZ) < 1e-9 ? {t:"Exactly 16 oz", c:""} : {t:`Fits, ${vol.toFixed(1)} oz`, c:""};
     const hasMilk = hot.milk > 0 || iced.milk > 0;
     const addRev  = (hasMilk ? oatF * A.altCharge + almF * A.almCharge : 0) + syr * A.syrupCharge + (iF > 0 ? foamA * A.foamCharge : 0);
@@ -1606,6 +1691,49 @@ function renderIngredients(){
 }
 
 const SERVE_LBL = {both:"Both", hot:"Hot", iced:"Iced"};
+/* ------------------------------------------------ one recipe per drink
+   The menu, the recipe lab and the specialty tile all show this same card. Menu and lab copies of a drink share
+   one recipe array (linkRecipes), so an edit anywhere shows everywhere. Costs fill in from the model on every recalc. */
+UI.recEdit = new Set();   // drink names (normalized) whose recipe is open for editing
+function recipeBlock(path, k, d){
+  const id = `${path}:${k}`, ed = UI.recEdit.has(norm(d.name)), p = `${path}.${k}`, R = d.recipe || [];
+  const tag = sv => sv && sv !== "both" ? ` <span class="tagp">${SERVE_LBL[sv]} only</span>` : "";
+  const rows = ed ? R.map((r,j) => `<div class="rc-row ed">
+      <select class="in txt" data-bind="${p}.recipe.${j}.0" aria-label="Ingredient or syrup">${recOpts(r[0])}</select>
+      <input class="in" type="number" min="0" step="${isSyrLine(r[0]) ? 1 : 0.01}" data-bind="${p}.recipe.${j}.1" data-type="num" value="${+r[1] || 0}" aria-label="Dose">
+      <span class="muted" data-rcu="${id}:${j}">${esc(lineUnit(r[0]))}</span>
+      <select class="in txt" data-bind="${p}.recipe.${j}.3" aria-label="Used in">${Object.entries(SERVE_LBL).map(([v,l]) => `<option value="${v}"${(r[3] || "both") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
+      <label class="addin" title="Counts toward the specialty add-in cost and the specialty order sheet"><input type="checkbox" data-bind="${p}.recipe.${j}.2" data-type="bool"${r[2] ? " checked" : ""}> add-in</label>
+      <span class="calc" data-rcl="${id}:${j}"></span>
+      <button class="x" data-act="recDel" data-p="${path}" data-k="${k}" data-j="${j}" aria-label="Remove line">✕</button></div>`).join("")
+    : R.map((r,j) => `<div class="rc-row"><span>${esc(lineName(r[0]))}${isSyrLine(r[0]) ? ` <span class="tagp">syrup</span>` : ""}${tag(r[3])}</span><b>${String(+r[1] || 0)} <span data-rcu="${id}:${j}">${esc(lineUnit(r[0]))}</span></b><span class="calc" data-rcl="${id}:${j}"></span></div>`).join("");
+  return `<div class="rcb">${rows || `<p class="note-sm">No ingredients yet.</p>`}
+    ${ed ? `<button class="btn ghost sm" data-act="recAdd" data-p="${path}" data-k="${k}">Add ingredient or syrup</button>` : ""}
+    <div class="rc-tot"><span>COGS <b data-rct="${id}:cogs"></b></span><span>Price <b>${F.usd2(+d.price || 0)}</b></span><span>Margin <b data-rct="${id}:margin"></b></span><button class="btn ${ed ? "" : "ghost "}sm" data-act="recEdit" data-n="${esc(norm(d.name))}">${ed ? "Done" : "Edit recipe"}</button></div></div>`;
+}
+function fillRecipeCosts(M){
+  if (!M) return;
+  const rowOf = (p, k) => (p === "drinks" ? M.drinks : M.drafts)[+k];
+  document.querySelectorAll("[data-rcl]").forEach(el => { const [p,k,j] = el.dataset.rcl.split(":"), r = rowOf(p, k), l = r && r.lines[+j]; el.textContent = l ? F.usd3(l.cost) : ""; });
+  document.querySelectorAll("[data-rcu]").forEach(el => { const [p,k,j] = el.dataset.rcu.split(":"), r = rowOf(p, k), l = r && r.lines[+j]; if (l) el.textContent = l.unitLbl; });
+  document.querySelectorAll("[data-rct]").forEach(el => { const [p,k,f] = el.dataset.rct.split(":"), r = rowOf(p, k); if (!r) return;
+    if (f === "cogs") el.textContent = F.usd2(r.cogs); else { el.textContent = F.frac(r.margin); el.className = mCls(r.margin); } });
+}
+function linkRecipes(){
+  // menu and lab copies of the same drink share one recipe array; the menu copy wins because COGS and sales run on it
+  const byName = {}; S.drinks.forEach(d => { if (Array.isArray(d.recipe)) byName[(d.name || "").trim()] = d; });
+  (S.drafts || []).forEach(x => { const d = byName[(x.name || "").trim()]; if (d && x.recipe !== d.recipe) x.recipe = d.recipe; });
+  if (!S.syr || typeof S.syr !== "object") S.syr = {drinks:{}};
+  if (!S.syr.drinks || typeof S.syr.drinks !== "object") S.syr.drinks = {};
+  if (S.syr.linked) return;
+  // one time: a syrup picked on the specialty tile, or one named after the drink, becomes a pumps line in the recipe
+  S.drinks.concat(S.drafts || []).forEach(d => { if (!Array.isArray(d.recipe) || d.recipe.some(r => isSyrLine(r[0]))) return;
+    const c = S.syr.drinks[norm(d.name)], pick = c && c.syrup ? (S.syrups || []).find(x => x.id === c.syrup) : null;
+    const s = pick || (S.syrups || []).find(x => { const n = norm(String(x.name).replace(/syrup/i, "")); return x.id !== "simple" && n && norm(d.name).includes(n); });
+    if (s) d.recipe.push([SYR_PFX + s.id, +s.pumps || 3, true, "both"]); });
+  Object.values(S.syr.drinks).forEach(c => { if (c) delete c.syrup; });
+  S.syr.linked = true;
+}
 function renderMenu(){
   const ed = !!UI.menuEdit;
   $("menuEditBtns").innerHTML = ed
@@ -1630,23 +1758,10 @@ function renderMenu(){
       <td><span class="m" id="dm-${k}"></span></td>
       <td class="l"><span class="fit" id="df-${k}"></span></td></tr>`;
     if (open){
-      const opts = ingOpts;
-      const ingName = id => { const g = S.ingredients.find(x => x.id === id); return g ? g.name : id; };
-      const lines = d.recipe.map((r,j) => ed ? `<div class="rec-r">
-          <select class="in txt" data-bind="drinks.${k}.recipe.${j}.0" aria-label="Ingredient">${opts(r[0])}</select>
-          <input class="in" type="number" min="0" step="0.01" data-bind="drinks.${k}.recipe.${j}.1" data-type="num" value="${r[1]}" aria-label="Dose">
-          <span class="u" id="ru-${k}-${j}"></span>
-          <select class="in txt" data-bind="drinks.${k}.recipe.${j}.3" aria-label="Used in">${Object.entries(SERVE_LBL).map(([v,l]) => `<option value="${v}"${(r[3] || "both") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
-          <span class="calc" id="rl-${k}-${j}"></span>
-          <span class="c"><input type="checkbox" data-bind="drinks.${k}.recipe.${j}.2" data-type="bool"${r[2] ? " checked" : ""} aria-label="Counts as specialty add-in"></span>
-          <button class="x" data-act="delLine" data-k="${k}" data-j="${j}" title="Remove line" aria-label="Remove line">✕</button></div>`
-        : `<div class="rec-r ro"><span>${esc(ingName(r[0]))}</span><span class="r">${r[1]}</span><span class="u" id="ru-${k}-${j}"></span><span>${SERVE_LBL[r[3] || "both"]}</span><span class="calc" id="rl-${k}-${j}"></span><span class="c">${r[2] ? "✓" : ""}</span><span></span></div>`).join("");
       h += `<tr class="drawer"><td colspan="7"><div class="rec">
         ${ed && secOf(d) === "specialty" ? `<div class="frm" style="grid-template-columns:110px 260px;margin:0 0 8px"><label>Name</label><input class="in txt" data-bind="drinks.${k}.name" value="${esc(d.name)}" aria-label="Drink name"></div>` : ""}
         <div class="frm" style="grid-template-columns:110px 220px;margin:0 0 12px"><label>Menu section</label>${ed ? `<select class="in txt" data-bind="drinks.${k}.sec" data-rr="menu" aria-label="Menu section">${SECS.map(([s,l]) => `<option value="${s}"${secOf(d) === s ? " selected" : ""}>${l}</option>`).join("")}</select>` : `<span>${(SECS.find(x => x[0] === secOf(d)) || [0,""])[1]}</span>`}</div>
-        <div class="rec-h"><span>Ingredient</span><span class="r">Dose</span><span>Unit</span><span>Used in</span><span class="r">Cost</span><span class="c" title="Counts toward the specialty add-in cost">Add-in</span><span></span></div>
-        ${lines}
-        ${ed ? `<button class="add" data-act="addLine" data-k="${k}">Add ingredient to recipe</button>` : ""}
+        ${recipeBlock("drinks", k, d)}
         <table class="t rec-alt" id="rsv-${k}"></table>
         <div class="rec-f"><span>Iced build, counted against the 16 oz cup</span><span id="rv-${k}"></span></div>
         <table class="t rec-alt" id="ralt-${k}"></table>
@@ -1656,6 +1771,7 @@ function renderMenu(){
   }); });
   h += `<tr class="tot"><td class="l">Weighted average</td><td id="av-price"></td><td id="av-sold"></td><td id="av-iced"></td><td id="av-cogs"></td><td><span class="m" id="av-m"></span></td><td></td></tr>`;
   $("menuBody").innerHTML = h;
+  fillRecipeCosts(UI.M);
 }
 
 /* recipes that can fill a specialty slot: lab drafts, drinks taken off the menu, archived weeks */
@@ -1730,16 +1846,7 @@ function renderLab(){
     </div>
     <div class="labtop" style="grid-template-columns:1fr;margin-top:8px"><label>What makes it special<input class="in txt" data-bind="drafts.${i}.addin" value="${esc(d.addin || "")}" placeholder="2 pumps caramel, cinnamon"></label></div>
     <div class="rec">
-      <div class="rec-h"><span>Ingredient</span><span class="r">Dose</span><span>Unit</span><span>Used in</span><span class="r">Cost</span><span class="c">Add-in</span><span></span></div>
-      ${d.recipe.map((r,j) => `<div class="rec-r">
-        <select class="in txt" data-bind="drafts.${i}.recipe.${j}.0" aria-label="Ingredient">${ingOpts(r[0])}</select>
-        <input class="in" type="number" min="0" step="0.01" data-bind="drafts.${i}.recipe.${j}.1" data-type="num" value="${r[1]}" aria-label="Dose">
-        <span class="u" id="lu-${i}-${j}"></span>
-        <select class="in txt" data-bind="drafts.${i}.recipe.${j}.3" aria-label="Used in">${Object.entries(SERVE_LBL).map(([v,l]) => `<option value="${v}"${(r[3] || "both") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
-        <span class="calc" id="ll-${i}-${j}"></span>
-        <span class="c"><input type="checkbox" data-bind="drafts.${i}.recipe.${j}.2" data-type="bool"${r[2] ? " checked" : ""} aria-label="Counts as specialty add-in"></span>
-        <button class="x" data-act="labDelLine" data-i="${i}" data-j="${j}" aria-label="Remove line">✕</button></div>`).join("")}
-      <button class="add" data-act="labAddLine" data-i="${i}">Add ingredient</button>
+      ${onMenu ? `<p class="note-sm" style="margin:0 0 8px">Same recipe as the menu. Changes here change the menu too.</p>` : ""}${recipeBlock("drafts", i, d)}
       <table class="t rec-alt" id="lsv-${i}"></table>
       <div class="rec-f"><span>Iced build, counted against the 16 oz cup</span><span id="lv-${i}"></span></div>
     </div>
@@ -1749,31 +1856,8 @@ function renderLab(){
       <button class="btn ghost" data-act="labDel" data-i="${i}">Delete</button>
     </div></div>
   </div>`; }).join("");
-  recalcLab();
+  fillRecipeCosts(M);
 }
-function recalcLab(){ /* fill the cost cells of open lab cards right away */
-  try { const M = model(); M.drafts.forEach((r,i) => r.lines.forEach((l,j) => { set(`lu-${i}-${j}`, l.unitLbl); set(`ll-${i}-${j}`, F.usd3(l.cost)); })); } catch(e){}
-}
-function renderArchive(){
-  const box = $("archBody"); if (!box) return;
-  const A = (S.archive || []).slice().sort((a,b) => b.week.localeCompare(a.week) || a.name.localeCompare(b.name));
-  if (!A.length){ box.innerHTML = `<p class="empty">Specialty drinks are saved here each week the menu changes or sales are logged. Press Save this week to add one now.</p>`; return; }
-  // live sales per week for each archived drink
-  const sold = {};
-  Store.sales.forEach(doc => (doc.lines || []).forEach(l => { const d = findDrink(l.k); if (!d || !l.d) return; const key = weekOf(l.d) + "|" + d.name; sold[key] = (sold[key] || 0) + (+l.q || 0); }));
-  const soldFor = a => { let n = sold[a.week + "|" + a.name] || 0; const d = findDrink(a.name); if (d && d.name !== a.name) n += sold[a.week + "|" + d.name] || 0; return n; };
-  let h = "", wk = null;
-  A.forEach(a => {
-    const idx = S.archive.indexOf(a);
-    if (a.week !== wk){ wk = a.week; h += `<tr class="band"><td colspan="8">Week of ${fmtD(wk)}</td></tr>`; }
-    const onMenu = S.drinks.some(d => d.name === a.name), n = soldFor(a);
-    h += `<tr><td class="l">${esc(a.name)}<div class="note-sm">${esc(a.recipe)}</div></td><td>${F.usd2(a.price)}</td><td>${F.usd3(a.cogs)}</td>
-      <td><span class="${mCls(a.margin)}">${F.frac(a.margin)}</span></td><td>${F.usd3(a.addin)}</td><td>${F.int(n)}</td><td>${F.usd0(n * (a.price - a.cogs))}</td>
-      <td class="l"><div class="lnk">${onMenu ? `<span class="m neutral">On menu</span>` : `<button class="btn ghost sm" data-act="archToLab" data-i="${idx}">Copy to lab</button>`}<button class="x" data-act="archDel" data-i="${idx}" aria-label="Delete archive entry">✕</button></div></td></tr>`;
-  });
-  box.innerHTML = `<div class="scroll"><table class="t"><thead><tr><th class="l">Drink</th><th>Price</th><th>COGS</th><th>Margin</th><th>Add-in</th><th>Sold</th><th>Gross profit</th><th></th></tr></thead><tbody>${h}</tbody></table></div>`;
-}
-
 function renderCharges(){
   const box = $("chargeBody"); if (!box) return;
   box.innerHTML = (S.charges || []).map((x,i) => `<tr>
@@ -2015,7 +2099,6 @@ function recalc(){
     const dc = $("dc-" + k); if (dc){ dc.textContent = F.usd2(r.cogs); dc.title = r.iF > 0 && r.iF < 1 ? `Hot ${F.usd3(r.hot.cogs)}, iced ${F.usd3(r.iced.cogs)}, blended by iced share` : ""; }
     const el = $("dm-" + k); if (el){ el.textContent = F.frac(r.margin); el.className = mCls(r.margin); el.title = `Hot ${F.frac(r.hot.margin)}, iced ${F.frac(r.iced.margin)}, blended by iced share`; }
     const fe = $("df-" + k); if (fe){ fe.textContent = r.fit.t; fe.className = "fit" + (r.fit.c ? " " + r.fit.c : ""); }
-    r.lines.forEach((l,j) => { set(`ru-${k}-${j}`, l.unitLbl); set(`rl-${k}-${j}`, F.usd3(l.cost)); });
     const sv = $("rsv-" + k);
     if (sv){ const row = (lbl, b, on) => on ? `<tr><td class="l">${lbl}</td><td>${F.usd3(b.ing)}</td><td>${F.usd3(b.pkg)}</td><td class="calc">${F.usd3(b.cogs)}</td><td><span class="${mCls(b.margin)}">${F.frac(b.margin)}</span></td><td>${F.usd3(b.add)}</td></tr>` : "";
       sv.innerHTML = `<caption style="text-align:left;padding-bottom:6px;font-size:15px">Sells for <b>${F.usd2(d.price)}</b> hot or iced</caption><thead><tr><th class="l">Serve</th><th>Ingredients</th><th>Cups</th><th>COGS</th><th>Margin</th><th>Add-in</th></tr></thead><tbody>`
@@ -2202,8 +2285,10 @@ function recalc(){
   renderTrack(M);
   renderPayback(M);
   UI.M = M;
+  fillRecipeCosts(M);
   const ae = document.activeElement;
-  if (!($("batchBody") && $("batchBody").contains(ae)) && !($("batchSliders") && $("batchSliders").contains(ae) && ae.type !== "range")) renderBatch();
+  if (["specBody","syrBody"].some(id => $(id) && $(id).contains(ae))) syrOutputs(); else renderSyr();
+  renderSpecOrder();
   if (!($("pane-shifts") && $("pane-shifts").contains(ae) && (ae.tagName === "INPUT" || ae.tagName === "SELECT"))) renderShifts();
   try { renderHome(M); } catch(e){ console.error(e); }
 }
@@ -2231,6 +2316,12 @@ function syrupDefault(){ const L = syrupItems(), p = S.addons && S.addons.syrupI
   return (L.find(i => i.id === p) || L.find(i => /vanilla/i.test(i.name)) || L.find(i => i.kind !== "specialty") || L[0] || {id:"syrup"}).id; }
 function syrupShort(i){ const t = String(i.name || "").replace(/\(.*?\)/g, "").replace(/\b(monin|torani|davinci|syrup)\b/gi, "").replace(/,/g, " ").replace(/\s+/g, " ").trim(); return t || i.name; }
 function syrupIsSpecialty(i){ return i.kind === "specialty"; }
+const logWk = () => weekOf(UI.opt.now || !$("logDate").value ? ymd(new Date()) : $("logDate").value);
+function stockedSyrups(wk){   // a week's pick carries forward until a later week changes it; nothing picked yet means every syrup
+  const all = syrupItems().map(i => i.id), W = S.weeks || {};
+  const k = Object.keys(W).filter(w => w <= wk && W[w] && Array.isArray(W[w].syr)).sort().pop();
+  return k ? W[k].syr.filter(id => all.includes(id)) : all;
+}
 const syOf = l => !l || !l.sy ? "" : l.sy === true ? syrupDefault() : String(l.sy);
 function wholeF(){ const v = S.addons && S.addons.wholePct != null ? +S.addons.wholePct : 85; return Math.min(100, Math.max(0, isFinite(v) ? v : 85)) / 100; }
 function milkOzOf(d){ return d.recipe.filter(r => r[0] === "milk").reduce((s,r) => s + (r[1] || 0), 0); }
@@ -2385,10 +2476,13 @@ function renderLogControls(){
   $("optIce").innerHTML = [["Iced",true],["Hot",false]].map(([l,v]) => `<button class="${o.ice === v ? "on" : ""}" data-act="optIce" data-v="${v}">${l}</button>`).join("");
   $("optMilk").innerHTML = [["2%","dairy"],["Oat","oat"],["Almond","almond"]].map(([l,v]) => `<button class="${o.milk === v ? "on" : ""}" data-act="optMilk" data-v="${v}">${l}</button>`).join("");
   document.querySelectorAll('[data-act=opt]').forEach(b => b.classList.toggle("on", !!o[b.dataset.o]));
-  const SY = syrupItems(), house = SY.filter(i => !syrupIsSpecialty(i)), spec = SY.filter(syrupIsSpecialty), cur = o.sy || "";
-  $("optSyrup").innerHTML = [["None",""]].concat(house.map(i => [syrupShort(i), i.id])).map(([l,v]) => `<button class="${cur === v ? "on" : ""}" data-act="optSy" data-v="${esc(v)}">${esc(l)}</button>`).join("");
-  $("optSpec").innerHTML = spec.map(i => `<button class="tog${cur === i.id ? " on" : ""}" data-act="optSy" data-v="${esc(i.id)}" title="${esc(i.name)}">${esc(syrupShort(i))}</button>`).join("");
-  $("optSpecRow").hidden = !spec.length;
+  const cur = o.sy || "", wk = logWk(), on = new Set(stockedSyrups(wk));
+  $("syGear").classList.toggle("on", !!UI.syPick); $("syGear").setAttribute("aria-expanded", String(!!UI.syPick));
+  $("syPick").hidden = !UI.syPick;
+  $("syPick").innerHTML = `<div class="note-sm">Syrups stocked the week of ${fmtD(wk)}. Unticked ones are hidden from the buttons.</div>`
+    + syrupItems().map(i => `<label><input type="checkbox" data-sypick="${esc(i.id)}"${on.has(i.id) ? " checked" : ""}> ${esc(syrupShort(i))}${syrupIsSpecialty(i) ? ` <span class="note-sm">specialty</span>` : ""}</label>`).join("");
+  $("optSyrup").innerHTML = `<button class="tog${cur ? "" : " on"}" data-act="optSy" data-v="" aria-pressed="${!cur}">None</button>`
+    + syrupItems().filter(i => on.has(i.id) || i.id === cur).map(i => `<button class="tog${syrupIsSpecialty(i) ? " sp" : ""}${cur === i.id ? " on" : ""}" data-act="optSy" data-v="${esc(i.id)}" title="${esc(i.name)}" aria-pressed="${cur === i.id}">${esc(syrupShort(i))}</button>`).join("");
   set("optQty", o.q);
   $("useNow").checked = o.now; $("logDate").disabled = o.now; $("logTime").disabled = o.now;
   if (o.now){ const n = new Date(); $("logDate").value = ymd(n); $("logTime").value = hm(n); }
@@ -2496,6 +2590,13 @@ function renderTrack(M){
     return `<tr><td class="l">${txt}</td><td style="width:40px"><button class="x" data-act="delSale" data-id="${esc(doc.id)}" title="Delete entry" aria-label="Delete entry">✕</button></td></tr>`;
   }).join("") : `<tr><td class="l empty">Entries appear here as you log them.</td></tr>`;
 
+  // syrups customers chose, across all logged sales
+  const tally = {}; let tn = 0;
+  Store.sales.forEach(doc => (doc.lines || []).forEach(l => { const q = +l.q || 0, id = syOf(l); if (!id || q <= 0) return; tally[id] = (tally[id] || 0) + q; tn += q; }));
+  $("syrupTally").innerHTML = tn ? Object.entries(tally).sort((a,b) => b[1] - a[1]).map(([id, q]) => { const g = syrupItems().find(i => i.id === id);
+      return `<tr><td class="l">${esc(g ? syrupShort(g) : id)}${g && syrupIsSpecialty(g) ? ` <span class="note-sm">specialty</span>` : ""}</td><td>${F.int(q)}</td><td class="muted">${F.pct(q / tn * 100)}</td></tr>`; }).join("")
+    : `<tr><td class="l empty">No syrups logged yet.</td></tr>`;
+
   // stock events
   const itemName = id => { const it = trackedItems().find(i => i.id === id); return it ? it : {name:id, unit:""}; };
   const evs = Store.stock.slice().sort((a,b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 10);
@@ -2559,7 +2660,6 @@ async function submitTicket(){
     UI.lastSale = await Store.addSale({kind:"tap", at:new Date().toISOString(), lines});
     UI.ticket = []; renderTicket();
     if (!(S.archive || []).some(a => a.week === weekOf(ymd(new Date())))){ archiveWeek(); markDirty(); }
-    renderArchive();
     toast("toast", `Submitted ${n} ${n === 1 ? "drink" : "drinks"}, ${F.usd2(tot)}, at ${fmtT(time)}.`, true);
   } catch(e){ toast("toast", saveError(e)); renderTicket(); }
 }
@@ -2717,8 +2817,8 @@ function applyConfig(cfg){
   if (!S.cal || typeof S.cal !== "object" || !cfg.cal) S.cal = {rules:[], open:(S.track.dates || []).slice(), closed:[]};
   ["rules","open","closed"].forEach(k => { if (!Array.isArray(S.cal[k])) S.cal[k] = []; });
   if (!S.ops || typeof S.ops !== "object") S.ops = {open:8, close:17, shiftN:2};
-  if (!S.batch || typeof S.batch !== "object") S.batch = {target:50, budget:60, drinks:{}};
-  if (!S.batch.drinks || typeof S.batch.drinks !== "object") S.batch.drinks = {};
+  if (!S.syr || typeof S.syr !== "object" || !cfg.syr) S.syr = {drinks:{}};
+  if (!Array.isArray(S.syrups) || !cfg.syrups) S.syrups = JSON.parse(SYRUP_DEF);
   if (S.exp){ S.exp.load = 0; if (!S.exp.curve || !Array.isArray(S.exp.curve.wd) || !Array.isArray(S.exp.curve.wk)) S.exp.curve = JSON.parse(JSON.stringify(EXP_DEF)); delete S.exp.wdFactor; delete S.exp.growth; }
   if (S.track.useSales == null) S.track.useSales = S.track.auto !== false;
   delete S.track.auto; delete S.track.autoMix; if (S.fees) delete S.fees.autoTxn;
@@ -2731,6 +2831,8 @@ function applyConfig(cfg){
     S.v = 3;
   }
   if (!(cfg.v >= 4)){ seedLab(); S.v = 4; setTimeout(markDirty, 0); }
+  if (!(S.syr && S.syr.linked)) setTimeout(markDirty, 0);
+  linkRecipes();
   ensureDates();
   renderAll();
 }
@@ -2771,7 +2873,7 @@ async function initStore(){
   if (db){
     Store.mode = "db"; Store.db = db; setSave("Connecting to saved data…");
     const fail = e => setSave(e && e.code === "revoked" ? "Saved data is no longer available on this page" : e && e.code === "permission-denied" ? "Saved data is locked. Check the Firestore rules." : "Saved data is reconnecting");
-    db.collection("sales").onSnapshot(snap => { Store.sales = snap.docs.map(x => ({id:x.id, ...x.data()})); recalc(); renderArchive(); }, fail);
+    db.collection("sales").onSnapshot(snap => { Store.sales = snap.docs.map(x => ({id:x.id, ...x.data()})); recalc(); }, fail);
     db.collection("stock").onSnapshot(snap => { Store.stock = snap.docs.map(x => ({id:x.id, ...x.data()})); recalc(); }, fail);
     let seeded = false;
     db.doc("config/main").onSnapshot(snap => {
@@ -2809,11 +2911,20 @@ function onEdit(e){
   if (PAIRS[path]){ const [other, dir] = PAIRS[path], ov = getPath(S, other);
     if (dir < 0 && v >= ov) v = ov - 1; if (dir > 0 && v <= ov) v = ov + 1; el.value = v; }
   setPath(S, path, v);
+  { const m = /^(drinks|drafts)\.(\d+)\.(price|iced|addin)$/.exec(path), src = m && S[m[1]][+m[2]], nm = src && (src.name || "").trim();   // keep the menu and lab copies in step
+    if (nm) S.drinks.concat(S.drafts || []).forEach(x => { if (x !== src && (x.name || "").trim() === nm) x[m[3]] = v; }); }
   markDirty();
   if (el.dataset.rr && RR[el.dataset.rr] && (e.type === "input" || el.type === "checkbox")) RR[el.dataset.rr]();
   recalc();
 }
 document.addEventListener("input", e => { if (e.target.type !== "checkbox") onEdit(e); });
+document.addEventListener("change", e => { const t = e.target;
+  if (t.id === "logDate"){ renderLogControls(); return; }
+  const id = t.dataset && t.dataset.sypick; if (!id) return;
+  const wk = logWk(), on = new Set(stockedSyrups(wk)); if (t.checked) on.add(id); else on.delete(id);
+  if (!S.weeks[wk]) S.weeks[wk] = {}; S.weeks[wk].syr = syrupItems().map(i => i.id).filter(x => on.has(x));
+  if (!t.checked && UI.opt.sy === id) UI.opt.sy = false;
+  markDirty(); renderLogControls(); });
 document.addEventListener("change", e => { if (e.target.tagName === "SELECT" || e.target.type === "checkbox") onEdit(e); });
 
 document.addEventListener("click", e => {
@@ -2890,7 +3001,7 @@ document.addEventListener("click", e => {
     if (a === "cancelRow" && UI.rowBackup) list[i] = JSON.parse(UI.rowBackup);
     else if (list[i]) list[i].url = cleanUrl(list[i].url);
     UI.editRow = null; UI.rowBackup = null; markDirty();
-    renderIngredients(); renderMenu(); renderLab(); renderStockForm(); renderBatch(); recalc(); return; }
+    renderIngredients(); renderMenu(); renderLab(); renderStockForm(); renderSyr(); recalc(); return; }
   if (a === "expDay"){ UI.expDay = t.dataset.d; renderExpCurve(); recalc(); return; }
   if (a === "expImport"){
     const key = UI.expDay; S.exp.curve[key] = S.exp.curve[key].map((v,i) => Math.round(pilotAvgAt(EMIN + i) * 10) / 10);
@@ -2906,20 +3017,23 @@ document.addEventListener("click", e => {
   if (a === "labServe"){ UI.lab.serve = t.dataset.v; renderLab(); return; }
   if (a === "labNew"){ UI.lab.open.add(S.drafts.length); UI.lab.q = ""; UI.lab.season = "all"; UI.lab.serve = "all"; if ($("labQ")) $("labQ").value = "";
     S.drafts.push({name:"New specialty drink", season:"any", sec:"specialty", price:4.50, iced:50, sold:5, recipe:[["milk",6,false,"both"],["beans",18,false,"both"],["ice",6,false,"iced"]], addin:"", budgetHot:0, budgetIced:0});
+    UI.recEdit.add(norm("New specialty drink"));
     markDirty(); renderLab(); recalc(); const f = document.querySelector(".labcard:last-child .labname"); if (f){ f.focus(); f.select(); } return; }
-  if (a === "labAddLine"){ S.drafts[+t.dataset.i].recipe.push([S.ingredients[0].id, 0, false, "both"]); markDirty(); renderLab(); recalc(); return; }
-  if (a === "labDelLine"){ S.drafts[+t.dataset.i].recipe.splice(+t.dataset.j, 1); markDirty(); renderLab(); recalc(); return; }
+  if (a === "recEdit"){ const n = t.dataset.n; UI.recEdit.has(n) ? UI.recEdit.delete(n) : UI.recEdit.add(n); renderMenu(); renderLab(); renderSyr(); recalc(); return; }
+  if (a === "recAdd" || a === "recDel"){ const d = (S[t.dataset.p] || [])[+t.dataset.k]; if (!d) return;   // menu and lab share the array, so this edits both
+    if (a === "recAdd") d.recipe.push([(S.ingredients[0] || {id:""}).id, 0, false, "both"]); else d.recipe.splice(+t.dataset.j, 1);
+    markDirty(); renderMenu(); renderLab(); renderSyr(); recalc(); return; }
   if (a === "labDel"){ S.drafts.splice(+t.dataset.i, 1); UI.lab.open.clear(); markDirty(); renderLab(); recalc(); return; }
   if (a === "labPublish"){
     const i = +t.dataset.i, src = S.drafts[i]; if (!src) return;
     src.name = (src.name || "").trim() || "Untitled drink";
-    const d = JSON.parse(JSON.stringify(src));
+    const d = JSON.parse(JSON.stringify(src)); d.recipe = src.recipe;   // the lab and menu keep one shared recipe
     if (S.drinks.some(x => x.name === d.name)){ toast("labToast", `${d.name} is already on the menu. Rename it first.`); return; }
     d.sec = ($("labSec-" + i) || {}).value || "specialty"; d.sold = d.sold || 5;
     const share = Math.min(100, Math.max(0, +d.iced || 0)) / 100; d.budgetIced = Math.round(5 * share * 100) / 100; d.budgetHot = Math.round((5 - d.budgetIced) * 100) / 100;
     S.retired = (S.retired || []).filter(x => x.name !== d.name);
     S.drinks.push(d);
-    archiveWeek(); markDirty(); renderLab(); renderMenu(); renderDrinkGrid(); renderSpec(); renderArchive(); recalc();
+    archiveWeek(); markDirty(); renderLab(); renderMenu(); renderDrinkGrid(); renderSpec(); recalc();
     toast("labToast", `${d.name} is on the ${(SECS.find(s => s[0] === d.sec) || [0,"menu"])[1].toLowerCase()}. It also shows on the Log sales tab.`); return; }
   if (a === "retire"){
     const k = +t.dataset.k, d = S.drinks[k]; if (!d) return;
@@ -2931,10 +3045,8 @@ document.addEventListener("click", e => {
     S.retired = (S.retired || []).filter(x => x.name !== d.name).concat([JSON.parse(JSON.stringify(d))]);
     if (!inLab(d.name)) S.drafts.push(labCopy(d));
     S.drinks.splice(k, 1); UI.openDrink.clear();
-    markDirty(); renderMenu(); renderDrinkGrid(); renderSpec(); renderLab(); renderArchive(); recalc();
+    markDirty(); renderMenu(); renderDrinkGrid(); renderSpec(); renderLab(); recalc();
     toast("labToast", `${d.name} is off the menu. Its recipe is in the lab and this week's margins are in the archive.`); return; }
-  if (a === "archSave"){ archiveWeek(); markDirty(); renderArchive(); toast("archToast", `Saved the specialty menu for the week of ${fmtD(weekOf(ymd(new Date())))}.`); return; }
-  if (a === "archDel"){ S.archive.splice(+t.dataset.i, 1); markDirty(); renderArchive(); return; }
   if (a === "archToLab"){ const x = S.archive[+t.dataset.i]; if (!x) return;
     if (inLab(x.name)){ toast("labToast", `${x.name} is already in the lab.`); return; }
     S.drafts.push({name:x.name, season:seasonGuess(x.name), sec:"specialty", price:x.price, iced:x.iced, sold:5, addin:"", recipe:(x.lines || []).map(l => [l.id, l.q, l.addin, l.serve]), budgetHot:0, budgetIced:0});
@@ -2985,24 +3097,29 @@ document.addEventListener("click", e => {
   if (a === "wkApply"){ const n = applyWeek(t.dataset.w); toast("calToast", n ? `Put this week's specialty plan on the menu.` : "The menu already matches the plan."); renderShifts(); return; }
   if (a === "wkClear"){ if (S.weeks) delete S.weeks[t.dataset.w]; markDirty(); renderShifts(); return; }
   if (a === "dayShifts"){ const x = ensureDay(t.dataset.d); x.n = Math.max(1, Math.min(6, x.n + +t.dataset.v)); ensureDay(t.dataset.d); markDirty(); renderShifts(); renderDayPanel(); return; }
-  if (a === "batchBase"){ const d = S.drinks[+t.dataset.k], b = BASES[t.dataset.b]; if (!d || !b) return;
-    const keep = d.recipe.filter(r => r[2] || r[0] === "ice"); d.recipe = b.lines.map(l => [l[0], l[1], false, "both"]).concat(keep);
-    markDirty(); renderMenu(); renderBatch(); recalc(); return; }
-  if (a === "batchSync"){ Object.values(S.batch.drinks || {}).forEach(c => c.n = null); markDirty(); renderBatch(); recalc(); return; }
+  if (a === "syrEdit"){ const k = t.dataset.e; UI.syrEdit.has(k) ? UI.syrEdit.delete(k) : UI.syrEdit.add(k); renderSyr(); return; }
+  if (a === "syrNew"){ const id = "s" + Date.now().toString(36); S.syrups.push({id, name:"New syrup", base:true, yield:32, lines:[], steps:""}); UI.syrEdit.add("s:" + id); markDirty(); renderSyr(); recalc(); return; }
+  if (a === "syrDelS"){ const s = S.syrups[+t.dataset.i]; if (!s || s.id === "simple" || !confirm("Delete " + s.name + "? It comes out of every recipe that uses it.")) return;
+    S.syrups.splice(+t.dataset.i, 1);
+    S.drinks.concat(S.drafts || []).forEach(d => { if (Array.isArray(d.recipe)) for (let j = d.recipe.length - 1; j >= 0; j--) if (d.recipe[j][0] === SYR_PFX + s.id) d.recipe.splice(j, 1); });
+    markDirty(); renderSyr(); renderMenu(); renderLab(); recalc(); return; }
+  if (a === "syrLineAdd" || a === "syrLineDel"){ const s = S.syrups[+t.dataset.i]; if (!s) return; if (!Array.isArray(s.lines)) s.lines = [];
+    if (a === "syrLineAdd") s.lines.push({item:"", qty:0, unit:"cup", cost:0}); else s.lines.splice(+t.dataset.j, 1); markDirty(); renderSyr(); recalc(); return; }
+  if (a === "homeWk"){ const v = +t.dataset.v, W = UI.homeWks || []; UI.homeWk = v === 0 ? weekOf(ymd(new Date())) : W[Math.max(0, Math.min(W.length - 1, W.indexOf(UI.homeWk) + v))] || UI.homeWk; renderHome(UI.M || model()); return; }
+  if (a === "syGear"){ UI.syPick = !UI.syPick; renderLogControls(); return; }
   if (a === "addCharge"){ S.charges.push({name:"New charge", amount:0}); markDirty(); renderCharges(); recalc(); const f = document.querySelector("#chargeBody tr:last-child .in"); if (f){ f.focus(); f.select(); } return; }
   if (a === "delCharge"){ S.charges.splice(+t.dataset.i, 1); markDirty(); renderCharges(); recalc(); return; }
   if (a === "menuEdit"){ UI.menuEdit = true; UI.menuBackup = JSON.stringify({drinks:S.drinks, drafts:S.drafts, retired:S.retired, archive:S.archive}); UI.nameBase = S.drinks.map(d => d.name); renderMenu(); recalc(); return; }
   if (a === "menuDone" || a === "menuCancel"){
-    if (a === "menuCancel" && UI.menuBackup){ const bk = JSON.parse(UI.menuBackup); S.drinks = bk.drinks; S.drafts = bk.drafts; S.retired = bk.retired; S.archive = bk.archive; }
+    if (a === "menuCancel" && UI.menuBackup){ const bk = JSON.parse(UI.menuBackup); S.drinks = bk.drinks; S.drafts = bk.drafts; S.retired = bk.retired; S.archive = bk.archive; linkRecipes(); }
     else if (UI.menuBackup){   // renamed drinks keep their old names so logged sales still match
       const old = (UI.nameBase || []).map(n => ({name:n}));
       S.drinks.forEach((d,k) => { const o = old[k]; if (!d.name || !d.name.trim()) d.name = o ? o.name : "Untitled drink"; d.name = d.name.trim();
-        if (o && o.name !== d.name){ d.aliases = [...new Set((d.aliases || []).concat(o.name))]; S.archive.forEach(a => { if (a.name === o.name && a.week === weekOf(ymd(new Date()))) a.name = d.name; }); } }); }
+        if (o && o.name !== d.name){ S.drafts.forEach(x => { if (x.recipe === d.recipe) x.name = d.name; });   // the lab copy follows the rename so the recipes stay linked
+          d.aliases = [...new Set((d.aliases || []).concat(o.name))]; S.archive.forEach(a => { if (a.name === o.name && a.week === weekOf(ymd(new Date()))) a.name = d.name; }); } }); }
     UI.menuEdit = false; UI.menuBackup = null; markDirty();
-    renderMenu(); renderDrinkGrid(); renderSpec(); renderLab(); renderArchive(); recalc(); return; }
+    renderMenu(); renderDrinkGrid(); renderSpec(); renderLab(); recalc(); return; }
   if (a === "toggleDrink"){ const k = +t.dataset.k; UI.openDrink.has(k) ? UI.openDrink.delete(k) : UI.openDrink.add(k); renderMenu(); }
-  else if (a === "addLine"){ const k = +t.dataset.k; S.drinks[k].recipe.push([S.ingredients[0].id, 0, false, "both"]); renderMenu(); }
-  else if (a === "delLine"){ S.drinks[+t.dataset.k].recipe.splice(+t.dataset.j, 1); renderMenu(); }
   else if (a === "addIng"){ S.ingredients.push({id:"c" + Date.now(), kind:t.dataset.kind === "specialty" ? "specialty" : "core", name:t.dataset.kind === "specialty" ? "New specialty ingredient" : "New ingredient", price:0, size:1, unit:"oz", vendor:"", url:"", vol:1, custom:true});
     UI.editRow = "ing-" + (S.ingredients.length - 1); UI.rowBackup = null; renderIngredients(); renderMenu();
     setTimeout(() => { const f = document.querySelector("tr.editing .in"); if (f){ f.focus(); f.select(); } }, 0); }
@@ -3068,7 +3185,9 @@ document.addEventListener("change", e => {
     if (Array.isArray(p)){ p.forEach(q => { if (!(q.end > q.start)) q.end = q.start + 0.5; }); p.sort((a,b) => a.start - b.start); }
     setTimeout(() => { renderPattern(); renderShifts(); renderDayPanel(); recalc(); }, 0); return; }
   if ($("dayPanel") && $("dayPanel").contains(tg) && tg.dataset && tg.dataset.bind){ setTimeout(() => { renderDayPanel(); renderShifts(); }, 0); }
-  if ($("batchBody") && $("batchBody").contains(tg)){ setTimeout(renderBatch, 0); }
+  { const recipe = /^(drinks|drafts)\.\d+\.(recipe\.|price$|iced$)/.test((tg.dataset && tg.dataset.bind) || "");   // a recipe shows in up to three places, so redraw them all
+    if ((recipe || ["specBody","syrBody"].some(id => $(id) && $(id).contains(tg))) && tg.type !== "range")
+      setTimeout(() => { renderSyr(); if (recipe){ renderMenu(); renderLab(); } recalc(); }, 0); }
 });
 document.addEventListener("input", e => { const d = e.target.dataset; if (d && d.sl === "amt"){ const l = (UI.stkLines || [])[+d.i]; if (l) l.amt = e.target.value; } });
 document.addEventListener("change", e => {
@@ -3085,74 +3204,133 @@ function swapSpecialty(k, key){
   S.retired = (S.retired || []).filter(x => x.name !== cur.name).concat([JSON.parse(JSON.stringify(cur))]);
   const o = JSON.parse(JSON.stringify(src.obj));
   const iced = o.iced != null ? +o.iced : +cur.iced, share = Math.min(100, Math.max(0, iced)) / 100, pool = (+cur.budgetHot || 0) + (+cur.budgetIced || 0);
-  const nd = {name:o.name, sec:cur.sec, price:+o.price || cur.price, iced, sold:cur.sold, recipe:o.recipe || [], addin:o.addin || "",
+  const nd = {name:o.name, sec:cur.sec, price:+o.price || cur.price, iced, sold:cur.sold, recipe:src.obj.recipe || [], addin:o.addin || "",
               aliases:o.aliases || [], budgetIced:Math.round(pool * share * 100) / 100, budgetHot:Math.round(pool * (1 - share) * 100) / 100};
   if (!inLab(cur.name)) S.drafts.push(labCopy(cur));
   S.retired = S.retired.filter(x => x.name !== nd.name);
   S.drinks[k] = nd; if (UI.nameBase) UI.nameBase[k] = nd.name;
   UI.openDrink.add(k);
-  renderMenu(); renderDrinkGrid(); renderSpec(); renderLab(); renderArchive(); recalc();
+  renderMenu(); renderDrinkGrid(); renderSpec(); renderLab(); recalc();
   toast("labToast", `${nd.name} is in the specialty slot with its recipe, price and iced share. ${cur.name} went back to the recipe lab and the archive. Press Done to keep it.`);
 }
 
-/* ------------------------------------------------ specialty batch planner */
-const BASES = {coffee:{label:"Coffee", lines:[["milk",6],["beans",18]]}, matcha:{label:"Matcha", lines:[["milk",6],["matcha",3],["water",1]]}};
-const baseOf = d => d.recipe.some(r => r[0] === "beans" && !r[2]) ? "coffee" : d.recipe.some(r => r[0] === "matcha" && !r[2]) ? "matcha" : "";
-const bkey = d => norm(d.name) || "drink";
-function batchCfg(d){
-  if (!S.batch.drinks) S.batch.drinks = {};
-  let c = S.batch.drinks[bkey(d)];
-  if (!c) c = S.batch.drinks[bkey(d)] = {on: !/brown sugar shaken/i.test(d.name), n:null};
-  return c;
+/* ------------------------------------------------ specialty drinks and custom syrups
+   The week's lineup is its two specialty slots plus the Strawberry Matcha Latte. A drink can use a custom syrup;
+   one batch makes as many drinks as its volume allows at the syrup's pumps per drink (0.25 oz a pump). Syrups
+   marked base are the simple syrup base plus flavoring, and the flavoring is the additional cost. */
+const skey = d => norm(d.name) || "drink";
+const nfmt = n => String(Math.round((+n || 0) * 100) / 100);
+const lineCost = s => (s.lines || []).reduce((t,l) => t + (+l.cost || 0), 0);
+const simpleSyrup = () => (S.syrups || []).find(s => s.id === "simple");
+function syrupCalc(s, pumps){   // pumps come from the drink's recipe line
+  const b = s.base && s.id !== "simple" ? simpleSyrup() : null;
+  const baseCost = b ? lineCost(b) : 0, flavor = lineCost(s), vol = Math.max(0, +(b ? b.yield : s.yield) || 0); pumps = Math.max(0, +pumps || 0);
+  const cost = baseCost + flavor, perOz = vol > 0 ? cost / vol : 0;
+  return {b, baseCost, flavor, cost, vol, pumps, perOz, perPump:perOz * PUMP_OZ, perDrink:perOz * PUMP_OZ * pumps, perBatch: pumps > 0 ? Math.floor(vol / (pumps * PUMP_OZ) + 1e-9) : 0};
 }
-function batchModel(){
+function syrCfg(d){   // how much of this drink to make this week: {n} batches of its syrup, or drinks when it has none
+  if (!S.syr || typeof S.syr !== "object") S.syr = {drinks:{}};
+  if (!S.syr.drinks || typeof S.syr.drinks !== "object") S.syr.drinks = {};
+  return S.syr.drinks[skey(d)] || (S.syr.drinks[skey(d)] = {});
+}
+function soldByDrink(){
+  const out = {};
+  Store.sales.forEach(doc => (doc.lines || []).forEach(l => { const d = findDrink(l.k), q = +l.q || 0; if (!d || q <= 0) return;
+    const o = out[norm(d.name)] || (out[norm(d.name)] = {n:0, days:new Set()}); o.n += q; if (l.d) o.days.add(l.d); }));
+  return out;
+}
+function specModel(T){
   const map = {}; S.ingredients.forEach(i => map[i.id] = i);
-  const unit = id => map[id] && map[id].size > 0 ? map[id].price / map[id].size : 0;
-  const rows = [], need = {};
-  S.drinks.forEach((d,k) => {
-    if (secOf(d) === "core") return;
-    const c = batchCfg(d), n = c.n != null ? Math.max(0, +c.n || 0) : Math.max(0, +S.batch.target || 0);
+  const wk = buyWeek(T), names = weekSpec(wk).names.filter(Boolean);
+  const sm = S.drinks.find(d => /strawberry matcha/i.test(d.name)); if (sm && !names.includes(sm.name)) names.push(sm.name);
+  const sold = soldByDrink(), items = {}, adds = {};
+  const rows = names.map(nm => {
+    let path = "drinks", k = S.drinks.findIndex(d => d.name === nm);
+    if (k < 0){ path = "drafts"; k = (S.drafts || []).findIndex(d => d.name === nm); }
+    if (k < 0) return null;
+    const d = S[path][k], c = syrCfg(d), sl = d.recipe.find(r => syrupOfLine(r[0])), s = sl ? syrupOfLine(sl[0]) : null;   // ponytail: batches follow the first syrup in the recipe
+    const C = s ? syrupCalc(s, sl[1]) : null;
+    const n = Math.max(0, Math.round(c.n != null ? +c.n || 0 : s ? 1 : 30)), drinks = s ? n * C.perBatch : n;
     const iF = Math.min(100, Math.max(0, +d.iced || 0)) / 100, share = sv => sv === "iced" ? iF : sv === "hot" ? 1 - iF : 1;
-    const baseCost = d.recipe.filter(r => !r[2] && r[0] !== "ice").reduce((s,r) => s + (r[1] || 0) * share(r[3] || "both") * unit(r[0]), 0) * n;
-    const lines = d.recipe.filter(r => r[2]).map(r => { const g = map[r[0]] || {name:r[0], unit:"", size:0, price:0}, per = (r[1] || 0) * share(r[3] || "both");
-      const spec = isSpecIng(g), q = per * n, packs = spec && g.size > 0 ? Math.ceil(q / g.size - 1e-9) : 0;
-      return {id:r[0], name:g.name, unit:g.unit, per, q, size:g.size, price:g.price, packs, spec, cost:packs * g.price, makes: per > 0 && g.size > 0 ? g.size / per : Infinity}; });
-    if (c.on) lines.filter(l => l.spec).forEach(l => need[l.id] = (need[l.id] || 0) + l.q);
-    rows.push({k, d, c, n, on:c.on, base:baseOf(d), baseCost, lines, cost:lines.reduce((s,l) => s + l.cost, 0)});
-  });
-  const buy = Object.entries(need).map(([id,q]) => { const g = map[id] || {name:id, unit:"", size:0, price:0};
-    const packs = g.size > 0 ? Math.ceil(q / g.size - 1e-9) : 0;
-    return {id, name:g.name, unit:g.unit, q, size:g.size, packs, cost:packs * g.price, used:q * unit(id), vendor:g.vendor || "", url:g.url || "",
-            users:rows.filter(r => r.on && r.lines.some(l => l.id === id)).map(r => r.d.name)}; });
-  const spend = buy.reduce((s,b) => s + b.cost, 0);
-  return {rows, buy, spend, used:buy.reduce((s,b) => s + b.used, 0), baseCost:rows.filter(r => r.on).reduce((s,r) => s + r.baseCost, 0), left:(+S.batch.budget || 0) - spend};
+    const need = [];
+    if (s) [].concat(C.b ? C.b.lines : [], s.lines || []).forEach(l => { const q = (+l.qty || 0) * n; if (q <= 0) return;
+      need.push({item:l.item, unit:l.unit, q});
+      const key = norm(l.item) + "|" + (l.unit || ""), x = items[key] || (items[key] = {item:l.item, unit:l.unit, q:0, cost:0, users:new Set()});
+      x.q += q; x.cost += (+l.cost || 0) * n; x.users.add(s.name); });
+    d.recipe.filter(r => r[2] && map[r[0]]).forEach(r => { const g = map[r[0]], q = (r[1] || 0) * share(r[3] || "both") * drinks; if (q <= 0) return;
+      need.push({item:g.name, unit:g.unit, q, size:g.size});
+      const x = adds[g.id] || (adds[g.id] = {id:g.id, name:g.name, unit:g.unit, size:g.size, price:+g.price || 0, vendor:String(g.vendor || "Other").trim() || "Other", url:g.url || "", q:0, users:new Set()});
+      x.q += q; x.users.add(d.name); });
+    return {d, path, k, key:skey(d), c, s, C, n, drinks, sold:sold[norm(d.name)], need};
+  }).filter(Boolean);
+  const addList = Object.values(adds).map(x => { const packs = x.size > 0 ? Math.ceil(x.q / x.size - 1e-9) : 0; return {...x, users:[...x.users], packs, cost:packs * x.price}; });
+  const itemList = Object.values(items).map(x => ({...x, users:[...x.users]}));
+  return {wk, rows, items:itemList, adds:addList, spend:addList.reduce((t,x) => t + x.cost, 0) + itemList.reduce((t,x) => t + x.cost, 0)};
 }
-function renderBatch(){
-  const body = $("batchBody"); if (!body) return;
-  if (!$("batchSliders").innerHTML) $("batchSliders").innerHTML = slider("batch.target", "Drinks per specialty drink, per weekend", 10, 150, 5, "int", true)
-    + `<div class="fields" style="margin:10px 0 14px;max-width:440px"><label>Weekly perishable budget</label><input class="in" type="number" min="0" step="5" data-bind="batch.budget" data-type="num" aria-label="Weekly perishable budget"></div>`;
-  const B = batchModel();
-  body.innerHTML = B.rows.map(r => { const key = bkey(r.d);
-    const base = r.base ? `<div class="segc sm" style="margin-top:6px">${Object.entries(BASES).map(([b,o]) => `<button class="${r.base === b ? "on" : ""}" data-act="batchBase" data-k="${r.k}" data-b="${b}">${o.label}</button>`).join("")}</div>` : `<div class="note-sm">No coffee or matcha base</div>`;
-    const lines = r.lines.length ? r.lines : [null], span = lines.length;
-    return lines.map((l,j) => `<tr class="${r.on ? "" : "batch-off"}${j < span - 1 ? " nob" : ""}">${j === 0 ? `
-      <td class="l" rowspan="${span}"><input type="checkbox" data-bind="batch.drinks.${key}.on" data-type="bool"${r.on ? " checked" : ""} aria-label="Include ${esc(r.d.name)} in the batch"></td>
-      <td class="l" rowspan="${span}"><b style="font-weight:600">${esc(r.d.name)}</b><div class="note-sm">${esc(secShort(secOf(r.d)))}${r.on ? "" : ". Fixed cost, shelf stable"}</div>${base}</td>
-      <td rowspan="${span}"><input class="in w-sm" type="number" min="0" step="5" data-bind="batch.drinks.${key}.n" data-type="num" value="${r.n}" aria-label="${esc(r.d.name)} drinks this weekend"${r.on ? "" : " disabled"}></td>` : ""}
-      ${l ? `<td class="l">${esc(l.name)}<div class="note-sm">${F.n2(l.per).replace(/\.?0+$/, "")} ${esc(l.unit)} per drink${l.spec ? "" : ". Core stock"}</div></td>
-      <td class="nw">${fmtQty(l.q, l.unit)}</td>
-      <td class="l nw">${l.spec ? (l.size > 0 ? `${l.packs} × ${fmtQty(l.size, l.unit)}` : "") : `<span class="muted">From stock</span>`}</td>
-      <td class="nw">${l.spec && isFinite(l.makes) ? `${F.int(Math.floor(l.makes))} drinks` : ""}</td>
-      <td class="calc nw">${l.spec ? F.usd2(l.cost) : ""}</td>` : `<td class="l note-sm" colspan="5">Tick add-in lines in the recipe</td>`}</tr>`).join(""); }).join("")
-    || `<tr><td class="l empty" colspan="8">No specialty or signature drinks on the menu.</td></tr>`;
-  const over = B.left < 0;
-  $("batchBuy").innerHTML = `<thead><tr><th class="l">Item</th><th class="l">For</th><th>Need</th><th class="l">Buy</th><th>Cost</th><th></th></tr></thead><tbody>`
-    + B.buy.map(b => `<tr><td class="l">${esc(b.name)}</td><td class="l note-sm">${esc(b.users.join(", "))}</td><td>${fmtQty(b.q, b.unit)}</td><td class="l">${b.size > 0 ? `${b.packs} × ${fmtQty(b.size, b.unit)}` : ""}</td><td>${F.usd2(b.cost)}</td><td>${b.url ? `<a class="btn ghost sm" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">Buy</a>` : ""}</td></tr>`).join("")
-    + `<tr class="tot"><td class="l">Specialty buy for the weekend</td><td></td><td></td><td></td><td>${F.usd2(B.spend)}</td><td></td></tr>`
-    + `<tr><td class="l">Weekly budget</td><td></td><td></td><td></td><td>${F.usd2(+S.batch.budget || 0)}</td><td></td></tr>`
-    + `<tr><td class="l">${over ? "Over budget by" : "Left in the budget"}</td><td></td><td></td><td></td><td class="${over ? "neg-t" : "status-ok"}"><b>${F.usd2(Math.abs(B.left))}</b></td><td></td></tr>`
-    + `<tr><td class="l muted">Used at the recipe dose</td><td></td><td></td><td></td><td class="muted">${F.usd2(B.used)}</td><td></td></tr>`
-    + `<tr><td class="l muted">Coffee or matcha base for these drinks, from core stock</td><td></td><td></td><td></td><td class="muted">${F.usd2(B.baseCost)}</td><td></td></tr></tbody>`;
+const soldTxt = s => s ? `${F.int(s.n)} sold over ${s.days.size} cafe ${s.days.size === 1 ? "day" : "days"}, about ${F.int(s.n / Math.max(1, s.days.size))} a day` : "—";
+const rng = (path, label, min, max, step, v) => `<div class="srow"><div class="shead"><span>${label}</span></div><input type="range" class="acc" min="${min}" max="${max}" step="${step}" data-bind="${path}" data-type="num" value="${v}" aria-label="${esc(label)}"></div>`;
+function drinkOut(r){
+  return `<div class="syr-make">${r.s ? `<b>${r.n} ${r.n === 1 ? "batch" : "batches"}</b> × ${F.int(r.C.perBatch)} drinks = <b>${F.int(r.drinks)} drinks</b>` : `<b>${F.int(r.drinks)} drinks</b> this week`}${r.s && r.C.cost > 0 ? `<span class="muted">, syrup ${F.usd2(r.C.perDrink)} a drink</span>` : ""}</div>`
+    + (r.need.length ? `<table class="t"><thead><tr><th class="l">You need</th><th>Amount</th><th class="l">Packs</th></tr></thead><tbody>`
+      + r.need.map(l => `<tr><td class="l">${esc(l.item)}</td><td class="nw">${nfmt(l.q)} ${esc(l.unit || "")}</td><td class="l nw">${l.size > 0 ? `${Math.ceil(l.q / l.size - 1e-9)} × ${fmtQty(l.size, l.unit)}` : ""}</td></tr>`).join("") + `</tbody></table>`
+      : `<p class="note-sm">${r.n ? "Add a syrup or tick add-in lines in the recipe to see what to buy." : "None planned this week."}</p>`);
+}
+function drinkCard(r){
+  return `<div class="syr"><div class="syr-h"><b>${esc(r.d.name)}</b><span class="kind ops">${esc(secShort(secOf(r.d)))}</span></div>
+    <div class="syr-sold"><span class="muted">Sold before</span> <b>${soldTxt(r.sold)}</b></div>
+    <div class="syr-2"><div>${recipeBlock(r.path, r.k, r.d)}</div><div>${r.s ? rng(`syr.drinks.${r.key}.n`, "Batches of syrup this week", 0, 8, 1, r.n) : rng(`syr.drinks.${r.key}.n`, "Drinks this week", 0, 150, 5, r.n)}<div data-syrout="${r.key}">${drinkOut(r)}</div></div></div></div>`;
+}
+function syrupStats(s){
+  const C = syrupCalc(s);
+  return `<table class="t"><tr><td class="l">Batch makes</td><td>${nfmt(C.vol / 8)} cups, ${nfmt(C.vol)} oz</td></tr>`
+    + (C.b ? `<tr><td class="l">Simple syrup base</td><td>${F.usd2(C.baseCost)}</td></tr><tr><td class="l">Flavoring, additional</td><td>${F.usd2(C.flavor)}</td></tr>` : "")
+    + `<tr class="sub"><td class="l">Batch cost</td><td>${F.usd2(C.cost)}</td></tr><tr><td class="l">Per oz</td><td>${F.usd3(C.perOz)}</td></tr><tr><td class="l">Per pump, 0.25 oz</td><td>${F.usd3(C.perPump)}</td></tr>`
+    + `</table><h4 style="margin-top:12px">In menu recipes</h4><table class="t">`
+    + (S.drinks.map(d => ({d, l:d.recipe.find(x => x[0] === SYR_PFX + s.id)})).filter(x => x.l).map(({d, l}) => { const U = syrupCalc(s, l[1]);
+        return `<tr><td class="l">${esc(d.name)}, ${nfmt(l[1])} pumps</td><td>${F.usd2(U.perDrink)} a drink</td><td>${F.int(U.perBatch)} a batch</td></tr>`; }).join("")
+      || `<tr><td class="l muted">Not in a menu recipe. Add it from a drink's Edit recipe.</td></tr>`) + `</table>`
+    + (C.cost > 0 ? "" : `<p class="note-sm">Add what each ingredient cost to see the cost per drink.</p>`);
+}
+function syrupCard(s, i){
+  const ed = UI.syrEdit.has("s:" + s.id), C = syrupCalc(s), p = `syrups.${i}`, simple = s.id === "simple";
+  const li = l => `<li><span>${esc(l.item || "Ingredient")}</span><b>${nfmt(l.qty)} ${esc(l.unit || "")}${+l.cost ? ` <span class="muted">${F.usd2(+l.cost)}</span>` : ""}</b></li>`;
+  const view = (C.b ? `<h4>Simple syrup base</h4><ul class="rcard">${C.b.lines.map(li).join("")}</ul><h4>Flavoring, additional cost</h4>` : "")
+    + `<ul class="rcard">${(s.lines || []).map(li).join("") || `<li class="muted">No ${C.b ? "flavoring" : "ingredients"} yet</li>`}</ul>`
+    + (s.steps ? `<ol class="rc-steps">${String(s.steps).split(/\n+/).map(t => t.trim()).filter(Boolean).map(t => `<li>${esc(t)}</li>`).join("")}</ol>` : "");
+  const edit = `<div class="rcard-ed">
+      <div class="syr-line syr-yield"><span>Name</span><input class="in txt" data-bind="${p}.name" value="${esc(s.name)}" aria-label="Syrup name"></div>
+      ${simple ? "" : `<label class="note-sm"><input type="checkbox" data-bind="${p}.base" data-type="bool"${s.base ? " checked" : ""}> Built on the simple syrup base</label>`}
+      ${C.b ? "" : `<div class="syr-line syr-yield"><span>Batch makes</span><input class="in" type="number" min="0" step="0.5" data-bind="${p}.yield" data-type="num" value="${+s.yield || 0}" aria-label="Batch yield in ounces"><span>oz</span></div>`}
+      <div class="rc-hd"><span>${C.b ? "Flavoring" : "Ingredient"}</span><span>Amount</span><span>Unit</span><span>Cost</span><span></span></div>
+      ${(s.lines || []).map((l,j) => `<div class="syr-line sl5"><input class="in txt" data-bind="${p}.lines.${j}.item" value="${esc(l.item)}" aria-label="Ingredient"><input class="in" type="number" min="0" step="0.01" data-bind="${p}.lines.${j}.qty" data-type="num" value="${+l.qty || 0}" aria-label="Amount"><input class="in txt" data-bind="${p}.lines.${j}.unit" value="${esc(l.unit)}" aria-label="Unit"><input class="in" type="number" min="0" step="0.01" data-bind="${p}.lines.${j}.cost" data-type="num" value="${+l.cost || 0}" aria-label="Cost"><button class="x" data-act="syrLineDel" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></div>`).join("")}
+      <button class="btn ghost sm" data-act="syrLineAdd" data-i="${i}">Add ${C.b ? "flavoring" : "ingredient"}</button>
+      <label class="note-sm rc-stl">Steps, one per line<textarea class="in txt" rows="4" data-bind="${p}.steps" aria-label="Steps">${esc(s.steps || "")}</textarea></label>
+      ${simple ? "" : `<button class="btn ghost sm neg-t" data-act="syrDelS" data-i="${i}">Delete syrup</button>`}</div>`;
+  return `<div class="syr"><div class="syr-h"><b>${esc(s.name)}</b>${C.b ? `<span class="kind ops">Flavored simple syrup</span>` : ""}<button class="btn ghost sm syr-ed" data-act="syrEdit" data-e="s:${esc(s.id)}">${ed ? "Done" : "Edit"}</button></div>
+    <div class="syr-2"><div>${ed ? edit : view}</div><div data-systats="${i}">${syrupStats(s)}</div></div></div>`;
+}
+function syrOutputs(){
+  specModel(UI.T).rows.forEach(r => { const el = document.querySelector(`[data-syrout="${r.key}"]`); if (el) el.innerHTML = drinkOut(r); });
+  (S.syrups || []).forEach((s,i) => { const el = document.querySelector(`[data-systats="${i}"]`); if (el) el.innerHTML = syrupStats(s); });
+}
+function renderSyr(){
+  const a = $("specBody"), b = $("syrBody"); if (!a || !b) return;
+  if (!UI.syrEdit) UI.syrEdit = new Set();
+  const M = specModel(UI.T);
+  set("specHint", `Week of ${fmtD(M.wk)}: that week's two specialty drinks plus the Strawberry Matcha Latte. Change the specialty lineup on Weeks and shifts. What you need goes to the specialty order sheet on Inventory and ingredients.`);
+  a.innerHTML = M.rows.map(drinkCard).join("") || `<p class="empty">No specialty drinks planned for that week.</p>`;
+  b.innerHTML = (S.syrups || []).map(syrupCard).join("");
+  fillRecipeCosts(UI.M);
+}
+function renderSpecOrder(){
+  const box = $("specOrder"); if (!box) return;
+  const B = specModel(UI.T);
+  set("specOrderHint", `Week of ${fmtD(B.wk)}. Filled in from the specialty drinks and custom syrups on Menu and recipes. Everything here is bought fresh for the week and kept off the regular order above.`);
+  if (!B.items.length && !B.adds.length){ box.innerHTML = `<p class="empty">Nothing planned. Set syrups and batches on Menu and recipes.</p>`; return; }
+  box.innerHTML = `<div class="scroll"><table class="t"><thead><tr><th class="l">Item</th><th class="l">For</th><th>Amount</th><th class="l">Buy</th><th>Cost</th><th></th></tr></thead><tbody>`
+    + (B.items.length ? `<tr class="band"><td class="l" colspan="6">Syrup ingredients</td></tr>` + B.items.map(x => `<tr><td class="l">${esc(x.item)}</td><td class="l note-sm">${esc(x.users.join(", "))}</td><td class="nw">${nfmt(x.q)} ${esc(x.unit || "")}</td><td></td><td>${x.cost ? F.usd2(x.cost) : "—"}</td><td></td></tr>`).join("") : "")
+    + (B.adds.length ? `<tr class="band"><td class="l" colspan="6">Drink add-ins</td></tr>` + B.adds.map(b => `<tr><td class="l">${esc(b.name)}<div class="note-sm">${esc(b.vendor)}</div></td><td class="l note-sm">${esc(b.users.join(", "))}</td><td class="nw">${fmtQty(b.q, b.unit)}</td><td class="l nw">${b.size > 0 ? `${b.packs} × ${fmtQty(b.size, b.unit)}` : ""}</td><td>${F.usd2(b.cost)}</td><td class="nw">${b.url ? `<a class="btn ghost sm" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">Buy</a>` : ""}</td></tr>`).join("") : "")
+    + `<tr class="tot"><td class="l">Specialty order total</td><td></td><td></td><td></td><td>${F.usd2(B.spend)}</td><td></td></tr></tbody></table></div>`;
 }
 
 /* ------------------------------------------------------ weeks and shifts */
@@ -3317,7 +3495,7 @@ function applyWeek(wk){
   specSlots().forEach((k,i) => { const nm = sp.names[i]; if (!nm || S.drinks[k].name === nm || S.drinks.some(d => d.name === nm)) return;
     const idx = S.drafts.findIndex(x => (x.name || "").trim() === nm); if (idx < 0) return;
     swapSpecialty(k, "lab:" + idx); n++; });
-  UI.openDrink.clear(); markDirty(); renderMenu(); renderBatch(); recalc();
+  UI.openDrink.clear(); markDirty(); renderMenu(); renderSyr(); recalc();
   return n;
 }
 
@@ -3446,47 +3624,45 @@ function setShiftNames(d, i, fn){ const x = ensureDay(d); x.names[i] = fn(namesI
 
 /* ------------------------------------------------------------------ home */
 function renderHome(M){
-  if (!$("homeNext")) return;
-  const today = ymd(new Date()), SD = UI.SD || salesDays(), T = UI.T || {rows:[], orders:[]}, dates = S.track.dates.slice().sort();
-  const next = dates.find(d => d >= today);
-  // next cafe day
-  if (next){ const x = ensureDay(next), st = staffing(next), sp = weekSpec(weekOf(next));
-    const when = next === today ? "Today" : next === addDays(today, 1) ? "Tomorrow" : fmtD(next);
-    $("homeNext").innerHTML = `<div><div class="eyebrow">Next cafe day</div><div class="big">${when}, ${tfmt(x.open)} to ${tfmt(x.close)}</div>
-      <div class="sub"><span class="kind ${x.kind}">${KIND_LBL[x.kind]}</span> ${st.filled} of ${st.seats} spots staffed. Planned ${F.int(plannedFor(next, M))} drinks.${sp.names.length ? ` Specialty: ${esc(sp.names.join(" and "))}.` : ""}</div></div>
-      <div class="acts"><button class="btn" data-act="dpShow" data-d="${next}">${st.filled < st.seats ? "Staff it" : "See shifts"}</button><button class="btn ghost" data-act="tab" data-tab="log">Log sales</button></div>`; }
-  else $("homeNext").innerHTML = `<div><div class="eyebrow">Next cafe day</div><div class="big">Nothing scheduled</div><div class="sub">Paint days on the calendar or add a repeating rule.</div></div><div class="acts"><button class="btn" data-act="tab" data-tab="shifts">Open the calendar</button></div>`;
-  // next 30 days and totals so far
-  const end30 = addDays(today, 29), soon = dates.filter(d => d >= today && d <= end30);
-  let plan = 0, prof = 0, labor = 0;
-  soon.forEach(d => { const pl = plannedFor(d, M), lb = dayLabor(d).cost; plan += pl; labor += lb; prof += pl * M.per.net - lb; });
-  const all = Object.values(SD).reduce((a, s) => ({n:a.n + s.n, rev:a.rev + s.rev}), {n:0, rev:0}), soldDays = Object.keys(SD).length;
-  const P = M.pilot, earned = Math.max(0, (UI.T ? UI.T.actDrinks : 0) * M.per.net), paid = P.charges > 0 ? Math.min(1, earned / P.charges) : 1;
-  const k = (l, v, s, cls) => `<div class="kpi"><div class="l">${l}</div><div class="v ${cls || ""}">${v}</div><div class="s">${s}</div></div>`;
-  $("homeKpis").innerHTML = k("Sold so far", F.int(all.n), all.n ? `${F.usd0(all.rev)} over ${soldDays} ${soldDays === 1 ? "day" : "days"}` : "No sales logged yet")
-    + k("Planned, next 30 days", F.int(plan), `drinks over ${soon.length} cafe ${soon.length === 1 ? "day" : "days"}`)
-    + k("Profit, next 30 days", F.usd0(prof), labor ? `after ${F.usd0(labor)} labor` : "pilot days, no labor", prof < 0 ? "neg" : "pos")
-    + k("Kept per drink", F.usd2(M.per.net), `on a ${F.usd2(M.per.R)} average ticket`)
-    + k("Equipment paid back", F.pct(paid * 100), `${F.usd0(earned)} of ${F.usd0(P.charges)}`, paid >= 1 ? "pos" : "");
-  // to-dos
-  const todo = [], horizon = addDays(today, 14);
-  const gaps = dates.filter(d => d >= today && d <= horizon).map(d => ({d, ...staffing(d)})).filter(x => x.filled < x.seats);
-  if (gaps.length) todo.push(["bad", `${gaps.reduce((a,x) => a + x.seats - x.filled, 0)} open spots across ${gaps.length} cafe ${gaps.length === 1 ? "day" : "days"} in the next two weeks`, `<button class="btn ghost sm" data-act="dpShow" data-d="${gaps[0].d}">Staff ${fmtD(gaps[0].d)}</button>`]);
-  const out = T.rows.filter(r => r.status === "Out"), now = T.rows.filter(r => r.status === "Order now");
-  if (out.length || now.length) todo.push([out.length ? "bad" : "", `${out.length ? `${out.length} out of stock` : ""}${out.length && now.length ? ", " : ""}${now.length ? `${now.length} to order now` : ""}. Order about ${F.usd0(T.orderCost || 0)}`, `<button class="btn ghost sm" data-act="tab" data-tab="inventory">Order list</button>`]);
-  const cw = weekOf(today), spc = weekSpec(cw);
-  if (spc.kind === "plan" && spc.names.some((n,i) => n !== spc.live[i])) todo.push(["", `This week's specialty plan isn't on the menu yet`, `<button class="btn ghost sm" data-act="wkApply" data-w="${cw}">Apply</button>`]);
-  const B = batchModel(); if (B.left < 0) todo.push(["", `Specialty batch is ${F.usd0(-B.left)} over the ${F.usd0(+S.batch.budget || 0)} weekly budget`, `<button class="btn ghost sm" data-act="tab" data-tab="menu">Batch planner</button>`]);
-  if (!S.team.length) todo.push(["", "No one is on the team list yet", `<button class="btn ghost sm" data-act="tab" data-tab="shifts">Add people</button>`]);
-  if (!dates.some(d => d >= today)) todo.push(["bad", "No upcoming cafe days on the calendar", `<button class="btn ghost sm" data-act="tab" data-tab="shifts">Calendar</button>`]);
-  if (P.pw.gp < 0) todo.push(["bad", `The forecast loses ${F.usd0(-P.pw.gp)} a weekend`, `<button class="btn ghost sm" data-act="tab" data-tab="analytics">Analytics</button>`]);
-  $("homeTodo").innerHTML = todo.length ? todo.map(([c, t, b]) => `<div class="todo"><i class="${c}"></i><span>${t}</span>${b}</div>`).join("") : `<div class="todo"><i class="ok"></i><span>All caught up. Shifts are covered and stock is fine.</span><span></span></div>`;
-  // next two weeks
-  const up = dates.filter(d => d >= today && d <= horizon);
-  $("homeDays").innerHTML = up.length ? up.map(d => { const x = ensureDay(d), st = staffing(d), f = st.seats ? st.filled / st.seats : 1;
-    return `<div class="hday"><button class="drink" data-act="dpShow" data-d="${d}">${fmtD(d)}</button><span class="kind ${x.kind}">${KIND_LBL[x.kind]}</span>
-      <span><span class="meter"><i class="${f >= 1 ? "" : f > 0 ? "low" : "none"}" style="width:${Math.max(4, f * 100)}%"></i></span><span class="note-sm">${st.filled} of ${st.seats} staffed, ${tfmt(x.open)} to ${tfmt(x.close)}</span></span>
-      <span class="tw">${F.int(plannedFor(d, M))} planned</span></div>`; }).join("") : `<p class="empty">No cafe days in the next two weeks.</p>`;
+  if (!$("homeWeek")) return;
+  const today = ymd(new Date()), SD = UI.SD || salesDays(), T = UI.T || {rows:[]}, dates = S.track.dates.slice().sort(), cw = weekOf(today);
+  // operation weeks: this week, every week with a cafe day, and every week with a saved menu
+  const wks = UI.homeWks = [...new Set([cw].concat(dates.map(weekOf), (S.archive || []).map(a => a.week)))].sort();
+  if (!UI.homeWk || !wks.includes(UI.homeWk)) UI.homeWk = cw;
+  const wk = UI.homeWk, wi = wks.indexOf(wk);
+  document.querySelectorAll("[data-act=homeWk]").forEach(b => { const v = +b.dataset.v; b.disabled = v < 0 ? wi <= 0 : v > 0 ? wi >= wks.length - 1 : wk === cw; });
+  const rel = wk === cw ? "This week" : wk === addDays(cw, 7) ? "Next week" : wk === addDays(cw, -7) ? "Last week" : wk < cw ? "Past week" : "Coming week";
+  $("homeWeekTitle").innerHTML = `${rel}<span class="wk-sub">${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</span>`;
+  let wh = "";
+  for (let i = 0; i < 7; i++){ const d = addDays(wk, i), dn = `<span class="wd-d${d === today ? " now" : ""}">${fmtD(d)}</span>`;
+    if (!dates.includes(d)){ wh += `<div class="wday off">${dn}<span class="muted">${SD[d] ? `${F.int(SD[d].n)} drinks sold` : "Closed"}</span></div>`; continue; }
+    const x = ensureDay(d), sh = shiftsOf(d);
+    wh += `<div class="wday">${dn}<div><div class="wd-h"><span class="kind ${x.kind}">${KIND_LBL[x.kind]}</span> ${tfmt(x.open)} to ${tfmt(x.close)}${SD[d] ? `, ${F.int(SD[d].n)} drinks sold` : d < today ? "" : `, ${F.int(plannedFor(d, M))} drinks planned`}</div>`
+      + sh.map((q,j) => { const ns = namesIn(x.names[j]), open = Math.max(0, q.seats - ns.length);
+          return `<div class="wd-s"><span class="muted">${tfmt(q.start)} to ${tfmt(q.end)}</span> ${ns.map(esc).join(", ")}${open ? ` <span class="neg-t">${open} open</span>` : ""}</div>`; }).join("")
+      + `</div><button class="btn ghost sm" data-act="dpShow" data-d="${d}">Shifts</button></div>`; }
+  $("homeWeek").innerHTML = wh;
+  // menu for that week: core and signature as they are now, specialty from the week's plan or its saved snapshot
+  const sp = weekSpec(wk), slots = specSlots();
+  const priceOf = n => { const x = S.drinks.find(d => d.name === n) || (S.archive || []).find(a => a.week === wk && a.name === n) || (S.drafts || []).find(d => d.name === n); return x ? F.usd2(x.price) : ""; };
+  const row = (nm, serve) => `<tr><td class="l">${esc(nm)}</td><td class="muted">${serve}</td><td>${priceOf(nm)}</td></tr>`;
+  $("homeMenu").innerHTML = SECS.map(([s, label]) => {
+    if (s === "specialty"){ const names = sp.kind === "past" ? sp.names : slots.map((k,i) => sp.names[i] || S.drinks[k].name);
+      return `<h3>${label}</h3>` + (names.length ? `<table class="t">${names.map(n => { const d = S.drinks.find(x => x.name === n) || (S.drafts || []).find(x => x.name === n); return row(n, d ? SERVE_TAG[serveOf(d)] : ""); }).join("")}</table>` : `<p class="empty">No specialty menu saved for this week.</p>`); }
+    const ks = S.drinks.map((d,k) => k).filter(k => secOf(S.drinks[k]) === s);
+    return ks.length ? `<h3>${label}</h3><table class="t">${ks.map(k => row(S.drinks[k].name, SERVE_TAG[serveOf(S.drinks[k])])).join("")}</table>` : ""; }).join("");
+  // what to reorder for the week of the next cafe day
+  const Bw = buyWeek(T), BL = buyItems(T).rows.filter(r => r.qty > 0), SP = specModel(T), SA = SP.adds.filter(b => b.packs > 0);
+  set("homeOrderTitle", `To order for the week of ${fmtD(Bw)}`);
+  const oRow = (name, why, amt, cost) => `<tr><td class="l">${esc(name)}<div class="note-sm">${esc(why)}</div></td><td class="nw">${amt}</td><td>${cost}</td></tr>`;
+  const oTot = BL.reduce((s,r) => s + r.cost, 0) + SP.spend;
+  $("homeOrder").innerHTML = BL.length || SA.length || SP.items.length ? `<table class="t">`
+      + (BL.length ? `<tr class="band"><td class="l" colspan="3">Regular stock</td></tr>` + BL.map(r => oRow(r.name, r.vendor, `${r.qty} × ${fmtQty(r.size || 0, r.unit)}`, F.usd2(r.cost))).join("") : "")
+      + (SA.length || SP.items.length ? `<tr class="band"><td class="l" colspan="3">Specialty, fresh this week</td></tr>`
+          + SA.map(b => oRow(b.name, b.vendor, `${b.packs} × ${fmtQty(b.size || 0, b.unit)}`, F.usd2(b.cost))).join("")
+          + SP.items.map(x => oRow(x.item, x.users.join(", "), `${nfmt(x.q)} ${esc(x.unit || "")}`, x.cost ? F.usd2(x.cost) : "—")).join("") : "")
+      + `<tr class="tot"><td class="l">Total</td><td></td><td>${F.usd2(oTot)}</td></tr></table>`
+    : `<p class="empty">Nothing to order. Stock covers the next service days.</p>`;
   // weekly chart: last 8 weeks and next 4
   const cw0 = weekOf(today), weeks = []; for (let i = -7; i <= 4; i++) weeks.push(addDays(cw0, 7 * i));
   const vals = weeks.map(w => { let n = 0, pl = 0; for (let i = 0; i < 7; i++){ const d = addDays(w, i); if (SD[d]) n += SD[d].n; if (S.track.dates.includes(d)) pl += plannedFor(d, M); } return {w, n, pl}; });
@@ -3497,16 +3673,6 @@ function renderHome(M){
     if (v.n > 0) g += `<rect class="b-dem" x="${x + 3}" y="${y(v.n)}" width="${w - 6}" height="${m.t + ih - y(v.n)}" rx="3"/><text class="vl" x="${x + w / 2}" y="${y(v.n) - 3}" text-anchor="middle">${F.int(v.n)}</text>`;
     g += `<text class="ax" x="${x + w / 2}" y="${H - 8}" text-anchor="middle"${v.w === cw0 ? ' style="font-weight:700;fill:var(--label)"' : ""}>${v.w === cw0 ? "This wk" : fmtD(v.w).replace(/^\w+ /, "")}</text>`; });
   $("homeChart").innerHTML = g;
-  // specialty
-  $("homeSpec").innerHTML = (spc.names.length ? `<table class="t">${specSlots().map((kk,i) => { const d = S.drinks[kk], r0 = M.drinks[kk]; return `<tr><td class="l"><b style="font-weight:600">${esc(spc.names[i] || d.name)}</b><div class="note-sm">${(+d.iced || 0) >= 100 ? "Cold slot" : (+d.iced || 0) <= 0 ? "Hot slot" : "Specialty"}</div></td><td>${F.usd2(d.price)}</td><td><span class="${mCls(r0.margin)}">${F.frac(r0.margin)}</span></td></tr>`; }).join("")}</table>` : `<p class="empty">No specialty slots.</p>`)
-    + `<p class="note-sm" style="margin-top:8px">Weekend specialty buy ${F.usd2(B.spend)} of a ${F.usd0(+S.batch.budget || 0)} budget.</p>`;
-  // money
-  $("homeMoney").innerHTML = `<table class="t">
-    <tr><td class="l">Forecast profit per weekend</td><td class="${P.pw.gp < 0 ? "neg-t" : ""}"><b>${F.usd0(P.pw.gp)}</b></td></tr>
-    <tr><td class="l">Cash to front for the pilot</td><td>${F.usd0(P.upfront)}</td></tr>
-    <tr><td class="l">Profit so far from logged sales</td><td>${F.usd0(earned)}</td></tr>
-    <tr><td class="l">Expansion plan, weekly profit</td><td class="${M.exp.ew.gp < 0 ? "neg-t" : ""}">${F.usd0(M.exp.ew.gp)}</td></tr>
-    <tr><td class="l">Expansion break-even</td><td>${isFinite(M.exp.beDrinks) ? `${F.int(Math.ceil(M.exp.beDrinks / Math.max(1, M.exp.daysW)))} drinks a day` : "None"}</td></tr></table>`;
 }
 
 
@@ -3515,11 +3681,9 @@ const isAmazon = v => /amazon/i.test(v || "");
 function buyWeek(T){ const nx = (T && T.next) || S.track.dates.slice().sort().find(d => d >= ymd(new Date())) || ymd(new Date()); return weekOf(nx); }
 function buyItems(T){
   const rows = [];
-  (T.rows || []).forEach(r => { if (isAmazon(r.vendor)) return;
+  const own = new Set(specModel(T).adds.map(b => b.id));   // specialty add-ins are bought fresh on their own sheet
+  (T.rows || []).forEach(r => { if (isAmazon(r.vendor) || own.has(r.id)) return;
     rows.push({id:r.id, name:r.name, vendor:r.vendor || "Other", url:r.url, size:r.size, unit:r.unit, price:r.price, sug:r.packs, why:r.packs ? `Short ${fmtQty(r.short, r.unit)}` : r.status === "Not used" ? "Not used" : `${F.n1(r.daysLeft)} days on hand`}); });
-  batchModel().buy.forEach(b => { if (isAmazon(b.vendor)) return;
-    const g = S.ingredients.find(x => x.id === b.id) || {};
-    rows.push({id:b.id, name:b.name, vendor:b.vendor || "Other", url:b.url, size:g.size, unit:b.unit, price:g.price || 0, sug:b.packs, why:`Specialty batch, ${fmtQty(b.q, b.unit)}`}); });
   const wk = buyWeek(T), o = S.orders[wk] || {qty:{}, notes:{}};
   rows.forEach(r => { r.vendor = String(r.vendor || "Other").trim().replace(/\s+/g, " ") || "Other"; r.qty = o.qty && o.qty[r.id] != null ? Math.max(0, +o.qty[r.id] || 0) : r.sug; r.cost = r.qty * (r.price || 0); r.edited = o.qty && o.qty[r.id] != null && +o.qty[r.id] !== r.sug; });
   return {wk, rows, notes:o.notes || {}};
@@ -3530,18 +3694,18 @@ function renderBuyList(T){
   $("buyShow").innerHTML = `<button class="${showAll ? "" : "on"}" data-act="buyAll" data-v="0">To buy</button><button class="${showAll ? "on" : ""}" data-act="buyAll" data-v="1">All items</button>`;
   const vkey = v => String(v || "").trim().toLowerCase(), onV = new Set(B.rows.filter(r => r.qty > 0).map(r => vkey(r.vendor)));
   const vis = B.rows.filter(r => showAll || r.qty > 0 || onV.has(vkey(r.vendor)));
-  set("orderHint", `Week of ${fmtD(B.wk)}. Suggested amounts cover ${T.nextDates && T.nextDates.filter(Boolean).length ? T.nextDates.filter(Boolean).map(fmtD).join(" and ") : "the next service days"} plus a ${S.track.buffer}% buffer, and the specialty batch. Change any quantity. Amazon is kept off this list.`);
+  set("orderHint", `Week of ${fmtD(B.wk)}. Suggested amounts cover ${T.nextDates && T.nextDates.filter(Boolean).length ? T.nextDates.filter(Boolean).map(fmtD).join(" and ") : "the next service days"} plus a ${S.track.buffer}% buffer. Specialty syrup items are on their own sheet below. Change any quantity. Amazon is kept off this list.`);
   if (!vis.length){ box.innerHTML = `<p class="empty">Nothing to buy this week. Switch to All items to add something.</p>`; return; }
   const byV = {}; vis.forEach(r => (byV[r.vendor] || (byV[r.vendor] = [])).push(r));
   let h = "", tot = 0;
   Object.keys(byV).sort((a,b) => a.localeCompare(b)).forEach(v => { const rs = byV[v].sort((a,b) => a.name.localeCompare(b.name)), sub = rs.reduce((s,r) => s + r.cost, 0); tot += sub;
     h += `<div class="vendor"><h3>${esc(v)}</h3><textarea class="in" data-onote="${esc(v)}" placeholder="Notes for ${esc(v)} this week" aria-label="Notes for ${esc(v)}">${esc(B.notes[v] || "")}</textarea>
-      <table class="t"><thead><tr><th class="l">Item</th><th class="l">Why</th><th>Packs</th><th class="l">Pack</th><th>Cost</th><th></th></tr></thead><tbody>`
+      <div class="scroll"><table class="t"><thead><tr><th class="l">Item</th><th class="l">Why</th><th>Packs</th><th class="l">Pack</th><th>Cost</th><th></th></tr></thead><tbody>`
       + rs.map(r => `<tr class="${r.qty ? "" : "zero"}"><td class="l">${esc(r.name)}</td><td class="l note-sm">${esc(r.why)}${r.edited ? `, suggested ${r.sug}` : ""}</td>
           <td><input class="in q" type="number" min="0" step="1" data-oq="${esc(r.id)}" value="${r.qty}" aria-label="Packs of ${esc(r.name)}"></td>
           <td class="l nw">${r.size ? fmtQty(r.size, r.unit) : ""}</td><td>${F.usd2(r.cost)}</td>
           <td class="nw">${r.url ? `<a class="btn ghost sm" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Buy</a> ` : ""}${r.qty ? `<button class="btn ghost sm" data-act="received" data-id="${esc(r.id)}" data-q="${r.qty * (r.size || 0)}">Received</button>` : ""}</td></tr>`).join("")
-      + `<tr class="sub"><td class="l">${esc(v)} total</td><td></td><td></td><td></td><td>${F.usd2(sub)}</td><td></td></tr></tbody></table></div>`; });
+      + `<tr class="sub"><td class="l">${esc(v)} total</td><td></td><td></td><td></td><td>${F.usd2(sub)}</td><td></td></tr></tbody></table></div></div>`; });
   h += `<table class="t"><tr class="tot"><td class="l">Order total</td><td>${F.usd2(tot)}</td></tr></table>`;
   box.innerHTML = h;
 }
@@ -3594,10 +3758,11 @@ async function exportBuyPdf(){
 
 function renderAll(){
   renderIngredients(); renderMenu(); renderAddons(); renderBuy(); renderSpec(); renderCurve(); renderStaff();
-  renderDrinkGrid(); renderStockForm(); renderLogControls(); renderTicket(); renderExpCurve(); renderLab(); renderArchive(); renderCharges(); renderHabits(); renderBatch(); syncRanges(); syncFields(); syncChecks(); recalc();
+  renderDrinkGrid(); renderStockForm(); renderLogControls(); renderTicket(); renderExpCurve(); renderLab(); renderCharges(); renderHabits(); renderSyr(); syncRanges(); syncFields(); syncChecks(); recalc();
 }
 
 /* ------------------------------------------------------------------- init */
+linkRecipes();
 buildSliders();
 renderIngredients();
 renderMenu();
@@ -3612,10 +3777,9 @@ renderLogControls();
 renderTicket();
 renderExpCurve();
 renderLab();
-renderArchive();
 renderCharges();
 renderHabits();
-renderBatch();
+renderSyr();
 if ($("newDate")) $("newDate").value = ymd(new Date());
 syncRanges();
 syncChecks();
