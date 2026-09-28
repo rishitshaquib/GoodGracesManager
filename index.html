@@ -600,6 +600,8 @@ details.fold[open] summary{margin-bottom:8px}
 .pf-f{display:grid;gap:10px;margin-top:12px}
 .pf-f label{display:grid;gap:4px;font-size:13px;color:var(--label2)}
 .pf-f .in{background:var(--tile);font-size:16px}
+.imp{margin-top:14px;font-size:14px}.imp summary{cursor:pointer;color:var(--tint);font-weight:600}
+.imp textarea{width:100%;font-size:14px;font-family:inherit;resize:vertical}
 .mx{border-collapse:separate;border-spacing:3px;font-size:12px}
 .mx th,.mx td{padding:0;text-align:center;white-space:nowrap}
 .mx thead th{font-weight:600;color:var(--label2);vertical-align:bottom;padding:2px}
@@ -842,6 +844,11 @@ td.note-sm.flag{color:var(--orange-t);font-weight:600}
     <h3>Team</h3>
     <div class="row2" id="teamAddRow" style="margin-bottom:10px;max-width:460px"><input class="in txt" id="teamName" placeholder="Add a person" aria-label="Name to add"><button class="btn sm" data-act="teamAdd">Add</button></div>
     <div class="ptiles" id="teamList"></div>
+    <details class="imp" id="teamImport"><summary>Import staff from a list</summary>
+      <p class="note-sm">Paste one person per line: name, email, class year, role, then availability like <i>Saturday: 10:00 AM - 1:00 PM, Sunday: 1:00 PM - 4:00 PM</i>. People already on the team (same email or name) are updated.</p>
+      <textarea class="in txt" id="impText" rows="6" aria-label="Staff list to import"></textarea>
+      <div style="margin-top:8px"><button class="btn sm" data-act="teamImport">Import</button></div>
+    </details>
   </div>
   <div class="cols c-side" style="margin-top:18px">
     <div>
@@ -3105,7 +3112,7 @@ document.addEventListener("click", e => {
     if (team().some(x => x !== p && x.name === name)){ toast("pfToast", "Someone on the team already has that name."); return; }
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast("pfToast", "That email doesn't look right."); return; }
     if (name !== p.name){ Object.values(S.days || {}).forEach(x => { x.names = (x.names || []).map(v => namesIn(v).map(m => m === p.name ? name : m).join(", ")); }); markDirty(); }   // shifts are assigned by name
-    Object.assign(p, {name, email, phone:v("phone")});
+    Object.assign(p, {name, email, phone:v("phone"), role:v("role"), year:v("year")});
     saveStaff(p).then(() => { renderStaff(); toast("pfToast", "Saved."); }).catch(e => toast("pfToast", saveError(e))); return; }
   if (a === "pfRule"){ const p = pfPerson(), w = +t.dataset.w, sh = patternFor(w); if (!p || !isMgr()) return;
     const on = sh.map(q => covers((p.rule || {})[w], q)); on[+t.dataset.i] = !on[+t.dataset.i];
@@ -3125,6 +3132,13 @@ document.addEventListener("click", e => {
   if (a === "authVerified"){ const u = Auth.user; if (!u) return; u.reload().then(() => u.getIdToken(true)).then(() => { if (!u.emailVerified) set("authMsg", "Not verified yet. Open the link in the email first."); onUser(u); }).catch(err => set("authMsg", authError(err))); return; }
   if (a === "authResend"){ if (Auth.user) Auth.user.sendEmailVerification().then(() => set("authMsg", "Sent. Check your email.")).catch(err => set("authMsg", authError(err))); return; }
   if (a === "signOut"){ closeSheet("pfPanel"); firebase.auth().signOut(); return; }
+  if (a === "teamImport"){ if (!isMgr()) return; const rows = parseStaff($("impText").value); if (!rows.length){ toast("staffToast", "Nothing to import. Paste one person per line."); return; }
+    let added = 0, updated = 0;
+    rows.reduce((pr, r) => pr.then(() => { const p = team().find(x => (r.email && x.email === r.email) || x.name === r.name);
+      if (p) updated++; else added++;
+      return saveStaff(p ? Object.assign(p, r, {email:r.email || p.email}) : Object.assign({id:Auth.on ? undefined : newId(), phone:"", off:[]}, r)); }), Promise.resolve())
+      .then(() => { $("impText").value = ""; $("teamImport").open = false; renderStaff(); toast("staffToast", `Imported ${rows.length}: ${added} new, ${updated} updated.`); })
+      .catch(e => toast("staffToast", saveError(e))); return; }
   if (a === "teamAdd"){ const inp = $("teamName"), n = inp.value.trim(); if (!n || !isMgr()) return;
     if (person(n)){ toast("staffToast", `${n} is already on the team.`); return; }
     const p = {id:Auth.on ? undefined : newId(), name:n, email:"", phone:"", rule:{}, off:[]}; inp.value = "";
@@ -3648,7 +3662,26 @@ const teamSorted = () => team().slice().sort((a,b) => a.name.localeCompare(b.nam
 const person = n => team().find(p => p.name === n);
 const newId = () => "p" + Math.random().toString(36).slice(2, 10);
 const WDAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-const covers = (r, q) => (r || []).some(x => x.s <= q.start && q.end <= x.e);
+function covers(r, q){   // back-to-back ranges join up, so 1-4 plus 4-7 covers a 3-6 shift
+  let s = null, e = null;
+  for (const x of (r || []).slice().sort((a,b) => a.s - b.s)){
+    if (e !== null && x.s <= e){ e = Math.max(e, x.e); continue; }
+    if (e !== null && s <= q.start && q.end <= e) return true;
+    s = x.s; e = x.e; }
+  return e !== null && s <= q.start && q.end <= e;
+}
+function parseStaff(text){   // "Name  email  2028  Barista, Support  Saturday: 10:00 AM - 1:00 PM, Sunday: ..." per line
+  const hr = t => { const m = /(\d{1,2}):(\d{2})\s*([AP])M/i.exec(t); return m ? (+m[1] % 12) + (/p/i.test(m[3]) ? 12 : 0) + (+m[2]) / 60 : null; };
+  return text.split(/\r?\n/).map(line => line.split(/\t|\s{2,}/).map(t => t.trim()).filter(Boolean)).filter(f => f.length).map(f => {
+    const at = f.findIndex(t => /@/.test(t)), p = {name:f.slice(0, Math.max(at, 1)).join(" "), email:at >= 0 ? f[at].toLowerCase() : "", year:"", role:"", rule:{}};
+    f.slice(at + 1).forEach(t => {
+      if (/^\d{4}$/.test(t)){ p.year = t; return; }
+      const slots = t.split(/,\s*(?=[A-Za-z]+day\s*:)/).map(x => /^\s*(\w+day)\s*:\s*(.+?)\s*[-–]\s*(.+)$/i.exec(x)).filter(Boolean);
+      if (!slots.length){ p.role = t; return; }
+      slots.forEach(m => { const w = WDAY.findIndex(d => d.toLowerCase() === m[1].toLowerCase()), a = hr(m[2]), b = hr(m[3]);
+        if (w >= 0 && a !== null && b !== null && b > a) (p.rule[w] || (p.rule[w] = [])).push({s:a, e:b}); }); });
+    return p; }).filter(p => p.name);
+}
 function availFor(d, name, q){ const p = person(name); return !!p && !(p.off || []).includes(weekOf(d)) && covers((p.rule || {})[toDate(d).getDay()], q); }
 const availOn = (d, name) => shiftsOf(d).some(q => availFor(d, name, q));
 const offWeeks = () => { const w = weekOf(ymd(new Date())); return [0,1,2,3,4,5,6,7].map(i => addDays(w, 7 * i)); };   // this week and the next seven; past weeks are locked
@@ -3658,7 +3691,7 @@ function ruleText(p){ const r = p.rule || {};
 async function saveStaff(p){
   p.email = String(p.email || "").trim().toLowerCase();
   if (!Auth.on){ if (!S.team.includes(p)) S.team.push(p); markDirty(); return; }
-  const {id, ...doc} = p; doc.rule = doc.rule || {}; doc.off = doc.off || []; doc.phone = doc.phone || "";
+  const {id, ...doc} = p; doc.rule = doc.rule || {}; doc.off = doc.off || []; ["phone", "role", "year"].forEach(k => doc[k] = String(doc[k] || ""));
   if (id) await Store.db.doc("staff/" + id).set(doc); else p.id = (await Store.db.collection("staff").add(doc)).id;
 }
 async function saveOff(p){ if (!Auth.on){ markDirty(); return; } await Store.db.doc("staff/" + p.id).update({off:p.off}); }   // the one field staff may change on their own profile
@@ -3708,11 +3741,11 @@ function renderMatrix(){
 }
 function renderTeam(){
   const box = $("teamList"); if (!box) return;
-  $("teamAddRow").hidden = !isMgr();
+  $("teamAddRow").hidden = $("teamImport").hidden = !isMgr();
   if (Auth.on && !Auth.role){ box.innerHTML = `<p class="empty">Sign in to see the team.</p>`; return; }
   const cw = weekOf(ymd(new Date()));
   box.innerHTML = team().length ? teamSorted().map(p => { const off = (p.off || []).filter(w => w >= cw).sort();
-    return `<button class="ptile" data-act="pfOpen" data-id="${esc(p.id)}"><b>${esc(p.name)}</b><span class="note-sm">${esc([p.email, p.phone].filter(Boolean).join(" · ") || "No contact details yet")}</span><span class="note-sm">${esc(ruleText(p))}</span>${off.length ? `<span class="note-sm neg-t">Off the week of ${off.map(fmtD).join(", ")}</span>` : ""}</button>`; }).join("")
+    return `<button class="ptile" data-act="pfOpen" data-id="${esc(p.id)}"><b>${esc(p.name)}</b><span class="note-sm">${esc([p.role, p.year && "Class of " + p.year].filter(Boolean).join(" · "))}</span><span class="note-sm">${esc([p.email, p.phone].filter(Boolean).join(" · ") || "No contact details yet")}</span><span class="note-sm">${esc(ruleText(p))}</span>${off.length ? `<span class="note-sm neg-t">Off the week of ${off.map(fmtD).join(", ")}</span>` : ""}</button>`; }).join("")
     : `<p class="empty">No one yet. Add the people who work shifts.</p>`;
 }
 const pfPerson = () => team().find(x => x.id === UI.pf);
@@ -3721,7 +3754,7 @@ function renderPf(){
   const box = $("pfBody"), p = pfPerson(); if (!box || !UI.pf) return; if (!p){ closeSheet("pfPanel"); return; }
   const mgr = isMgr(), link = [p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : "", p.phone ? `<a href="tel:${esc(p.phone.replace(/[^\d+]/g, ""))}">${esc(p.phone)}</a>` : ""].filter(Boolean).join(" · ");
   box.innerHTML = `<div class="tile-h"><h2 id="pfTitle">${esc(p.name)}</h2><button class="x" data-act="pfClose" aria-label="Close">✕</button></div>${link ? `<p class="tw" style="margin:6px 0 0">${link}</p>` : ""}`
-    + (mgr ? `<div class="pf-f"><label>Name<input class="in txt" data-pf="name" value="${esc(p.name)}"></label><label>Email<input class="in txt" type="email" data-pf="email" value="${esc(p.email || "")}" autocomplete="off"></label><label>Phone<input class="in txt" type="tel" data-pf="phone" value="${esc(p.phone || "")}" autocomplete="off"></label><div><button class="btn sm" data-act="pfSave">Save details</button></div></div>` : "")
+    + (mgr ? `<div class="pf-f"><label>Name<input class="in txt" data-pf="name" value="${esc(p.name)}"></label><label>Email<input class="in txt" type="email" data-pf="email" value="${esc(p.email || "")}" autocomplete="off"></label><label>Phone<input class="in txt" type="tel" data-pf="phone" value="${esc(p.phone || "")}" autocomplete="off"></label><label>Role<input class="in txt" data-pf="role" value="${esc(p.role || "")}" placeholder="Barista, Support"></label><label>Class year<input class="in txt" data-pf="year" value="${esc(p.year || "")}" inputmode="numeric"></label><div><button class="btn sm" data-act="pfSave">Save details</button></div></div>` : "")
     + `<p class="toast" id="pfToast" role="status"></p><h3>Usual availability</h3>`
     + (mgr ? `<p class="note-sm" style="margin:-4px 0 8px">Tap the shifts they can usually work. This repeats every week.</p>` + [1,2,3,4,5,6,0].map(w => { const r = (p.rule || {})[w];
         return `<div class="sh-slot"><div class="top"><span>${WDAY[w]}</span></div><div class="pchips">${patternFor(w).map((q,i) => { const on = covers(r, q); return `<button class="pc ${on ? "av" : "off"}" data-act="pfRule" data-w="${w}" data-i="${i}" aria-pressed="${on}">${tfmt(q.start)} to ${tfmt(q.end)}</button>`; }).join("")}</div></div>`; }).join("")

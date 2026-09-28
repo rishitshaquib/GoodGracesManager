@@ -9,7 +9,7 @@ service cloud.firestore {
     function verified(){ return request.auth != null && request.auth.token.email_verified == true; }
     function isManager(){ return verified() && request.auth.token.email.lower() in ['rishit.shaquib@gmail.com']; }
     function isSelf(d){ return verified() && d.email == request.auth.token.email.lower(); }
-    function validStaff(){ return request.method == 'delete' || (request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'rule', 'off'])
+    function validStaff(){ return request.method == 'delete' || (request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'role', 'year', 'rule', 'off'])
                                   && request.resource.data.name is string && request.resource.data.name.size() <= 80
                                   && request.resource.data.email is string && request.resource.data.phone is string
                                   && request.resource.data.rule is map && request.resource.data.off is list && request.resource.data.off.size() <= 60); }
