@@ -431,7 +431,13 @@ details.buy[open] summary{margin-bottom:10px}
   table.t th{padding:7px 4px}
   .calgrid{grid-template-columns:minmax(0,1fr)}
   .pc{padding:8px 12px;font-size:14px}
-  .wday,.wday.off{grid-template-columns:78px minmax(0,1fr)}
+  .in,select.in,textarea.in{font-size:16px}
+  .segc button,.segc.sm button{min-height:34px;padding:6px 12px}
+  button.drink{min-height:34px}
+  #wkDays tr:not(.band) td{white-space:nowrap}
+  #wkDays th:nth-child(3),#wkDays td:nth-child(3),#wkDays th:nth-child(7),#wkDays td:nth-child(7){display:none}
+  .wday,.wday.off{grid-template-columns:88px minmax(0,1fr)}
+  .wd-d{white-space:nowrap}
   .wday .btn{grid-column:2;justify-self:start}
   .syr-line{grid-template-columns:minmax(0,1fr) 64px 60px 28px}
   .syr-line.sl5,.rc-hd{grid-template-columns:minmax(0,1fr) 52px 48px 56px 28px}
@@ -528,8 +534,8 @@ details.fold[open] summary{margin-bottom:8px}
 .wk{flex:0 0 210px;scroll-snap-align:start;background:var(--fill);border:0;border-radius:16px;padding:12px 14px;text-align:left;cursor:pointer;color:var(--label);font-size:13px;display:flex;flex-direction:column;gap:4px}
 .wk:hover{background:var(--fill2)}
 .wk.on{background:var(--tile);box-shadow:inset 0 0 0 2px var(--tint)}
-.wk .wh{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-weight:600;font-size:14px}
-.wk .tag{font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--fill2);color:var(--label2)}
+.wk .wh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 6px;font-weight:600;font-size:14px}
+.wk .tag{font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--fill2);color:var(--label2);white-space:nowrap}
 .wk .tag.now{background:var(--tint);color:#fff}
 .wk .big{font-size:20px;font-weight:700;letter-spacing:-.02em}
 .wk .sm{color:var(--label2);font-size:12px;line-height:1.3}
@@ -595,7 +601,8 @@ details.fold[open] summary{margin-bottom:8px}
 .acct{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--label2)}
 .ptiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 .ptile{display:flex;flex-direction:column;gap:3px;min-width:0;text-align:left;border:0;background:var(--fill);border-radius:14px;padding:12px 14px;cursor:pointer;color:var(--label);font:inherit}
-.ptile b{font-size:15px}
+.ptile .pn{font-size:15px;font-weight:400}.ptile.tr .pn{font-weight:700}
+.chk{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--label);cursor:pointer}.chk input{width:20px;height:20px;accent-color:var(--tint)}
 .ptile .note-sm{overflow-wrap:anywhere}
 .pf-f{display:grid;gap:10px;margin-top:12px}
 .pf-f label{display:grid;gap:4px;font-size:13px;color:var(--label2)}
@@ -838,14 +845,14 @@ td.note-sm.flag{color:var(--orange-t);font-weight:600}
   </div>
   <div class="sec" style="margin-top:18px">
     <div class="tile-h"><div class="wknav"><button class="x" data-act="mxWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="mxTitle">Staffing</h2><button class="x" data-act="mxWk" data-v="1" aria-label="Next week">›</button></div><button class="btn ghost sm" data-act="mxWk" data-v="0">This week</button></div>
-    <p class="note-sm" style="margin:6px 0 10px">Green is available, from each person's usual availability minus their weeks off. Tap a cell to put someone on that shift, and tap again to take them off.</p>
+    <p class="note-sm" style="margin:6px 0 10px">Green is available, from each person's usual availability minus their weeks off. Tap a cell to put someone on that shift, and tap again to take them off. Bold names have completed barista training.</p>
     <div id="mxGrid"></div>
     <p class="toast" id="staffToast" role="status"></p>
     <h3>Team</h3>
     <div class="row2" id="teamAddRow" style="margin-bottom:10px;max-width:460px"><input class="in txt" id="teamName" placeholder="Add a person" aria-label="Name to add"><button class="btn sm" data-act="teamAdd">Add</button></div>
     <div class="ptiles" id="teamList"></div>
     <details class="imp" id="teamImport"><summary>Import staff from a list</summary>
-      <p class="note-sm">Paste one person per line: name, email, class year, role, then availability like <i>Saturday: 10:00 AM - 1:00 PM, Sunday: 1:00 PM - 4:00 PM</i>. People already on the team (same email or name) are updated.</p>
+      <p class="note-sm">Paste one person per line: name, email, class year, role, <i>Trained</i> if they finished barista training, then availability like <i>Saturday: 10:00 AM - 1:00 PM, Sunday: 1:00 PM - 4:00 PM</i>. People already on the team (same email or name) are updated.</p>
       <textarea class="in txt" id="impText" rows="6" aria-label="Staff list to import"></textarea>
       <div style="margin-top:8px"><button class="btn sm" data-act="teamImport">Import</button></div>
     </details>
@@ -3114,6 +3121,8 @@ document.addEventListener("click", e => {
     if (name !== p.name){ Object.values(S.days || {}).forEach(x => { x.names = (x.names || []).map(v => namesIn(v).map(m => m === p.name ? name : m).join(", ")); }); markDirty(); }   // shifts are assigned by name
     Object.assign(p, {name, email, phone:v("phone"), role:v("role"), year:v("year")});
     saveStaff(p).then(() => { renderStaff(); toast("pfToast", "Saved."); }).catch(e => toast("pfToast", saveError(e))); return; }
+  if (a === "pfTrained"){ const p = pfPerson(); if (!p || !isMgr()) return; p.trained = t.checked;
+    saveStaff(p).catch(e => toast("pfToast", saveError(e))); renderMatrix(); renderTeam(); renderDayPanel(); if (UI.M) renderHome(UI.M); return; }
   if (a === "pfRule"){ const p = pfPerson(), w = +t.dataset.w, sh = patternFor(w); if (!p || !isMgr()) return;
     const on = sh.map(q => covers((p.rule || {})[w], q)); on[+t.dataset.i] = !on[+t.dataset.i];
     p.rule = Object.assign({}, p.rule, {[w]: sh.filter((q,j) => on[j]).map(q => ({s:q.start, e:q.end}))}); if (!p.rule[w].length) delete p.rule[w];
@@ -3660,6 +3669,7 @@ const team = () => Auth.on ? Store.staff : S.team;
 const isMgr = () => !Auth.on || Auth.role === "manager";
 const teamSorted = () => team().slice().sort((a,b) => a.name.localeCompare(b.name));
 const person = n => team().find(p => p.name === n);
+const nameH = n => { const p = person(n); return p && p.trained ? `<b>${esc(n)}</b>` : esc(n); };   // bold = completed barista training
 const newId = () => "p" + Math.random().toString(36).slice(2, 10);
 const WDAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 function covers(r, q){   // back-to-back ranges join up, so 1-4 plus 4-7 covers a 3-6 shift
@@ -3676,6 +3686,7 @@ function parseStaff(text){   // "Name  email  2028  Barista, Support  Saturday: 
     const at = f.findIndex(t => /@/.test(t)), p = {name:f.slice(0, Math.max(at, 1)).join(" "), email:at >= 0 ? f[at].toLowerCase() : "", year:"", role:"", rule:{}};
     f.slice(at + 1).forEach(t => {
       if (/^\d{4}$/.test(t)){ p.year = t; return; }
+      if (/^trained$/i.test(t)){ p.trained = true; return; }
       const slots = t.split(/,\s*(?=[A-Za-z]+day\s*:)/).map(x => /^\s*(\w+day)\s*:\s*(.+?)\s*[-–]\s*(.+)$/i.exec(x)).filter(Boolean);
       if (!slots.length){ p.role = t; return; }
       slots.forEach(m => { const w = WDAY.findIndex(d => d.toLowerCase() === m[1].toLowerCase()), a = hr(m[2]), b = hr(m[3]);
@@ -3691,7 +3702,7 @@ function ruleText(p){ const r = p.rule || {};
 async function saveStaff(p){
   p.email = String(p.email || "").trim().toLowerCase();
   if (!Auth.on){ if (!S.team.includes(p)) S.team.push(p); markDirty(); return; }
-  const {id, ...doc} = p; doc.rule = doc.rule || {}; doc.off = doc.off || []; ["phone", "role", "year"].forEach(k => doc[k] = String(doc[k] || ""));
+  const {id, ...doc} = p; doc.rule = doc.rule || {}; doc.off = doc.off || []; ["phone", "role", "year"].forEach(k => doc[k] = String(doc[k] || "")); doc.trained = !!doc.trained;
   if (id) await Store.db.doc("staff/" + id).set(doc); else p.id = (await Store.db.collection("staff").add(doc)).id;
 }
 async function saveOff(p){ if (!Auth.on){ markDirty(); return; } await Store.db.doc("staff/" + p.id).update({off:p.off}); }   // the one field staff may change on their own profile
@@ -3736,7 +3747,7 @@ function renderMatrix(){
   if (!people.length){ box.innerHTML = `<p class="empty">Add people to the team below to start assigning shifts.</p>`; return; }
   box.innerHTML = `<div class="scroll"><table class="mx"><thead><tr><th class="nm" rowspan="2">Name</th>${days.map(d => `<th class="d0" colspan="${shiftsOf(d).length}">${fmtD(d)}</th>`).join("")}</tr>
     <tr>${cols.map(c => `<th class="${c.first ? "d0" : ""}">${tfmt(c.q.start)}<br>${tfmt(c.q.end)}<div class="${c.on.length >= c.q.seats ? "status-ok" : "neg-t"}">${c.on.length}/${c.q.seats}</div></th>`).join("")}</tr></thead>
-    <tbody>${people.map(n => `<tr><th class="nm" scope="row" title="${esc(n)}">${esc(n)}</th>${cols.map(c => { const as = c.on.includes(n), av = availFor(c.d, n, c.q);
+    <tbody>${people.map(n => `<tr><th class="nm" scope="row" title="${esc(n)}">${nameH(n)}</th>${cols.map(c => { const as = c.on.includes(n), av = availFor(c.d, n, c.q);
       return `<td class="${c.first ? "d0" : ""}"><button class="mxc${as ? " as" : ""}${av ? " av" : " na"}" data-act="mxTog" data-d="${c.d}" data-i="${c.i}" data-n="${esc(n)}" aria-pressed="${as}" aria-label="${esc(n)}, ${fmtD(c.d)} ${tfmt(c.q.start)} to ${tfmt(c.q.end)}, ${as ? "on this shift" : av ? "available" : "not available"}"${c.d < today ? " disabled" : ""}>${as ? "✓" : av ? "" : "–"}</button></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 function renderTeam(){
@@ -3745,7 +3756,7 @@ function renderTeam(){
   if (Auth.on && !Auth.role){ box.innerHTML = `<p class="empty">Sign in to see the team.</p>`; return; }
   const cw = weekOf(ymd(new Date()));
   box.innerHTML = team().length ? teamSorted().map(p => { const off = (p.off || []).filter(w => w >= cw).sort();
-    return `<button class="ptile" data-act="pfOpen" data-id="${esc(p.id)}"><b>${esc(p.name)}</b><span class="note-sm">${esc([p.role, p.year && "Class of " + p.year].filter(Boolean).join(" · "))}</span><span class="note-sm">${esc([p.email, p.phone].filter(Boolean).join(" · ") || "No contact details yet")}</span><span class="note-sm">${esc(ruleText(p))}</span>${off.length ? `<span class="note-sm neg-t">Off the week of ${off.map(fmtD).join(", ")}</span>` : ""}</button>`; }).join("")
+    return `<button class="ptile${p.trained ? " tr" : ""}" data-act="pfOpen" data-id="${esc(p.id)}"><span class="pn">${esc(p.name)}</span>${p.trained ? `<span class="note-sm status-ok">Barista trained</span>` : ""}<span class="note-sm">${esc([p.role, p.year && "Class of " + p.year].filter(Boolean).join(" · "))}</span><span class="note-sm">${esc([p.email, p.phone].filter(Boolean).join(" · ") || "No contact details yet")}</span><span class="note-sm">${esc(ruleText(p))}</span>${off.length ? `<span class="note-sm neg-t">Off the week of ${off.map(fmtD).join(", ")}</span>` : ""}</button>`; }).join("")
     : `<p class="empty">No one yet. Add the people who work shifts.</p>`;
 }
 const pfPerson = () => team().find(x => x.id === UI.pf);
@@ -3754,11 +3765,11 @@ function renderPf(){
   const box = $("pfBody"), p = pfPerson(); if (!box || !UI.pf) return; if (!p){ closeSheet("pfPanel"); return; }
   const mgr = isMgr(), link = [p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : "", p.phone ? `<a href="tel:${esc(p.phone.replace(/[^\d+]/g, ""))}">${esc(p.phone)}</a>` : ""].filter(Boolean).join(" · ");
   box.innerHTML = `<div class="tile-h"><h2 id="pfTitle">${esc(p.name)}</h2><button class="x" data-act="pfClose" aria-label="Close">✕</button></div>${link ? `<p class="tw" style="margin:6px 0 0">${link}</p>` : ""}`
-    + (mgr ? `<div class="pf-f"><label>Name<input class="in txt" data-pf="name" value="${esc(p.name)}"></label><label>Email<input class="in txt" type="email" data-pf="email" value="${esc(p.email || "")}" autocomplete="off"></label><label>Phone<input class="in txt" type="tel" data-pf="phone" value="${esc(p.phone || "")}" autocomplete="off"></label><label>Role<input class="in txt" data-pf="role" value="${esc(p.role || "")}" placeholder="Barista, Support"></label><label>Class year<input class="in txt" data-pf="year" value="${esc(p.year || "")}" inputmode="numeric"></label><div><button class="btn sm" data-act="pfSave">Save details</button></div></div>` : "")
+    + (mgr ? `<div class="pf-f"><label>Name<input class="in txt" data-pf="name" value="${esc(p.name)}"></label><label>Email<input class="in txt" type="email" data-pf="email" value="${esc(p.email || "")}" autocomplete="off"></label><label>Phone<input class="in txt" type="tel" data-pf="phone" value="${esc(p.phone || "")}" autocomplete="off"></label><label>Role<input class="in txt" data-pf="role" value="${esc(p.role || "")}" placeholder="Barista, Support"></label><label>Class year<input class="in txt" data-pf="year" value="${esc(p.year || "")}" inputmode="numeric"></label><label class="chk"><input type="checkbox" data-act="pfTrained"${p.trained ? " checked" : ""}> Completed barista training</label><div><button class="btn sm" data-act="pfSave">Save details</button></div></div>` : "")
     + `<p class="toast" id="pfToast" role="status"></p><h3>Usual availability</h3>`
     + (mgr ? `<p class="note-sm" style="margin:-4px 0 8px">Tap the shifts they can usually work. This repeats every week.</p>` + [1,2,3,4,5,6,0].map(w => { const r = (p.rule || {})[w];
         return `<div class="sh-slot"><div class="top"><span>${WDAY[w]}</span></div><div class="pchips">${patternFor(w).map((q,i) => { const on = covers(r, q); return `<button class="pc ${on ? "av" : "off"}" data-act="pfRule" data-w="${w}" data-i="${i}" aria-pressed="${on}">${tfmt(q.start)} to ${tfmt(q.end)}</button>`; }).join("")}</div></div>`; }).join("")
-      : `<p class="tw">${esc(ruleText(p))}</p><p class="note-sm">Ask a manager to change your usual days and times.</p>`)
+      : `<p class="tw">${esc(ruleText(p))}</p><p class="note-sm">Ask a manager to change your usual days and times.</p><p class="tw">Barista training: ${p.trained ? "completed" : "not yet"}</p>`)
     + `<h3>Weeks off</h3><p class="note-sm" style="margin:-4px 0 8px">Tap a week to take it off. Red weeks are off, so ${mgr ? "they" : "you"} won't show as available.</p>
       <div class="pchips">${offWeeks().map(w => { const off = (p.off || []).includes(w); return `<button class="pc ${off ? "off" : "av"}" data-act="pfOff" data-w="${w}" aria-pressed="${off}">Week of ${fmtD(w)}</button>`; }).join("")}</div>`
     + (mgr ? `<div style="margin-top:22px"><button class="btn ghost sm" data-act="pfDel">Remove ${esc(p.name)}</button></div>` : "");
@@ -3787,13 +3798,13 @@ function renderDayPanel(){
     const on = namesIn(x.names[i]), q = SH[i], need = Math.max(0, q.seats - on.length);
     const cand = avail.filter(n => !on.includes(n) && availFor(d, n, q));
     h += `<div class="sh-slot"><div class="top"><span>${tfmt(q.start)} to ${tfmt(q.end)}</span><span class="${need ? "status-over" : "status-ok"}" style="font-size:12px">${on.length} of ${q.seats} filled</span></div>
-      <div class="pchips">${on.map(n => `<button class="pc on" data-act="dpUn" data-i="${i}" data-n="${esc(n)}" title="Take ${esc(n)} off this shift">${esc(n)}</button>`).join("")}${Array.from({length:need}, () => `<span class="seatempty">Open spot</span>`).join("")}</div>
+      <div class="pchips">${on.map(n => `<button class="pc on" data-act="dpUn" data-i="${i}" data-n="${esc(n)}" title="Take ${esc(n)} off this shift">${nameH(n)}</button>`).join("")}${Array.from({length:need}, () => `<span class="seatempty">Open spot</span>`).join("")}</div>
       <div class="note-sm" style="margin-top:8px">${cand.length ? "Available, tap to add" : avail.some(n => availFor(d, n, q)) ? "Everyone available is already on this shift" : "Nobody is marked available for this shift"}</div>
-      <div class="pchips">${cand.map(n => `<button class="pc add${onShift[n] ? " busy" : ""}" data-act="dpAs" data-i="${i}" data-n="${esc(n)}"${onShift[n] ? ` title="Also on shift ${onShift[n].map(k => k + 1).join(" and ")}"` : ""}>${esc(n)}${onShift[n] ? ` (shift ${onShift[n].map(k => k + 1).join(", ")})` : ""}</button>`).join("")}</div>
+      <div class="pchips">${cand.map(n => `<button class="pc add${onShift[n] ? " busy" : ""}" data-act="dpAs" data-i="${i}" data-n="${esc(n)}"${onShift[n] ? ` title="Also on shift ${onShift[n].map(k => k + 1).join(" and ")}"` : ""}>${nameH(n)}${onShift[n] ? ` (shift ${onShift[n].map(k => k + 1).join(", ")})` : ""}</button>`).join("")}</div>
       <div class="row2" style="margin-top:8px"><input class="in txt" list="peopleList" data-dpname="${i}" placeholder="Someone else" aria-label="Add a name to shift ${i + 1}" style="font-size:14px"><button class="btn ghost sm" data-act="dpAdd" data-i="${i}">Add</button></div></div>`;
   }
   h += `<h3>Who's available ${toDate(d).toLocaleDateString("en-US", {weekday:"long"})}</h3><p class="note-sm" style="margin:-4px 0 6px">From each person's usual availability and weeks off. Change it from their profile under Staffing.</p>
-    <div class="pchips">${people.map(n => `<span class="pc ${availOn(d, n) ? "av" : "off"}">${esc(n)}${onShift[n] ? ` · shift ${onShift[n].map(k => k + 1).join(", ")}` : ""}</span>`).join("") || `<span class="empty">${isMgr() ? "Add people to the team under Staffing first." : "Sign in as a manager to see who's available."}</span>`}</div>
+    <div class="pchips">${people.map(n => `<span class="pc ${availOn(d, n) ? "av" : "off"}">${nameH(n)}${onShift[n] ? ` · shift ${onShift[n].map(k => k + 1).join(", ")}` : ""}</span>`).join("") || `<span class="empty">${isMgr() ? "Add people to the team under Staffing first." : "Sign in as a manager to see who's available."}</span>`}</div>
     ${s ? `<div class="dsales"><b>${F.int(s.n)}</b> drinks, <b>${F.usd0(s.rev)}</b>, ${F.int(s.orders)} orders.</div>` : ""}`;
   box.innerHTML = h;
 }
@@ -3817,7 +3828,7 @@ function renderHome(M){
     const x = ensureDay(d), sh = shiftsOf(d);
     wh += `<div class="wday">${dn}<div><div class="wd-h"><span class="kind ${x.kind}">${KIND_LBL[x.kind]}</span> ${tfmt(x.open)} to ${tfmt(x.close)}${SD[d] ? `, ${F.int(SD[d].n)} drinks sold` : d < today ? "" : `, ${F.int(plannedFor(d, M))} drinks planned`}</div>`
       + sh.map((q,j) => { const ns = namesIn(x.names[j]), open = Math.max(0, q.seats - ns.length);
-          return `<div class="wd-s"><span class="muted">${tfmt(q.start)} to ${tfmt(q.end)}</span> ${ns.map(esc).join(", ")}${open ? ` <span class="neg-t">${open} open</span>` : ""}</div>`; }).join("")
+          return `<div class="wd-s"><span class="muted">${tfmt(q.start)} to ${tfmt(q.end)}</span> ${ns.map(nameH).join(", ")}${open ? ` <span class="neg-t">${open} open</span>` : ""}</div>`; }).join("")
       + `</div><button class="btn ghost sm" data-act="dpShow" data-d="${d}">Shifts</button></div>`; }
   $("homeWeek").innerHTML = wh;
   // menu for that week: core and signature as they are now, specialty from the week's plan or its saved snapshot
