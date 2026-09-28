@@ -430,6 +430,7 @@ details.buy[open] summary{margin-bottom:10px}
   table.t td{padding:7px 4px;font-size:13px}
   table.t th{padding:7px 4px}
   .calgrid{grid-template-columns:minmax(0,1fr)}
+  .pc{padding:8px 12px;font-size:14px}
   .wday,.wday.off{grid-template-columns:78px minmax(0,1fr)}
   .wday .btn{grid-column:2;justify-self:start}
   .syr-line{grid-template-columns:minmax(0,1fr) 64px 60px 28px}
@@ -590,7 +591,27 @@ details.fold[open] summary{margin-bottom:8px}
 .pc.busy{opacity:.55}
 .pc.off{background:none;box-shadow:inset 0 0 0 1px var(--fill2);color:var(--label3);text-decoration:line-through}
 .pc.av{background:var(--green-bg);color:var(--green-t)}
-.tm{display:grid;grid-template-columns:1fr auto 28px;gap:8px;align-items:center;padding:6px 0;border-bottom:.5px solid var(--sep);font-size:14px}
+.pc:disabled{cursor:default}
+.acct{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--label2)}
+.ptiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.ptile{display:flex;flex-direction:column;gap:3px;min-width:0;text-align:left;border:0;background:var(--fill);border-radius:14px;padding:12px 14px;cursor:pointer;color:var(--label);font:inherit}
+.ptile b{font-size:15px}
+.ptile .note-sm{overflow-wrap:anywhere}
+.pf-f{display:grid;gap:10px;margin-top:12px}
+.pf-f label{display:grid;gap:4px;font-size:13px;color:var(--label2)}
+.pf-f .in{background:var(--tile);font-size:16px}
+.mx{border-collapse:separate;border-spacing:3px;font-size:12px}
+.mx th,.mx td{padding:0;text-align:center;white-space:nowrap}
+.mx thead th{font-weight:600;color:var(--label2);vertical-align:bottom;padding:2px}
+.mx .d0{padding-left:10px}
+.mx .nm{position:sticky;left:0;z-index:1;background:var(--tile);text-align:left;padding-right:8px;font-size:13px;font-weight:500;color:var(--label);max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.mxc{width:44px;height:36px;border:0;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;background:var(--fill);color:var(--label3)}
+.mxc.av{background:var(--green-bg);color:var(--green-t)}
+.mxc.as{background:var(--tint);color:#fff}
+.mxc.as.na{background:var(--orange)}
+.mxc:disabled{cursor:default;opacity:.45}
+.sh-slot.off{opacity:.6}
+.tm{display:grid;grid-template-columns:minmax(0,1fr) 32px 28px;gap:8px;align-items:center;padding:6px 0;border-bottom:.5px solid var(--sep);font-size:14px}
 .tm:last-child{border-bottom:0}
 .pat{display:grid;grid-template-columns:1fr auto 1fr auto 28px;gap:8px;align-items:center;padding:6px 0;border-bottom:.5px solid var(--sep);font-size:14px}
 .pat .in{padding:6px 26px 6px 8px;font-size:14px}
@@ -669,6 +690,7 @@ td.note-sm.flag{color:var(--orange-t);font-weight:600}
       <h1><svg class="logo" viewBox="0 0 1455.13 588.32" role="img" aria-label="Good Grace's Cafe Management Portal"><use href="#gg-logo"/></svg></h1>
       <p class="portal">Management portal</p>
     </div>
+    <div class="acct" id="acct"></div>
   </div>
 
 </header>
@@ -797,10 +819,6 @@ td.note-sm.flag{color:var(--orange-t);font-weight:600}
             <button class="btn sm" data-act="ruleAdd">Add rule</button>
           </div>
           <div id="ruleList"></div>
-          <h3>Team and usual availability</h3>
-          <p class="note-sm" style="margin:-2px 0 8px">Mark the days each person can usually work. Change it for a single day from that day's shift list.</p>
-          <div class="row2" style="margin-bottom:10px"><input class="in txt" id="teamName" placeholder="Add a person" aria-label="Name to add"><button class="btn sm" data-act="teamAdd">Add</button></div>
-          <div id="teamList"></div>
         </div>
       </div>
       <div>
@@ -815,6 +833,15 @@ td.note-sm.flag{color:var(--orange-t);font-weight:600}
     <div class="calset"><h3>Settings</h3>
       <div class="fields" style="max-width:460px"><label>Barista wage<small>Operations days only</small></label><input class="in" type="number" min="0" step="0.01" data-bind="exp.wage" data-type="num" aria-label="Barista wage"></div>
     </div>
+  </div>
+  <div class="sec" style="margin-top:18px">
+    <div class="tile-h"><div class="wknav"><button class="x" data-act="mxWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="mxTitle">Staffing</h2><button class="x" data-act="mxWk" data-v="1" aria-label="Next week">›</button></div><button class="btn ghost sm" data-act="mxWk" data-v="0">This week</button></div>
+    <p class="note-sm" style="margin:6px 0 10px">Green is available, from each person's usual availability minus their weeks off. Tap a cell to put someone on that shift, and tap again to take them off.</p>
+    <div id="mxGrid"></div>
+    <p class="toast" id="staffToast" role="status"></p>
+    <h3>Team</h3>
+    <div class="row2" id="teamAddRow" style="margin-bottom:10px;max-width:460px"><input class="in txt" id="teamName" placeholder="Add a person" aria-label="Name to add"><button class="btn sm" data-act="teamAdd">Add</button></div>
+    <div class="ptiles" id="teamList"></div>
   </div>
   <div class="cols c-side" style="margin-top:18px">
     <div>
@@ -1156,6 +1183,8 @@ td.note-sm.flag{color:var(--orange-t);font-weight:600}
 </section>
 
 </main>
+<div class="sheet-bg" id="pfPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pfTitle"><div id="pfBody"></div></div></div>
+<div class="sheet-bg" id="authPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="authTitle"><div id="authBody"></div></div></div>
 <div class="sheet-bg" id="dayPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dpTitle"><div id="dpBody"></div></div></div>
 
 <footer class="foot">
@@ -1165,6 +1194,7 @@ td.note-sm.flag{color:var(--orange-t);font-weight:600}
 
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
 (function(){
@@ -2307,7 +2337,7 @@ const fmtT = s => { const [h,m] = String(s).split(":").map(Number); return tfmt(
 const norm = s => String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9]/g, "");
 const fmtQty = (v, unit) => { const a = Math.abs(v); const n = a >= 100 ? Math.round(v).toLocaleString("en-US") : (Math.round(v * 10) / 10).toString(); return `${n} ${unit}`; };
 
-const Store = {mode:"memory", db:null, sales:[], stock:[]};
+const Store = {mode:"memory", db:null, sales:[], stock:[], staff:[]};
 UI.opt = {ice:true, milk:"dairy", sy:false, fo:false, q:1, now:true};
 UI.logMode = "tap"; UI.stkType = "receive"; UI.pending = null; UI.lastSale = null;
 
@@ -2811,6 +2841,7 @@ function applyConfig(cfg){
   if (!S.orders || typeof S.orders !== "object" || Array.isArray(S.orders)) S.orders = {};
   if (!S.pattern || typeof S.pattern !== "object" || Array.isArray(S.pattern)) S.pattern = {};
   { const have = new Set(S.team.map(p => p.name)); Object.values(S.days).forEach(x => (x.names || []).forEach(v => String(v || "").split(",").map(t => t.trim()).filter(Boolean).forEach(n => { if (!have.has(n)){ have.add(n); S.team.push({name:n, days:[]}); } }))); }
+  S.team.forEach(p => { if (!p.id) p.id = newId(); });
   if (S.addons && S.addons.wholePct == null) S.addons.wholePct = 85;
   S.ingredients.forEach(g => { if (g.kind == null) g.kind = SPEC_ONLY.has(g.id) ? "specialty" : "core"; });
   (S.drafts || []).forEach(d => { if (!d.season) d.season = seasonGuess(d.name || ""); });
@@ -2872,6 +2903,7 @@ async function initStore(){
   let db = await getDb();
   if (db){
     Store.mode = "db"; Store.db = db; setSave("Connecting to saved data…");
+    try { if (window.firebase && firebase.auth && firebase.apps.length){ Auth.on = true; firebase.auth().onAuthStateChanged(onUser); } } catch(e){ console.error("Sign-in failed to start", e); }
     const fail = e => setSave(e && e.code === "revoked" ? "Saved data is no longer available on this page" : e && e.code === "permission-denied" ? "Saved data is locked. Check the Firestore rules." : "Saved data is reconnecting");
     db.collection("sales").onSnapshot(snap => { Store.sales = snap.docs.map(x => ({id:x.id, ...x.data()})); recalc(); }, fail);
     db.collection("stock").onSnapshot(snap => { Store.stock = snap.docs.map(x => ({id:x.id, ...x.data()})); recalc(); }, fail);
@@ -3058,16 +3090,45 @@ document.addEventListener("click", e => {
   if (a === "dpAs"){ const n = t.dataset.n; setShiftNames(UI.dayPanel, +t.dataset.i, arr => arr.includes(n) ? arr : arr.concat(n)); return; }
   if (a === "dpUn"){ const n = t.dataset.n; setShiftNames(UI.dayPanel, +t.dataset.i, arr => arr.filter(x => x !== n)); return; }
   if (a === "dpAdd"){ const i = +t.dataset.i, inp = document.querySelector(`[data-dpname="${i}"]`), n = inp ? inp.value.trim() : ""; if (!n) return;
-    if (!S.team.some(p => p.name === n)) S.team.push({name:n, days:[]});
-    const x = ensureDay(UI.dayPanel); if (!x.avail) x.avail = {}; x.avail[n] = true;
+    if (!Auth.on && !person(n)) S.team.push({id:newId(), name:n});
     setShiftNames(UI.dayPanel, i, arr => arr.includes(n) ? arr : arr.concat(n)); return; }
-  if (a === "dpAv"){ const d = UI.dayPanel, n = t.dataset.n, x = ensureDay(d); if (!x.avail) x.avail = {};
-    const now = availOn(d, n), p = S.team.find(q => q.name === n), usual = !!(p && (p.days || []).includes(toDate(d).getDay()));
-    if (!now === usual) delete x.avail[n]; else x.avail[n] = !now;
-    markDirty(); renderDayPanel(); return; }
-  if (a === "teamAdd"){ const inp = $("teamName"), n = inp.value.trim(); if (!n) return; if (!S.team.some(p => p.name === n)) S.team.push({name:n, days:[6,0]}); inp.value = ""; markDirty(); renderTeam(); renderDayPanel(); return; }
-  if (a === "teamDay"){ const p = S.team[+t.dataset.i], v = +t.dataset.v; if (!p) return; p.days = (p.days || []).includes(v) ? p.days.filter(x => x !== v) : (p.days || []).concat(v); markDirty(); renderTeam(); renderDayPanel(); return; }
-  if (a === "teamDel"){ S.team.splice(+t.dataset.i, 1); markDirty(); renderTeam(); renderDayPanel(); return; }
+  if (a === "mxWk"){ const v = +t.dataset.v; UI.mxWk = v === 0 ? weekOf(ymd(new Date())) : addDays(UI.mxWk, 7 * v); renderMatrix(); return; }
+  if (a === "mxTog"){ const d = t.dataset.d, i = +t.dataset.i, n = t.dataset.n; if (!isMgr() || d < ymd(new Date())) return;
+    const was = namesIn(ensureDay(d).names[i]).includes(n);
+    setShiftNames(d, i, arr => was ? arr.filter(x => x !== n) : arr.concat(n));
+    toast("staffToast", was ? `Took ${n} off ${fmtD(d)}.` : availFor(d, n, shiftsOf(d)[i]) ? `Put ${n} on ${fmtD(d)}, ${tfmt(shiftsOf(d)[i].start)} to ${tfmt(shiftsOf(d)[i].end)}.` : `Put ${n} on ${fmtD(d)}, but they aren't marked available then.`);
+    const b = document.querySelector(`[data-act="mxTog"][data-d="${d}"][data-i="${i}"][data-n="${CSS.escape(n)}"]`); if (b) b.focus(); return; }
+  if (a === "pfOpen"){ openPf(t.dataset.id); return; }
+  if (a === "pfClose"){ closeSheet("pfPanel"); return; }
+  if (a === "pfSave"){ const p = pfPerson(); if (!p || !isMgr()) return; const v = k => (document.querySelector(`[data-pf="${k}"]`).value || "").trim(), name = v("name"), email = v("email");
+    if (!name){ toast("pfToast", "Enter a name."); return; }
+    if (team().some(x => x !== p && x.name === name)){ toast("pfToast", "Someone on the team already has that name."); return; }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast("pfToast", "That email doesn't look right."); return; }
+    if (name !== p.name){ Object.values(S.days || {}).forEach(x => { x.names = (x.names || []).map(v => namesIn(v).map(m => m === p.name ? name : m).join(", ")); }); markDirty(); }   // shifts are assigned by name
+    Object.assign(p, {name, email, phone:v("phone")});
+    saveStaff(p).then(() => { renderStaff(); toast("pfToast", "Saved."); }).catch(e => toast("pfToast", saveError(e))); return; }
+  if (a === "pfRule"){ const p = pfPerson(), w = +t.dataset.w, sh = patternFor(w); if (!p || !isMgr()) return;
+    const on = sh.map(q => covers((p.rule || {})[w], q)); on[+t.dataset.i] = !on[+t.dataset.i];
+    p.rule = Object.assign({}, p.rule, {[w]: sh.filter((q,j) => on[j]).map(q => ({s:q.start, e:q.end}))}); if (!p.rule[w].length) delete p.rule[w];
+    saveStaff(p).catch(e => toast("pfToast", saveError(e))); renderStaff(); return; }
+  if (a === "pfOff"){ const p = pfPerson(), w = t.dataset.w, cw = weekOf(ymd(new Date())); if (!p || w < cw) return;
+    p.off = ((p.off || []).includes(w) ? p.off.filter(x => x !== w) : (p.off || []).concat(w)).filter(x => x >= addDays(cw, -84)).sort();   // keep 12 weeks of history
+    saveOff(p).catch(e => toast("pfToast", saveError(e))); renderStaff(); return; }
+  if (a === "pfDel"){ const p = pfPerson(); if (!p || !isMgr() || !confirm(`Remove ${p.name} from the team? Shifts they already worked stay.`)) return;
+    closeSheet("pfPanel"); delStaff(p).then(renderStaff).catch(e => toast("staffToast", saveError(e))); return; }
+  if (a === "authOpen"){ renderAuth(); openSheet("authPanel"); return; }
+  if (a === "authClose"){ closeSheet("authPanel"); return; }
+  if (a === "authIn" || a === "authNew" || a === "authReset"){ const e = $("authEmail").value.trim(), pw = $("authPass").value, A = firebase.auth();
+    set("authMsg", "");
+    (a === "authIn" ? A.signInWithEmailAndPassword(e, pw) : a === "authNew" ? A.createUserWithEmailAndPassword(e, pw).then(c => c.user.sendEmailVerification()).then(() => onUser(A.currentUser))
+      : A.sendPasswordResetEmail(e).then(() => set("authMsg", "Check your email for a link to reset your password."))).catch(err => set("authMsg", authError(err))); return; }
+  if (a === "authVerified"){ const u = Auth.user; if (!u) return; u.reload().then(() => u.getIdToken(true)).then(() => { if (!u.emailVerified) set("authMsg", "Not verified yet. Open the link in the email first."); onUser(u); }).catch(err => set("authMsg", authError(err))); return; }
+  if (a === "authResend"){ if (Auth.user) Auth.user.sendEmailVerification().then(() => set("authMsg", "Sent. Check your email.")).catch(err => set("authMsg", authError(err))); return; }
+  if (a === "signOut"){ closeSheet("pfPanel"); firebase.auth().signOut(); return; }
+  if (a === "teamAdd"){ const inp = $("teamName"), n = inp.value.trim(); if (!n || !isMgr()) return;
+    if (person(n)){ toast("staffToast", `${n} is already on the team.`); return; }
+    const p = {id:Auth.on ? undefined : newId(), name:n, email:"", phone:"", rule:{}, off:[]}; inp.value = "";
+    saveStaff(p).then(() => { renderStaff(); openPf(p.id); }).catch(e => toast("staffToast", saveError(e))); return; }
   if (a === "patDow"){ UI.patDow = +t.dataset.v; renderPattern(); return; }
   if (a === "patAdd"){ const p = patternFor(UI.patDow), last = p[p.length - 1]; S.pattern[UI.patDow] = p.concat({start:last.end, end:Math.min(23, last.end + 4), seats:last.seats});
     markDirty(); renderPattern(); renderShifts(); recalc(); return; }
@@ -3156,8 +3217,11 @@ document.addEventListener("click", e => {
   if (["addIng","delIng","undoRemove","toggleDrink"].includes(a)) renderDrinkGrid();
   recalc();
 });
-document.addEventListener("mousedown", e => { if (e.target.id === "dayPanel") closeDay(); });
+document.addEventListener("mousedown", e => { if (e.target.id === "dayPanel") closeDay(); if (e.target.id === "pfPanel" || e.target.id === "authPanel") closeSheet(e.target.id); });
 document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !$("authPanel").hidden){ closeSheet("authPanel"); return; }
+  if (e.key === "Escape" && UI.pf){ closeSheet("pfPanel"); return; }
+  if (e.key === "Enter" && (e.target.id === "authEmail" || e.target.id === "authPass")){ const b = document.querySelector('[data-act="authIn"]'); if (b) b.click(); return; }
   if (e.key === "Escape" && UI.dayPanel){ closeDay(); return; }
   if (e.key === "Enter" && e.target.dataset && e.target.dataset.dpname != null){ const b = document.querySelector(`[data-act="dpAdd"][data-i="${e.target.dataset.dpname}"]`); if (b) b.click(); return; }
   if (e.key === "Enter" && e.target.id === "teamName"){ const b = document.querySelector('[data-act="teamAdd"]'); if (b) b.click(); return; }
@@ -3479,8 +3543,9 @@ function renderShifts(){
   renderCal();
   renderPattern();
   renderTeam();
+  renderMatrix();
   if (UI.dayPanel && !$("dayPanel").contains(document.activeElement)) renderDayPanel();
-  const people = new Set(S.team.map(p => p.name)); Object.values(S.days || {}).forEach(x => (x.names || []).forEach(v => namesIn(v).forEach(t => people.add(t))));
+  const people = new Set(team().map(p => p.name)); Object.values(S.days || {}).forEach(x => (x.names || []).forEach(v => namesIn(v).forEach(t => people.add(t))));
   $("peopleList").innerHTML = [...people].sort().map(n => `<option value="${esc(n)}">`).join("");
 
   // banner: this week's plan isn't on the menu yet
@@ -3574,26 +3639,106 @@ function paintDates(ds, brush){
 
 
 /* ------------------------------------------------ team, availability, day panel */
-const teamSorted = () => S.team.slice().sort((a,b) => a.name.localeCompare(b.name));
-function availOn(d, name){
-  const x = S.days && S.days[d], o = x && x.avail ? x.avail[name] : undefined;
-  if (o === true || o === false) return o;
-  const p = S.team.find(t => t.name === name); return !!(p && (p.days || []).includes(toDate(d).getDay()));
+// A profile is {id, name, email, phone, rule:{weekday:[{s,e}]}, off:[Mondays of weeks off]}. The rule repeats every week.
+// With Firebase on, profiles live in the private "staff" collection (see firestore.rules); otherwise in the settings, as S.team.
+const Auth = {on:false, user:null, role:null, unsub:null, migrated:false};
+const team = () => Auth.on ? Store.staff : S.team;
+const isMgr = () => !Auth.on || Auth.role === "manager";
+const teamSorted = () => team().slice().sort((a,b) => a.name.localeCompare(b.name));
+const person = n => team().find(p => p.name === n);
+const newId = () => "p" + Math.random().toString(36).slice(2, 10);
+const WDAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const covers = (r, q) => (r || []).some(x => x.s <= q.start && q.end <= x.e);
+function availFor(d, name, q){ const p = person(name); return !!p && !(p.off || []).includes(weekOf(d)) && covers((p.rule || {})[toDate(d).getDay()], q); }
+const availOn = (d, name) => shiftsOf(d).some(q => availFor(d, name, q));
+const offWeeks = () => { const w = weekOf(ymd(new Date())); return [0,1,2,3,4,5,6,7].map(i => addDays(w, 7 * i)); };   // this week and the next seven; past weeks are locked
+function ruleText(p){ const r = p.rule || {};
+  const parts = [1,2,3,4,5,6,0].filter(w => (r[w] || []).length).map(w => DOW[w] + " " + r[w].map(x => `${tfmt(x.s)}–${tfmt(x.e)}`).join(", "));
+  return parts.length ? parts.join(" · ") : "No usual availability yet"; }
+async function saveStaff(p){
+  p.email = String(p.email || "").trim().toLowerCase();
+  if (!Auth.on){ if (!S.team.includes(p)) S.team.push(p); markDirty(); return; }
+  const {id, ...doc} = p; doc.rule = doc.rule || {}; doc.off = doc.off || []; doc.phone = doc.phone || "";
+  if (id) await Store.db.doc("staff/" + id).set(doc); else p.id = (await Store.db.collection("staff").add(doc)).id;
+}
+async function saveOff(p){ if (!Auth.on){ markDirty(); return; } await Store.db.doc("staff/" + p.id).update({off:p.off}); }   // the one field staff may change on their own profile
+async function delStaff(p){ if (!Auth.on){ S.team = S.team.filter(x => x !== p); markDirty(); return; } await Store.db.doc("staff/" + p.id).delete(); }
+function onUser(u){
+  if (Auth.unsub){ Auth.unsub(); Auth.unsub = null; }
+  Store.staff = []; Auth.user = u;
+  const email = u && u.emailVerified ? String(u.email).toLowerCase() : null;
+  Auth.role = email ? ((window.MANAGER_EMAILS || []).map(e => String(e).toLowerCase()).includes(email) ? "manager" : "staff") : null;
+  if (email){ const col = Store.db.collection("staff"), q = Auth.role === "manager" ? col : col.where("email", "==", email);
+    Auth.unsub = q.onSnapshot(snap => { Store.staff = snap.docs.map(x => ({id:x.id, ...x.data()}));
+      if (Auth.role === "manager" && !snap.size && !snap.metadata.fromCache && !Auth.migrated){ Auth.migrated = true;   // first sign-in: turn the old name list into profiles
+        S.team.filter(p => p.name).forEach(p => col.add({name:p.name, email:"", phone:"", rule:{}, off:[]}).catch(e => console.error(e))); }
+      renderStaff(); }, e => { console.error(e); toast("staffToast", saveError(e)); }); }
+  if (!$("authPanel").hidden || (u && !u.emailVerified)){ if (u && u.emailVerified) closeSheet("authPanel"); else { renderAuth(); $("authPanel").hidden = false; } }
+  renderStaff();
+}
+function renderStaff(){ renderAcct(); renderMatrix(); renderTeam(); if (UI.pf && !$("pfPanel").contains(document.activeElement && document.activeElement.tagName === "INPUT" ? document.activeElement : null)) renderPf(); renderDayPanel(); }
+function renderAcct(){ const el = $("acct"); if (!el) return; const u = Auth.user, me = u && Auth.role === "staff" && Store.staff[0];
+  el.innerHTML = !Auth.on ? "" : !u ? `<button class="btn sm" data-act="authOpen">Sign in</button>`
+    : `<span>${esc(u.email)}${Auth.role === "manager" ? " · Manager" : ""}</span>${!u.emailVerified ? `<button class="btn sm" data-act="authOpen">Verify email</button>` : ""}${me ? `<button class="btn sm" data-act="pfOpen" data-id="${esc(me.id)}">My availability</button>` : ""}<button class="btn ghost sm" data-act="signOut">Sign out</button>`; }
+function renderAuth(msg){ const box = $("authBody"), u = Auth.user; if (!box) return;
+  box.innerHTML = `<div class="tile-h"><h2 id="authTitle">${u && !u.emailVerified ? "Verify your email" : "Sign in"}</h2><button class="x" data-act="authClose" aria-label="Close">✕</button></div>`
+    + (u && !u.emailVerified ? `<p class="hint">We sent a link to ${esc(u.email)}. Open it, then come back and tap the button below.</p><div class="chips"><button class="btn sm" data-act="authVerified">I've verified my email</button><button class="btn ghost sm" data-act="authResend">Send the link again</button></div>`
+      : `<p class="note-sm" style="margin:6px 0 12px">Staff: use the email your manager put on your profile. First time here? Enter it with a new password and tap Create account.</p>
+        <div class="pf-f"><label>Email<input class="in txt" type="email" id="authEmail" autocomplete="email"></label><label>Password<input class="in txt" type="password" id="authPass" autocomplete="current-password"></label>
+        <button class="btn" data-act="authIn">Sign in</button><div class="chips"><button class="btn ghost sm" data-act="authNew">Create account</button><button class="btn ghost sm" data-act="authReset">Forgot password</button></div></div>`)
+    + `<p class="toast" id="authMsg" role="status">${esc(msg || "")}</p>`; }
+function authError(e){ const c = (e && e.code) || "";
+  return /invalid-credential|wrong-password|user-not-found|invalid-login/.test(c) ? "That email and password don't match." : c === "auth/email-already-in-use" ? "That email already has an account. Sign in instead."
+    : c === "auth/weak-password" ? "Use a password of at least 6 characters." : c === "auth/invalid-email" || c === "auth/missing-email" ? "Enter a valid email." : c === "auth/missing-password" ? "Enter a password."
+    : c === "auth/too-many-requests" ? "Too many tries. Wait a minute and try again." : c === "auth/operation-not-allowed" ? "Email sign-in isn't turned on in Firebase yet." : "Could not sign in. Check your connection and try again."; }
+function renderMatrix(){
+  const box = $("mxGrid"); if (!box) return;
+  const today = ymd(new Date()); if (!UI.mxWk) UI.mxWk = weekOf(today); const wk = UI.mxWk;
+  $("mxTitle").innerHTML = `Staffing<span class="wk-sub">${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</span>`;
+  if (!isMgr()){ box.innerHTML = `<p class="empty">${Auth.user ? "Only managers can see everyone's availability and assign shifts." : "Sign in as a manager to see availability and assign shifts."}</p>`; return; }
+  const days = [0,1,2,3,4,5,6].map(i => addDays(wk, i)).filter(d => S.track.dates.includes(d));
+  if (!days.length){ box.innerHTML = `<p class="empty">The cafe is closed this week. Open days on the calendar.</p>`; return; }
+  const cols = []; days.forEach(d => { const x = ensureDay(d); shiftsOf(d).forEach((q,i) => cols.push({d, i, q, on:namesIn(x.names[i]), first:i === 0})); });
+  const people = [...new Set(teamSorted().map(p => p.name).concat(...cols.map(c => c.on)))];
+  if (!people.length){ box.innerHTML = `<p class="empty">Add people to the team below to start assigning shifts.</p>`; return; }
+  box.innerHTML = `<div class="scroll"><table class="mx"><thead><tr><th class="nm" rowspan="2">Name</th>${days.map(d => `<th class="d0" colspan="${shiftsOf(d).length}">${fmtD(d)}</th>`).join("")}</tr>
+    <tr>${cols.map(c => `<th class="${c.first ? "d0" : ""}">${tfmt(c.q.start)}<br>${tfmt(c.q.end)}<div class="${c.on.length >= c.q.seats ? "status-ok" : "neg-t"}">${c.on.length}/${c.q.seats}</div></th>`).join("")}</tr></thead>
+    <tbody>${people.map(n => `<tr><th class="nm" scope="row" title="${esc(n)}">${esc(n)}</th>${cols.map(c => { const as = c.on.includes(n), av = availFor(c.d, n, c.q);
+      return `<td class="${c.first ? "d0" : ""}"><button class="mxc${as ? " as" : ""}${av ? " av" : " na"}" data-act="mxTog" data-d="${c.d}" data-i="${c.i}" data-n="${esc(n)}" aria-pressed="${as}" aria-label="${esc(n)}, ${fmtD(c.d)} ${tfmt(c.q.start)} to ${tfmt(c.q.end)}, ${as ? "on this shift" : av ? "available" : "not available"}"${c.d < today ? " disabled" : ""}>${as ? "✓" : av ? "" : "–"}</button></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 function renderTeam(){
   const box = $("teamList"); if (!box) return;
-  const W = [[1,"M"],[2,"T"],[3,"W"],[4,"T"],[5,"F"],[6,"S"],[0,"S"]];
-  box.innerHTML = S.team.length ? teamSorted().map(p => { const i = S.team.indexOf(p);
-    return `<div class="tm"><span>${esc(p.name)}</span><span class="segc sm">${W.map(([v,l]) => `<button class="${(p.days || []).includes(v) ? "on" : ""}" data-act="teamDay" data-i="${i}" data-v="${v}" aria-label="${esc(p.name)} ${DOW[v]}">${l}</button>`).join("")}</span><button class="x" data-act="teamDel" data-i="${i}" aria-label="Remove ${esc(p.name)}">✕</button></div>`; }).join("")
+  $("teamAddRow").hidden = !isMgr();
+  if (Auth.on && !Auth.role){ box.innerHTML = `<p class="empty">Sign in to see the team.</p>`; return; }
+  const cw = weekOf(ymd(new Date()));
+  box.innerHTML = team().length ? teamSorted().map(p => { const off = (p.off || []).filter(w => w >= cw).sort();
+    return `<button class="ptile" data-act="pfOpen" data-id="${esc(p.id)}"><b>${esc(p.name)}</b><span class="note-sm">${esc([p.email, p.phone].filter(Boolean).join(" · ") || "No contact details yet")}</span><span class="note-sm">${esc(ruleText(p))}</span>${off.length ? `<span class="note-sm neg-t">Off the week of ${off.map(fmtD).join(", ")}</span>` : ""}</button>`; }).join("")
     : `<p class="empty">No one yet. Add the people who work shifts.</p>`;
 }
+const pfPerson = () => team().find(x => x.id === UI.pf);
+function openPf(id){ UI.pf = id; renderPf(); openSheet("pfPanel"); }
+function renderPf(){
+  const box = $("pfBody"), p = pfPerson(); if (!box || !UI.pf) return; if (!p){ closeSheet("pfPanel"); return; }
+  const mgr = isMgr(), link = [p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : "", p.phone ? `<a href="tel:${esc(p.phone.replace(/[^\d+]/g, ""))}">${esc(p.phone)}</a>` : ""].filter(Boolean).join(" · ");
+  box.innerHTML = `<div class="tile-h"><h2 id="pfTitle">${esc(p.name)}</h2><button class="x" data-act="pfClose" aria-label="Close">✕</button></div>${link ? `<p class="tw" style="margin:6px 0 0">${link}</p>` : ""}`
+    + (mgr ? `<div class="pf-f"><label>Name<input class="in txt" data-pf="name" value="${esc(p.name)}"></label><label>Email<input class="in txt" type="email" data-pf="email" value="${esc(p.email || "")}" autocomplete="off"></label><label>Phone<input class="in txt" type="tel" data-pf="phone" value="${esc(p.phone || "")}" autocomplete="off"></label><div><button class="btn sm" data-act="pfSave">Save details</button></div></div>` : "")
+    + `<p class="toast" id="pfToast" role="status"></p><h3>Usual availability</h3>`
+    + (mgr ? `<p class="note-sm" style="margin:-4px 0 8px">Tap the shifts they can usually work. This repeats every week.</p>` + [1,2,3,4,5,6,0].map(w => { const r = (p.rule || {})[w];
+        return `<div class="sh-slot"><div class="top"><span>${WDAY[w]}</span></div><div class="pchips">${patternFor(w).map((q,i) => { const on = covers(r, q); return `<button class="pc ${on ? "av" : "off"}" data-act="pfRule" data-w="${w}" data-i="${i}" aria-pressed="${on}">${tfmt(q.start)} to ${tfmt(q.end)}</button>`; }).join("")}</div></div>`; }).join("")
+      : `<p class="tw">${esc(ruleText(p))}</p><p class="note-sm">Ask a manager to change your usual days and times.</p>`)
+    + `<h3>Weeks off</h3><p class="note-sm" style="margin:-4px 0 8px">Tap a week to take it off. Red weeks are off, so ${mgr ? "they" : "you"} won't show as available.</p>
+      <div class="pchips">${offWeeks().map(w => { const off = (p.off || []).includes(w); return `<button class="pc ${off ? "off" : "av"}" data-act="pfOff" data-w="${w}" aria-pressed="${off}">Week of ${fmtD(w)}</button>`; }).join("")}</div>`
+    + (mgr ? `<div style="margin-top:22px"><button class="btn ghost sm" data-act="pfDel">Remove ${esc(p.name)}</button></div>` : "");
+}
+function openSheet(id){ $(id).hidden = false; const f = $(id).querySelector("button"); if (f) f.focus(); }
+function closeSheet(id){ $(id).hidden = true; if (id === "pfPanel") UI.pf = null; }
 function openDay(d){ UI.dayPanel = d; ensureDay(d); renderDayPanel(); $("dayPanel").hidden = false; const f = $("dayPanel").querySelector("button"); if (f) f.focus(); }
 function closeDay(){ UI.dayPanel = null; $("dayPanel").hidden = true; }
 function renderDayPanel(){
   const d = UI.dayPanel, box = $("dpBody"); if (!d || !box) return;
   const open = S.track.dates.includes(d), x = ensureDay(d), SD = UI.SD || {}, s = SD[d];
   const onShift = {}; x.names.slice(0, x.n).forEach((v,i) => namesIn(v).forEach(n => (onShift[n] || (onShift[n] = [])).push(i)));
-  const people = [...new Set(S.team.map(p => p.name).concat(Object.keys(onShift)))].sort((a,b) => a.localeCompare(b));
+  const people = [...new Set(team().map(p => p.name).concat(Object.keys(onShift)))].sort((a,b) => a.localeCompare(b));
   const avail = people.filter(n => availOn(d, n)), unavail = people.filter(n => !availOn(d, n));
   const L = dayLabor(d);
   let h = `<div class="tile-h"><h2 id="dpTitle">${fmtD(d)}</h2><button class="x" data-act="dpClose" aria-label="Close">✕</button></div>`;
@@ -3607,15 +3752,15 @@ function renderDayPanel(){
   const SH = shiftsOf(d);
   for (let i = 0; i < x.n; i++){
     const on = namesIn(x.names[i]), q = SH[i], need = Math.max(0, q.seats - on.length);
-    const cand = avail.filter(n => !on.includes(n));
+    const cand = avail.filter(n => !on.includes(n) && availFor(d, n, q));
     h += `<div class="sh-slot"><div class="top"><span>${tfmt(q.start)} to ${tfmt(q.end)}</span><span class="${need ? "status-over" : "status-ok"}" style="font-size:12px">${on.length} of ${q.seats} filled</span></div>
       <div class="pchips">${on.map(n => `<button class="pc on" data-act="dpUn" data-i="${i}" data-n="${esc(n)}" title="Take ${esc(n)} off this shift">${esc(n)}</button>`).join("")}${Array.from({length:need}, () => `<span class="seatempty">Open spot</span>`).join("")}</div>
-      <div class="note-sm" style="margin-top:8px">${cand.length ? "Available, tap to add" : avail.length ? "Everyone available is already on this shift" : "Nobody is marked available this day"}</div>
+      <div class="note-sm" style="margin-top:8px">${cand.length ? "Available, tap to add" : avail.some(n => availFor(d, n, q)) ? "Everyone available is already on this shift" : "Nobody is marked available for this shift"}</div>
       <div class="pchips">${cand.map(n => `<button class="pc add${onShift[n] ? " busy" : ""}" data-act="dpAs" data-i="${i}" data-n="${esc(n)}"${onShift[n] ? ` title="Also on shift ${onShift[n].map(k => k + 1).join(" and ")}"` : ""}>${esc(n)}${onShift[n] ? ` (shift ${onShift[n].map(k => k + 1).join(", ")})` : ""}</button>`).join("")}</div>
       <div class="row2" style="margin-top:8px"><input class="in txt" list="peopleList" data-dpname="${i}" placeholder="Someone else" aria-label="Add a name to shift ${i + 1}" style="font-size:14px"><button class="btn ghost sm" data-act="dpAdd" data-i="${i}">Add</button></div></div>`;
   }
-  h += `<h3>Who's available ${toDate(d).toLocaleDateString("en-US", {weekday:"long"})}</h3><p class="note-sm" style="margin:-4px 0 6px">Green is available. Tap to switch for this day only. Usual days are set on the Team list.</p>
-    <div class="pchips">${people.map(n => `<button class="pc ${availOn(d, n) ? "av" : "off"}" data-act="dpAv" data-n="${esc(n)}">${esc(n)}${onShift[n] ? ` · shift ${onShift[n].map(k => k + 1).join(", ")}` : ""}</button>`).join("") || `<span class="empty">Add people on the Team list first.</span>`}</div>
+  h += `<h3>Who's available ${toDate(d).toLocaleDateString("en-US", {weekday:"long"})}</h3><p class="note-sm" style="margin:-4px 0 6px">From each person's usual availability and weeks off. Change it from their profile under Staffing.</p>
+    <div class="pchips">${people.map(n => `<span class="pc ${availOn(d, n) ? "av" : "off"}">${esc(n)}${onShift[n] ? ` · shift ${onShift[n].map(k => k + 1).join(", ")}` : ""}</span>`).join("") || `<span class="empty">${isMgr() ? "Add people to the team under Staffing first." : "Sign in as a manager to see who's available."}</span>`}</div>
     ${s ? `<div class="dsales"><b>${F.int(s.n)}</b> drinks, <b>${F.usd0(s.rev)}</b>, ${F.int(s.orders)} orders.</div>` : ""}`;
   box.innerHTML = h;
 }

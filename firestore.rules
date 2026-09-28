@@ -1,10 +1,18 @@
 rules_version = '2';
 
-// Good Grace's Cafe: anyone with the link can read and write, but only to these three places,
-// and only with the expected shapes and sizes. Everything else is denied.
+// Good Grace's Cafe: anyone with the link can read and write the config, sales and stock,
+// but only with the expected shapes and sizes. Staff profiles need a verified sign-in. Everything else is denied.
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function verified(){ return request.auth != null && request.auth.token.email_verified == true; }
+    function isManager(){ return verified() && request.auth.token.email.lower() in ['rishit.shaquib@gmail.com']; }
+    function isSelf(d){ return verified() && d.email == request.auth.token.email.lower(); }
+    function validStaff(){ return request.method == 'delete' || (request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'rule', 'off'])
+                                  && request.resource.data.name is string && request.resource.data.name.size() <= 80
+                                  && request.resource.data.email is string && request.resource.data.phone is string
+                                  && request.resource.data.rule is map && request.resource.data.off is list && request.resource.data.off.size() <= 60); }
 
     // One document holds all settings (menu, prices, staffing, calendar) as a JSON string.
     match /config/main {
@@ -36,6 +44,17 @@ service cloud.firestore {
                     && request.resource.data.at is string;
       allow delete: if true;
       allow update: if false;
+    }
+
+    // Staff profiles hold emails and phone numbers, so only signed-in people with a verified email can read them.
+    // Managers (listed here and in firebase-config.js) manage every profile. Staff read their own and may only change their weeks off.
+    match /staff/{id} {
+      allow read: if isManager() || isSelf(resource.data);
+      allow create, delete: if isManager() && validStaff();
+      allow update: if (isManager() && validStaff())
+                    || (isSelf(resource.data)
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['off'])
+                        && request.resource.data.off is list && request.resource.data.off.size() <= 60);
     }
 
     match /{document=**} {
