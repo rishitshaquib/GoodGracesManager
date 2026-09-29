@@ -14,6 +14,3 @@ window.FIREBASE_CONFIG = {
   messagingSenderId: "835722261200",
   appId: "1:835722261200:web:81c8197678f258929ae4d5"
 };
-
-/* Emails that sign in as managers (see and assign everyone). Keep this list the same as isManager() in firestore.rules. */
-window.MANAGER_EMAILS = ["rishit.shaquib@gmail.com"];
