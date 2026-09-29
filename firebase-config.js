@@ -7,12 +7,12 @@
   Leave the PASTE values in place to run the site in browser-only mode (data saves to that one browser).
 */
 window.FIREBASE_CONFIG = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyCXytOkwhMm6-pI_zbW3a-7CgKgw_EDj1Q",
+  authDomain: "goodgracescafemanager.firebaseapp.com",
+  projectId: "goodgracescafemanager",
+  storageBucket: "goodgracescafemanager.firebasestorage.app",
+  messagingSenderId: "835722261200",
+  appId: "1:835722261200:web:81c8197678f258929ae4d5"
 };
 
 /* Emails that sign in as managers (see and assign everyone). Keep this list the same as isManager() in firestore.rules. */
