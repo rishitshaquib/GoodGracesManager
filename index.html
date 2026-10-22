@@ -734,7 +734,7 @@ details.fold2[open] > summary::before{transform:rotate(90deg)}
 .dz input{display:block;margin:10px auto 0;max-width:100%}
 .alink{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--fill);border-radius:14px;padding:10px 12px;margin:10px 0 14px;font-size:14px}
 .alink code{flex:1 1 220px;min-width:0;overflow-wrap:anywhere;font-size:13px;color:var(--label2)}
-body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
+body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot,body.avail-mode #admBtn{display:none}
 #availView{max-width:560px;margin:0 auto;padding:8px 16px 40px}
 #availView .sh-slot{background:var(--tile)}
 #availView .pc{padding:10px 14px;font-size:15px;background:var(--fill)}
@@ -752,6 +752,104 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
 .diag-m{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:13px;color:var(--label2);font-variant-numeric:tabular-nums}
 .prep h4{margin:14px 0 4px;font-size:14px}
 .prep ol,.prep ul{margin:4px 0 0;padding-left:20px;font-size:14px;line-height:1.5}
+/* ---------- admin lock: .adm shows only when unlocked, .staff only when locked */
+body:not(.admin) .adm{display:none!important}
+body.admin .staff{display:none!important}
+body:not(.admin) .mxc{cursor:default}
+.mast-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.admf{display:grid;gap:10px}
+.admf .in{text-align:left}
+/* ---------- home: build diagrams for what's on the menu */
+.hsecs > .sec + .sec{margin-top:18px}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px;margin-top:10px}
+.hcard{background:var(--fill);border-radius:16px;padding:12px 14px 14px;min-width:0}
+.hcard .diag-h h3{margin:0;font-size:17px;color:var(--label);text-transform:none;letter-spacing:0}
+.hcard .diag-builds{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.hcard .diag-b{background:var(--tile)}
+/* ---------- drink bank */
+.bkbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 8px}
+.bkbar .in{flex:1 1 220px;text-align:left}
+.bk{display:grid;grid-template-columns:minmax(0,1fr) 150px 120px auto;gap:8px 14px;align-items:center;padding:10px 0;border-bottom:.5px solid var(--sep)}
+.bk.off .bk-n .drink{color:var(--label2)}
+.bk-n .note-sm{margin-top:2px}
+.bk-l{display:grid;gap:4px;font-size:13px;color:var(--label2)}
+.bk-l b{color:var(--label);font-size:15px}
+.bk-l .rb{height:8px;background:var(--fill);border-radius:4px;overflow:hidden}
+.bk-l .rb i{display:block;height:100%;background:var(--purple);border-radius:4px}
+.bk select{text-align:left;font-size:14px}
+@media (max-width:720px){.bk{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.bk-n{grid-column:1/-1}.bk .segc{grid-column:1/-1;justify-self:start}}
+/* ---------- weekly order checklist */
+.ordrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;padding:10px 0;border-bottom:.5px solid var(--sep)}
+.ordrow .nm small{display:block;color:var(--label2);font-size:12px;margin-top:2px}
+.ordrow .ctl{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.ordrow .ctl .in.q{width:64px;flex:none}
+.ordrow .ctl select{width:auto;text-align:left;font-size:13px}
+.ordrow .ock{display:flex;gap:6px}
+.ordrow .pc{background:var(--tile);box-shadow:inset 0 0 0 1px var(--fill2);padding:7px 12px}
+.ordrow .pc:disabled{opacity:.5}
+.ordrow .in{background:var(--tile)}
+.ordrow .pc.av{background:var(--green-bg);color:var(--green-t)}
+.ordrow .pc.av::before{content:"✓ "}
+.ordrow.done .nm b{text-decoration:line-through;color:var(--label2)}
+.ordrow.zero .nm b{color:var(--label2)}
+/* ---------- weekly hours grid: shift blocks over half hours */
+.wkg{margin:12px 0 8px;touch-action:none;user-select:none;-webkit-user-select:none}
+.wkg.ro{touch-action:auto;margin:10px 0 6px}
+.wk-r{display:grid;grid-template-columns:40px minmax(0,1fr);gap:8px;align-items:center;margin-bottom:4px}
+.wkg.ro .wk-r{grid-template-columns:52px minmax(0,1fr)}
+.wk-d{font-size:13px;font-weight:600}
+.wk-c{display:grid;height:38px;border-radius:8px;background:var(--fill)}
+.wk-c > i{grid-row:1;border-left:1px solid color-mix(in srgb, var(--label) 6%, transparent);cursor:crosshair}
+.wkg.ro .wk-c > i{cursor:default}
+.wk-c > i.hr{border-left-color:color-mix(in srgb, var(--label) 14%, transparent)}
+.wk-hd .wk-c{height:auto;background:none}
+.wk-hd .wk-c span{grid-row:1;font-size:10px;color:var(--label2);white-space:nowrap;overflow:visible}
+.wk-b{grid-row:1;z-index:1;position:relative;margin:3px 1px;border-radius:7px;background:var(--green);display:flex;align-items:center;justify-content:center;min-width:0;cursor:grab}
+.wk-b.sel{box-shadow:0 0 0 2.5px var(--label)}
+.wk-n{border:0;background:rgba(255,255,255,.92);color:var(--green-t);font-weight:700;font-size:13px;min-width:24px;height:24px;border-radius:999px;cursor:pointer;padding:0 6px}
+.wk-g{position:absolute;top:0;bottom:0;width:9px;cursor:ew-resize}
+.wk-g.l{left:0;border-radius:7px 0 0 7px}.wk-g.r{right:0;border-radius:0 7px 7px 0}
+.wk-b:hover .wk-g{background:rgba(0,0,0,.14)}
+.wk-b.av{border:0;font-size:13px;font-weight:700;cursor:pointer;padding:0 2px;white-space:nowrap;overflow:hidden}
+.wk-b.av.need{background:var(--orange-bg);color:var(--orange-t);box-shadow:inset 0 0 0 1.5px var(--orange)}
+.wk-b.av.ok{background:var(--green-bg);color:var(--green-t)}
+.wk-b.av.mine{background:var(--tint);color:#fff}
+.wk-b.av:disabled{cursor:default}
+.wk-pop{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:var(--fill);border-radius:12px;padding:8px 12px;margin:0 0 8px 48px;font-size:14px}
+.wk-pop .stepper{background:var(--tile)}
+.wk-gap{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--label2);margin:10px 0 4px}
+.wksum{display:grid;gap:2px;font-size:13px;margin:6px 0 10px}
+.wksave{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--fill);border-radius:14px;padding:10px 12px}
+.wksave .in{width:auto}
+@media (max-width:640px){.wk-r{grid-template-columns:32px minmax(0,1fr);gap:6px}.wk-pop{margin-left:0}}
+
+/* ---------- home overview */
+.hd-days{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}
+.hd-day{background:var(--fill);border-radius:14px;padding:10px 12px}
+.hd-day h3{margin:0 0 6px!important;font-size:15px!important;color:var(--label)!important}
+.hsh{display:grid;grid-template-columns:118px minmax(0,1fr);gap:8px;padding:5px 0;font-size:15px;border-bottom:.5px solid var(--sep)}
+.hsh:last-of-type{border-bottom:0}
+.hsh .t{font-weight:600;font-variant-numeric:tabular-nums}
+.hmenu{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:4px 18px}
+.hmenu h3{margin:8px 0 2px!important;font-size:12px!important;text-transform:uppercase;letter-spacing:.06em;color:var(--label2)!important}
+.mrow2{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:5px 0;border-bottom:.5px solid var(--sep);font-size:15px}
+.hcfg{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 10px;padding:7px 0;border-bottom:.5px solid var(--sep);font-size:15px}
+.bk-a{display:flex;align-items:center;gap:6px}
+/* ---------- closing count */
+.cnt{display:grid;grid-template-columns:minmax(0,1fr) 84px 128px;gap:8px;align-items:center;padding:8px 0;border-bottom:.5px solid var(--sep)}
+.cnt .nm small{display:block;color:var(--label2);font-size:12px;margin-top:2px}
+.cnt select{text-align:left;font-size:13px}
+.cntbar{position:sticky;bottom:0;z-index:5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px -4px 0;padding:10px 4px calc(10px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb, var(--tile) 90%, transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.cntbar .in{width:auto}
+@media (max-width:640px){.cnt{grid-template-columns:96px minmax(0,1fr);gap:6px 8px}.cnt .nm{grid-column:1/-1}}
+details.full > summary{font-size:16px}
+.sel-s{min-width:140px;text-align:left;font-size:13px}
+/* ---------- analytics range and import */
+.anbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:4px 0 14px}
+.anbar .in{width:auto}
+.impf{background:var(--fill);border-radius:12px;padding:10px 12px;margin-top:8px}
+.impf.bad{box-shadow:inset 0 0 0 1.5px var(--red)}
+.impf .in{width:auto}
 
 </style>
 <meta name="robots" content="noindex, nofollow">
@@ -785,7 +883,7 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
       <h1><svg class="logo" viewBox="0 0 1455.13 588.32" role="img" aria-label="Good Grace's Cafe Management Portal"><use href="#gg-logo"/></svg></h1>
       <p class="portal">Management portal</p>
     </div>
-    <p class="save" id="saveState"></p>
+    <div class="mast-r"><p class="save" id="saveState"></p><button class="btn ghost sm" id="admBtn" data-act="admOpen">Admin</button></div>
   </div>
 </header>
 
@@ -795,7 +893,8 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
   <button class="step" data-act="tab" data-tab="shifts">Weeks and shifts</button>
   <button class="step" data-act="tab" data-tab="inventory">Inventory</button>
   <button class="step" data-act="tab" data-tab="menu">Menu and recipes</button>
-  <button class="step" data-act="tab" data-tab="analytics">Analytics</button>
+  <button class="step adm" data-act="tab" data-tab="bank">Drink bank</button>
+  <button class="step adm" data-act="tab" data-tab="analytics">Analytics</button>
 </div></nav>
 
 <main>
@@ -803,22 +902,22 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
 <!-- ============ HOME ============ -->
 <section class="pane on" id="pane-home">
   <div class="sec">
-    <div class="tile-h"><div class="wknav"><button class="x" data-act="homeWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="homeWeekTitle">This week</h2><button class="x" data-act="homeWk" data-v="1" aria-label="Next week">›</button></div><button class="btn ghost sm" data-act="homeWk" data-v="0">Back to this week</button></div>
-    <div class="cols c-even" style="margin-top:10px">
-      <div><div id="homeWeek"></div></div>
-      <div><div id="homeMenu"></div></div>
-    </div>
+    <div class="tile-h"><h2 id="homeShiftTitle">Shifts</h2><button class="btn big" data-act="tab" data-tab="log">Log sales</button></div>
+    <div id="homeShifts" style="margin-top:8px"></div>
   </div>
   <div class="sec" style="margin-top:18px">
-    <div class="tile-h"><h2><span class="ic" style="--c:#007AFF" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2.5l2.2 11.2h10.6L20.5 8H7"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span><span id="homeOrderTitle">To order</span></h2><button class="btn ghost sm" data-act="tab" data-tab="inventory">Inventory</button></div>
-    <div id="homeOrder"></div>
+    <div class="tile-h"><h2>On the menu this week</h2></div>
+    <p class="note-sm" style="margin:2px 0 8px">Tap a drink to see how it's made.</p>
+    <div id="homeMenu"></div>
+    <div class="adm" id="homeConfig"></div>
   </div>
+  <div class="hsecs" id="homeDiag" style="margin-top:18px"></div>
 </section>
 
 <!-- ============ LOG SALES ============ -->
 <section class="pane" id="pane-log">
   <div class="sec">
-    <div class="tile-h"><h2>Log sales</h2><button class="gearbtn" data-act="gearOpen" aria-label="Menu settings: prices, specialty drinks, add-ons"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button></div>
+    <div class="tile-h"><h2>Log sales</h2><button class="gearbtn adm" data-act="gearOpen" aria-label="Menu settings: prices, specialty drinks, add-ons"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button></div>
     <p class="hint" style="margin-top:4px">Tap a drink, pick the changes, then Add. Submit when the order is done.</p>
     <div class="dgrid" id="drinkGrid"></div>
     <div class="ticket">
@@ -836,11 +935,6 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
           <input class="in txt" type="time" id="logTime" aria-label="Sale time" disabled>
         </div>
       </details>
-      <details class="fold2"><summary>Upload a sales file</summary>
-        <div class="filebox"><input type="file" id="fileIn" accept=".csv,.xlsx,.xls" aria-label="Sales file"></div>
-        <p class="hint">One row per drink with date, time and drink. Add an order column to group drinks into orders. Optional columns: qty, iced, milk, syrup, foam.</p>
-        <div id="fileResult"></div>
-      </details>
       <details class="fold2"><summary>Recent entries</summary>
         <table class="t"><tbody id="recentBody"></tbody></table>
       </details>
@@ -850,45 +944,38 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
 
 <!-- ============ WEEKS AND SHIFTS ============ -->
 <section class="pane" id="pane-shifts">
-  <div class="sec">
-    <div class="tile-h"><h2><span class="ic" style="--c:#5856D6" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Cafe calendar</h2>
-      <div class="lnk"><button class="x" data-act="calMove" data-v="-1" aria-label="Earlier months">‹</button><span class="tw" id="calRange"></span><button class="x" data-act="calMove" data-v="1" aria-label="Later months">›</button></div></div>
-    <p class="hint" style="margin-top:4px">Tap a day to see its shifts. Drag across days to paint them with the brush, and right-click or right-drag to close days.</p>
-    <div class="calbar">
-      <div class="segc" id="calBrush"></div>
-      <span class="legend" style="margin:0"><span><i style="background:var(--orange)"></i>Pilot day</span><span><i style="background:var(--tint)"></i>Operations day</span><span><i style="background:var(--fill2)"></i>Closed</span></span>
+  <div class="sec adm">
+    <div class="tile-h"><h2><span class="ic" style="--c:#5856D6" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Cafe hours</h2>
     </div>
-    <div class="calgrid" id="calGrid"></div>
+    <p class="hint" style="margin-top:4px">Drag across a day to draw a shift, or down several days to draw the same shift on each. Drag a shift's end to resize it. Tap a shift to set how many people it needs or delete it, then save.</p>
+    <div class="wkg" id="wkGrid"></div>
+    <div class="wksum" id="wkSum"></div>
+    <div class="wksave">
+      <label class="tw">Starting <input class="in txt" type="date" id="wkFrom"></label>
+      <label class="tw">Until <input class="in txt" type="date" id="wkUntil" aria-label="Until, leave empty for no end date"></label>
+      <button class="btn" data-act="wkSave">Save as rule</button>
+      <span class="lnk"><button class="linkbtn" data-act="wkReset">Back to saved hours</button><button class="linkbtn" data-act="wkClear">Clear</button></span>
+    </div>
     <p class="toast" id="calToast" role="status"></p>
-    <details class="fold2"><summary>Repeating days, shift pattern and wage</summary>
-      <div class="cols c-even" style="margin-top:10px">
-        <div><div>
-          <h3 style="margin-top:0">Repeat</h3>
-          <div class="rulef">
-            <div class="segc sm" id="ruleDows"></div>
-            <select class="in txt" id="ruleKind" aria-label="Day type"><option value="pilot">as pilot days</option><option value="ops">as operations days</option></select>
-            <label class="tw">From <input class="in txt" type="date" id="ruleFrom"></label>
-            <label class="tw">Until <input class="in txt" type="date" id="ruleUntil"></label>
-            <button class="btn sm" data-act="ruleAdd">Add rule</button>
-          </div>
-          <div id="ruleList"></div>
-        </div></div>
-        <div><div>
-          <div class="tile-h"><h3 style="margin:0">Shift pattern</h3><div class="segc sm" id="patDow"></div></div>
-          <p class="note-sm" style="margin:6px 0 10px">Every cafe day takes its shifts from its weekday's pattern.</p>
-          <div id="patRows"></div>
-          <div class="chips" style="margin-top:8px"><button class="chip" data-act="patAdd">Add a shift</button><button class="chip" data-act="patCopy" data-to="all">Use for every day</button><button class="chip" data-act="patCopy" data-to="wk">Use for Sat and Sun</button><button class="chip" data-act="patCopy" data-to="wd">Use for weekdays</button></div>
-        </div></div>
-      </div>
-      <div class="fields" style="max-width:460px;margin-top:12px"><label>Barista wage<small>Operations days only</small></label><input class="in" type="number" min="0" step="0.01" data-bind="exp.wage" data-type="num" aria-label="Barista wage"></div>
+    <details class="fold2"><summary>Saved hours, single days and wage</summary>
+      <div id="ruleList" style="margin-top:10px"></div>
+      <div class="tile-h" style="margin-top:14px"><h3 style="margin:0">Calendar</h3>
+        <div class="lnk"><button class="x" data-act="calMove" data-v="-1" aria-label="Earlier months">‹</button><span class="tw" id="calRange"></span><button class="x" data-act="calMove" data-v="1" aria-label="Later months">›</button></div></div>
+      <p class="note-sm" style="margin:6px 0 8px">For one-offs: tap a day to see its shifts, drag to open or close days, right-click to close.</p>
+      <div class="calbar"><div class="segc" id="calBrush"></div>
+        <span class="legend" style="margin:0"><span><i style="background:var(--tint)"></i>Open</span><span><i style="background:var(--fill2)"></i>Closed</span></span></div>
+      <div class="calgrid" id="calGrid"></div>
+      <div class="fields" style="max-width:460px;margin-top:12px"><label>Barista wage<small>Per hour</small></label><input class="in" type="number" min="0" step="0.01" data-bind="exp.wage" data-type="num" aria-label="Barista wage"></div>
     </details>
   </div>
   <div class="sec" style="margin-top:18px">
     <div class="tile-h"><div class="wknav"><button class="x" data-act="mxWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="mxTitle">Staffing</h2><button class="x" data-act="mxWk" data-v="1" aria-label="Next week">›</button></div><button class="btn ghost sm" data-act="mxWk" data-v="0">This week</button></div>
     <div id="availBox"></div>
-    <p class="note-sm" style="margin:0 0 10px">Green is available: from the availability form for that week, otherwise each person's usual times minus their weeks off. Tap a cell to put someone on a shift and tap again to take them off. Bold names have finished barista training.</p>
+    <p class="note-sm adm" style="margin:0 0 10px">Green is available: from the availability form for that week, otherwise each person's usual times minus their weeks off. Tap a cell to put someone on a shift and tap again to take them off. Bold names have finished barista training.</p>
+    <p class="note-sm staff" style="margin:0 0 10px">✓ marks who is on each shift. Use the link above to tell us when you can work.</p>
     <div id="mxGrid"></div>
     <p class="toast" id="staffToast" role="status"></p>
+    <div class="adm">
     <h3>Team</h3>
     <div class="row2" id="teamAddRow" style="margin-bottom:10px;max-width:460px"><input class="in txt" id="teamName" placeholder="Add a person" aria-label="Name to add"><button class="btn sm" data-act="teamAdd">Add</button></div>
     <div class="ptiles" id="teamList"></div>
@@ -897,6 +984,7 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
       <textarea class="in txt" id="impText" rows="6" aria-label="Staff list to import"></textarea>
       <div style="margin-top:8px"><button class="btn sm" data-act="teamImport">Import</button></div>
     </details>
+    </div>
     <datalist id="peopleList"></datalist>
   </div>
 </section>
@@ -905,69 +993,84 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
 <section class="pane" id="pane-inventory">
   <div class="banner" id="inv-banner"></div>
   <div class="sec">
-    <h2><span class="ic" style="--c:#34C759" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg></span>Import a WebstaurantStore invoice</h2>
-    <p class="hint">Drop in the invoice PDF. Each line is matched to an ingredient, the price and pack size update, and the delivery goes into stock on hand.</p>
-    <label class="dz">Choose one or more invoice PDFs<input type="file" id="invIn" accept=".pdf,application/pdf" multiple aria-label="Invoice PDFs"></label>
-    <div id="invResult" style="margin-top:12px"></div>
-    <details class="fold2"><summary>Record a count or delivery by hand</summary>
-      <div class="segc stkseg" id="stkType" style="margin-top:10px">
-        <button data-act="stktype" data-v="receive" class="on">Delivery</button>
-        <button data-act="stktype" data-v="count">Count on hand</button>
-      </div>
-      <div class="frm stkfrm">
-        <label>Items</label><div><div id="stkLines"></div><button class="btn ghost sm" data-act="stkAdd" style="margin-top:6px">Add another item</button></div>
-        <label for="stkDate">Date</label><input class="in txt" type="date" id="stkDate">
-        <span></span><div><button class="btn" data-act="stksave">Save</button> <span class="toast" id="stkToast" style="display:inline"></span></div>
+    <div class="tile-h"><h2><span class="ic" style="--c:#34C759" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg></span>In reserve</h2><span class="note-sm" id="resSum"></span></div>
+    <p class="hint" style="margin-top:4px">Closing count: type what's left in reserve next to each item, then save. Leave a line blank to skip it.</p>
+    <div id="cntList"></div>
+    <div class="cntbar"><label class="tw">Counted on <input class="in txt" type="date" id="cntDate"></label><button class="btn" id="cntSave" data-act="cntSave">Save closing count</button><span class="toast" id="cntToast" role="status"></span></div>
+    <details class="fold2"><summary>Add an item to inventory</summary>
+      <div class="nbase" style="margin-top:8px">
+        <label class="wide">Item<input class="in txt" id="niName" placeholder="Oat milk, 16 oz lids, napkins"></label>
+        <label>One pack holds<input class="in" type="number" min="0" step="any" id="niSize" placeholder="64"></label>
+        <label>Unit<select class="in txt" id="niUnit"><option>each</option><option>oz</option><option>g</option></select></label>
+        <label>Pack price<input class="in" type="number" min="0" step="0.01" id="niPrice" placeholder="4.99"></label>
+        <label>Store<select class="in txt" id="niStore"><option value="">Pick one</option><option>BJ's</option><option>WebstaurantStore</option><option>Amazon</option></select></label>
+        <label class="wide">Kind<select class="in txt" id="niCat"><option value="coffee">Coffee</option><option value="tea">Tea and matcha</option><option value="milk">Milks and cream</option><option value="mixin">Syrups, sauces, fruit and spices</option><option value="other" selected>Other</option></select></label>
+        <label class="wide">Buy link<input class="in txt" id="niUrl" placeholder="Optional"></label>
+        <div class="wide" style="grid-column:1/-1"><button class="btn sm" data-act="niAdd">Add to inventory</button> <span class="toast" id="niToast" role="status"></span></div>
       </div>
     </details>
-    <details class="fold2"><summary>Recent deliveries and counts</summary>
+    <details class="fold2"><summary>Recent counts and deliveries</summary>
       <table class="t"><tbody id="stkLog"></tbody></table>
     </details>
   </div>
   <div class="sec" style="margin-top:18px">
-    <div class="tile-h"><h2><span class="ic" style="--c:#007AFF" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2.5l2.2 11.2h10.6L20.5 8H7"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>Stock and orders</h2><span class="segc sm" id="stkView"></span></div>
-    <div id="orderView">
-      <p class="hint" id="orderHint"></p>
-      <div id="trackSliders"></div>
-      <div class="calbar" style="margin:6px 0 10px"><span class="segc sm" id="buyShow"></span><span class="lnk"><button class="btn ghost sm" data-act="buyReset">Back to suggested</button><button class="btn sm" data-act="buyPdf">Export PDF</button></span></div>
-      <p class="toast" id="buyToast" role="status" style="margin:0 0 6px"></p>
-      <div id="orderList"></div>
-    </div>
-    <div id="stockView" hidden>
-      <div class="scroll"><table class="t">
-        <thead><tr><th class="l">Item</th><th>On hand</th><th>Per cafe day</th><th class="l">Lasts</th><th class="l">Status</th></tr></thead>
-        <tbody id="stockBody"></tbody>
-      </table></div>
-    </div>
+    <div class="tile-h"><h2><span class="ic" style="--c:#007AFF" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2.5l2.2 11.2h10.6L20.5 8H7"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>This week's order</h2><span class="segc sm" id="buyShow"></span></div>
+    <p class="hint" id="orderHint"></p>
+    <div class="calbar" style="margin:6px 0 4px"><button class="btn ghost sm" data-act="buyReset">Back to suggested</button></div>
+    <p class="toast" id="buyToast" role="status" style="margin:0 0 6px"></p>
+    <div id="orderList"></div>
+    <details class="fold2"><summary>Got a WebstaurantStore order? Import the invoice</summary>
+      <p class="hint" style="margin-top:8px">Drop in the invoice PDF. Each line is matched to an item, the price and pack size update, and the delivery goes into stock.</p>
+      <label class="dz">Choose one or more invoice PDFs<input type="file" id="invIn" accept=".pdf,application/pdf" multiple aria-label="Invoice PDFs"></label>
+      <div id="invResult" style="margin-top:12px"></div>
+    </details>
+    <details class="fold2 adm"><summary>Buffer and planning number</summary><div id="trackSliders" style="margin-top:8px"></div></details>
   </div>
   <div class="sec" style="margin-top:18px">
-    <h2>Ingredients and packaging</h2>
-    <p class="hint">Invoice imports keep these prices current. Recipes cost out from them.</p>
-    <div class="scroll"><table class="t">
-      <thead><tr><th class="l">Item</th><th>Pack price</th><th>Pack size</th><th class="l">Unit</th><th>Cost per unit</th><th class="l">Vendor</th><th class="l">Buy link</th><th></th></tr></thead>
-      <tbody id="ingBody"></tbody>
-    </table></div>
-    <button class="add" data-act="addIng">Add an ingredient</button> <button class="add" data-act="addPkg" style="margin-left:14px">Add packaging</button>
-    <div class="toast" id="ingToast" role="status"></div>
+    <details class="fold2 full" id="fullList"><summary>Full ordering list: stores, prices and buy links</summary>
+      <p class="hint" style="margin-top:8px">Set each item's store once. Invoice imports keep prices current<span class="adm">, and recipes cost out from them</span>.</p>
+      <div class="scroll"><table class="t">
+        <thead><tr><th class="l">Item</th><th>Pack price</th><th>Pack size</th><th class="l">Unit</th><th class="adm">Cost per unit</th><th class="l">Store</th><th class="l">Buy link</th><th class="adm"></th></tr></thead>
+        <tbody id="ingBody"></tbody>
+      </table></div>
+      <div class="adm"><button class="add" data-act="addIng">Add an ingredient</button> <button class="add" data-act="addPkg" style="margin-left:14px">Add packaging</button></div>
+      <div class="toast" id="ingToast" role="status"></div>
+    </details>
   </div>
 </section>
 
 <!-- ============ MENU AND RECIPES ============ -->
 <section class="pane" id="pane-menu">
   <div class="sec">
-    <div class="tile-h"><h2>Menu and recipes</h2><button class="btn ghost sm" data-act="gearOpen">Prices and specialty drinks</button></div>
-    <p class="hint" style="margin-top:4px">Tap a drink to see how it's built. Recipes are fixed; costs follow the latest ingredient prices.</p>
+    <div class="tile-h"><h2>Menu and recipes</h2><button class="btn ghost sm adm" data-act="gearOpen">Prices and specialty drinks</button></div>
+    <p class="hint" style="margin-top:4px">Tap a drink to see how it's built. Recipes are fixed<span class="adm">; costs follow the latest ingredient prices</span>.</p>
     <div class="scroll"><table class="t">
-      <thead><tr><th class="l">Drink</th><th class="l">Serve</th><th>Price</th><th>Cost</th><th>Margin</th></tr></thead>
+      <thead><tr><th class="l">Drink</th><th class="l">Serve</th><th>Price</th><th class="adm">Cost</th><th class="adm">Margin</th></tr></thead>
       <tbody id="menuBody"></tbody>
     </table></div>
     <details class="fold2 prep" id="prepBox"><summary>Batch prep, cup codes and steaming</summary><div id="prepBody"></div></details>
   </div>
 </section>
 
+<!-- ============ DRINK BANK ============ -->
+<section class="pane" id="pane-bank">
+  <div class="sec">
+    <div class="tile-h"><h2><span class="ic" style="--c:#AF52DE" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7L12 3Z"/></svg></span>Drink bank</h2><button class="btn sm" data-act="gearOpen">New drink</button></div>
+    <p class="hint" id="bankHint" style="margin-top:4px"></p>
+    <div class="bkbar"><input class="in txt" type="search" id="bankQ" placeholder="Search drinks, syrups, seasons" aria-label="Search the drink bank"><span class="segc sm" id="bankView"></span><span class="segc sm" id="bankSort"></span></div>
+    <div id="bankBody"></div>
+  </div>
+</section>
+
 <!-- ============ ANALYTICS ============ -->
 <section class="pane" id="pane-analytics">
-  <div class="tile-h" style="margin:4px 0 12px"><span class="segc" id="anRange"></span></div>
+  <div class="anbar"><label class="tw">From <input class="in txt" type="date" id="anFrom"></label><label class="tw">to <input class="in txt" type="date" id="anTo"></label><span class="segc sm" id="anRange"></span></div>
+  <div class="sec" style="margin-bottom:18px">
+    <h2><span class="ic" style="--c:#007AFF" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg></span>Import sales</h2>
+    <p class="hint">Each weekend, drop in all of its files at once: Clover transactions (each order's time and total), the Clover item sales report, or a sheet with one drink per row. Each file is sorted out by its columns, and you check them before they're saved.</p>
+    <label class="dz">Choose files<input type="file" id="impIn" accept=".csv,.xlsx,.xls,.json" multiple aria-label="Sales files"></label>
+    <div id="impResult" style="margin-top:10px"></div>
+  </div>
   <div class="banner" id="t-banner"></div>
   <div class="akpis" id="anKpis"></div>
   <div class="cols c-even">
@@ -995,6 +1098,20 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
         <table class="t" id="anSyr"></table>
       </div>
       <div class="sec">
+        <h2><span class="ic" style="--c:#007AFF" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 5-7 4 4M3 21h18"/></svg></span>Clover sales</h2>
+        <h3>Orders per half hour</h3>
+        <svg class="chart" id="anCurve" viewBox="0 0 640 220"></svg>
+        <h3>Days</h3>
+        <div class="scroll"><table class="t"><thead><tr><th class="l">Day</th><th>Orders</th><th>Sales</th><th>Avg order</th><th>Busiest 30 min</th><th>Before labor</th></tr></thead><tbody id="anCloverDays"></tbody></table></div>
+        <h3>Order size</h3>
+        <table class="t rank" id="anOrderSize"></table>
+        <h3>Top drinks, Clover item report</h3>
+        <p class="note-sm" id="anTopLabel" style="margin:-4px 0 6px"></p>
+        <div class="scroll"><table class="t rank" id="anTop"></table></div>
+        <h3>Add-ons</h3>
+        <div class="mlist" id="anMods"></div>
+      </div>
+      <div class="sec">
         <h2><span class="ic" style="--c:#34C759" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M16.5 7.5C16 6 14.3 5 12 5c-2.8 0-4.5 1.4-4.5 3.3 0 4.4 9 2.4 9 7 0 2-1.9 3.7-4.5 3.7-2.4 0-4.2-1.1-4.7-2.8"/></svg></span>Money</h2>
         <div class="stack" id="anStack"></div>
         <table class="t" id="anMoney"></table>
@@ -1020,6 +1137,7 @@ body.avail-mode .steps,body.avail-mode main,body.avail-mode .foot{display:none}
 
 <dialog class="mdlg" id="modDlg" aria-labelledby="modTitle"><div class="mbody" id="modBody"></div></dialog>
 <dialog class="diag-dlg" id="diagDlg" aria-label="Drink diagram"><div id="diagBody"></div></dialog>
+<dialog class="mdlg" id="admDlg" aria-labelledby="admTitle"><div class="mbody" id="admBody"></div></dialog>
 <div class="sheet-bg" id="gearPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="gearTitle"><div id="gearBody"></div></div></div>
 <div class="sheet-bg" id="pfPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pfTitle"><div id="pfBody"></div></div></div>
 <div class="sheet-bg" id="dayPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dpTitle"><div id="dpBody"></div></div></div>
@@ -1046,7 +1164,8 @@ const S = {
   ingredients: [], packaging: [],
   prices: {},       // fixed-menu drink id -> price, when changed from the default
   off: [],          // fixed-menu drink ids taken off the menu
-  specials: [],     // {id, name, aliases, base, syrup: ingredient id or "", pumps, foam, serve: "iced"|"hot"|"both", price, on}
+  specials: [],     // {id, name, aliases, base, syrup: ingredient id or "", pumps, foam, serve: "iced"|"hot"|"both", price, on, sec, season}
+  assign: {},       // fixed signature/specialty drink id -> {sec, season}, when changed in the drink bank
   bases: [],        // {id, name, ing: ingredient id, oz per drink}
   addons: {altCharge:0.50, almCharge:0.50, syrupCharge:0.25, foamCharge:0.50, wholePct:85},
   pastry: {price:3.00, cost:1.25},
@@ -1057,7 +1176,8 @@ const S = {
   cal:    {rules:[], open:[], closed:[]},
   pattern:{}, orders:{}, team:[], days:{},
   track:  {dates:[], cover:2, buffer:25, perDay:60},
-  exp:    {wage:16.94}
+  exp:    {wage:16.94},
+  clover: {orders:{}, items:[], cogsRate:0.232, card:{pct:0.023, fixed:0.10}}   // Clover days and item reports, from Import sales
 };
 const UI = {};
 /* Cafe data exported Sep 27, 2026 (same as seed-config.json): ingredient and packaging prices, team and calendar to start from. Settings saved in Firebase replace it on load. */
@@ -1078,14 +1198,14 @@ const MENU = [
   {id:"matcha", name:"Matcha Latte", aliases:["Matcha","MAT"], code:"MAT", sec:"core", price:5.00, serve:"both", milk:true, base:true,
    iced:[["milk",10],["matcha",3.6]], hot:[["matcha",3.6],["milk",8]]},
   {id:"londonfog", name:"London Fog", code:"FOG", sec:"core", price:3.50, serve:"hot", milk:true, hot:[["syrup",1,"vanilla"],["tea",1],["milk",6]]},
-  {id:"espresso", name:"Espresso", code:"ESP", sec:"core", price:1.00, serve:"hot", hot:[["beans",18]]},
-  {id:"bsoe", name:"Brown Sugar Oat Shaken Espresso", aliases:["Brown Sugar Shaken Espresso","BSOE"], code:"BSOE", sec:"signature", price:5.00, serve:"iced",
+  {id:"espresso", name:"Espresso", aliases:["Espresso Shot"], code:"ESP", sec:"core", price:1.00, serve:"hot", hot:[["beans",18]]},
+  {id:"bsoe", name:"Brown Sugar Oat Shaken Espresso", aliases:["Brown Sugar Shaken Espresso","Brown Sugar Oatmilk Shaken Espresso","BSOE"], code:"BSOE", sec:"signature", season:"", price:5.00, serve:"iced",
    iced:[["syrup",2,"brown sugar"],["beans",18],["cinnamon",0.02],["oat",6]]},
-  {id:"smat", name:"Strawberry Matcha Latte", aliases:["Strawberry Matcha","SMAT"], code:"SMAT", sec:"signature", price:5.50, serve:"iced", milk:true,
+  {id:"smat", name:"Strawberry Matcha Latte", aliases:["Strawberry Matcha","SMAT"], code:"SMAT", sec:"signature", season:"spring", price:5.50, serve:"iced", milk:true,
    iced:[["strawberry",0.63],["milk",9],["matcha",3.6]]},
-  {id:"bbl", name:"Banana Bread Latte", aliases:["BBL"], code:"BBL", sec:"specialty", price:5.00, serve:"iced", milk:true,
+  {id:"bbl", name:"Banana Bread Latte", aliases:["BBL"], code:"BBL", sec:"specialty", season:"fall", price:5.00, serve:"iced", milk:true,
    iced:[["syrup",2,"banana"],["beans",18],["milk",8.5]]},
-  {id:"cider", name:"Caramel Apple Spice Cider", aliases:["Caramel Apple Cider","CID"], code:"CID", sec:"specialty", price:4.50, serve:"hot",
+  {id:"cider", name:"Caramel Apple Spice Cider", aliases:["Caramel Apple Cider","CID"], code:"CID", sec:"specialty", season:"fall", price:4.50, serve:"hot",
    hot:[["syrup",1,"cinnamon"],["cider",8],["foam",2],["syrup",1,"caramel"]]}
 ];
 const FOAM = {cream:500 / 875, milk:325 / 875, vanilla:50 / 875};   // cold foam batch: 500 mL cream, 325 mL 2% milk, 50 mL vanilla
@@ -1093,6 +1213,15 @@ const PUMP_OZ = 0.25, FOAM_OZ = 2;
 const SECS = [["core","Core menu"],["signature","Signature drinks"],["specialty","Specialty drinks"]];
 const SERVE_TAG = {hot:"Hot", iced:"Iced", both:"Hot or iced"};
 const BUILDER_BASES = ["latte","matcha","chai","americano"];
+const SEASONS = [["fall","Fall"],["winter","Winter"],["spring","Spring"],["summer","Summer"],["","Any season"]];
+const seasonName = v => (SEASONS.find(x => x[0] === (v || "")) || SEASONS[4])[1];
+/* a first guess from the name, for drinks made before seasons existed; set it in the drink bank */
+function guessSeason(n){ n = String(n || "").toLowerCase();
+  if (/pumpkin|apple|cider|maple|pecan|harvest|spice|banana bread|cinnamon|caramel/.test(n)) return "fall";
+  if (/peppermint|gingerbread|eggnog|mocha|hot chocolate|holiday|toffee|candy cane|snow/.test(n)) return "winter";
+  if (/lavender|rose|honey|cherry|blossom|floral|strawberry/.test(n)) return "spring";
+  if (/coconut|mango|peach|lemon|raspberry|blueberry|watermelon|tropical/.test(n)) return "summer";
+  return ""; }
 
 /* every drink, fixed and built, as one shape: {id, name, aliases, sec, price, serve, milk, iced, hot, sp?} */
 const menuPrice = d => S.prices[d.id] != null && isFinite(+S.prices[d.id]) ? +S.prices[d.id] : d.price;
@@ -1107,11 +1236,17 @@ function specialDef(sp){
   if (sp.syrup) add.push(["syrup", +sp.pumps || 2, sp.syrup]);
   const foam = sp.foam ? [["foam", FOAM_OZ]] : [];
   const serve = ["iced","hot","both"].includes(sp.serve) ? sp.serve : "both";
-  return {id:sp.id, name:sp.name, aliases:sp.aliases || [], sec:"specialty", price:+sp.price || 0, serve, milk:!!b.milk, sp,
+  return {id:sp.id, name:sp.name, aliases:sp.aliases || [], sec: sp.sec === "signature" ? "signature" : "specialty", season: sp.season != null ? sp.season : guessSeason(sp.name),
+          price:+sp.price || 0, serve, milk:!!b.milk, sp,
           iced: serve === "hot" ? null : add.concat(b.iced || b.hot, foam),
           hot:  serve === "iced" ? null : add.concat(b.hot || b.iced, foam)};
 }
-const fixedDef = m => Object.assign({}, m, {price:menuPrice(m)});
+const fixedDef = m => { const a = m.sec !== "core" && S.assign[m.id] || {};
+  return Object.assign({}, m, {price:menuPrice(m)}, m.sec === "core" ? {} : {sec: a.sec || m.sec, season: a.season != null ? a.season : m.season || ""}); };
+/* signature or specialty, and the season, live on the special itself or in S.assign for a fixed drink */
+function setMeta(d, k, v){ if (d.sp) d.sp[k] = v; else (S.assign[d.id] || (S.assign[d.id] = {}))[k] = v; }
+function setOn(d, on){ if (d.sp) d.sp.on = on; else S.off = on ? S.off.filter(id => id !== d.id) : [...new Set(S.off.concat(d.id))]; }
+const syrupOf = d => { const L = (d.iced || d.hot || []).find(x => x[0] === "syrup"); return L ? flavorName(L[2]) : ""; };
 const allDrinks = () => MENU.map(fixedDef).concat((S.specials || []).map(specialDef));
 const isOn = d => d.sp ? d.sp.on !== false : !(S.off || []).includes(d.id);
 const liveDrinks = () => allDrinks().filter(isOn);
@@ -1264,7 +1399,8 @@ function renderDrinkGrid(){
   const btn = d => `<button class="dbtn s-${d.sec}" data-act="pick" data-id="${esc(d.id)}"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${d.serve === "iced" ? DRINK_ICON.glass : DRINK_ICON.cup}</svg></span><b>${esc(d.name)}</b><span class="p">${F.usd2(d.price)}, ${SERVE_TAG[d.serve].toLowerCase()}</span></button>`;
   const group = (label, xs) => xs.length ? `<div class="ghead">${label}</div>` + xs.map(btn).join("") : "";
   $("drinkGrid").innerHTML = group("Core menu", L.filter(d => d.sec === "core"))
-    + group("Signature and specialty", L.filter(d => d.sec !== "core"))
+    + group("Signature drinks", L.filter(d => d.sec === "signature"))
+    + group("Specialty drinks", L.filter(d => d.sec === "specialty"))
     + `<div class="ghead">Food</div><button class="dbtn food" data-act="pastry"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${DRINK_ICON.food}</svg></span><b>Pastry</b><span class="p">${F.usd2(+S.pastry.price || 0)}</span></button>`;
 }
 /* the modifier sheet: one drink, its options, then Add */
@@ -1349,7 +1485,7 @@ function renderRecent(){
 
 /* ------------------------------------------------------------------ gear: prices, specialty builder, add-ons
    Opens from Log sales and Menu. Building a drink here puts it on the log and on the menu at once. */
-UI.bld = {base:"latte", syrup:"", pumps:2, foam:false, serve:"iced", name:"", price:""};
+UI.bld = {base:"latte", syrup:"", pumps:2, foam:false, serve:"iced", season:"", name:"", price:""};
 const bldSuggest = () => { const b = UI.bld, bd = baseDef(b.base) || {name:"Drink", price:4.5};
   const fixed = MENU.find(m => m.id === b.base), basePrice = fixed ? menuPrice(fixed) : 4.50;
   return {name:[b.syrup ? flavorName(b.syrup) : "", bd.name, b.foam ? "with Cold Foam" : ""].filter(Boolean).join(" "),
@@ -1381,6 +1517,7 @@ function renderGear(){
         ${b.syrup ? `<div style="margin-top:8px">${seg("bPumps", [["1 pump",1],["2 pumps",2]], b.pumps)}</div>` : ""}</div>
       <label class="swrow" style="margin:0"><span>3. Cold foam on top, ${F.usd2(foamCost())} a cup</span><input type="checkbox" class="switch" id="bFoam"${b.foam ? " checked" : ""}></label>
       <div><div class="lbl">4. Serve</div>${seg("bServe", [["Iced","iced"],["Hot","hot"],["Both","both"]], b.serve)}</div>
+      <div><div class="lbl">5. Season</div><div class="pchips">${SEASONS.map(([v,l]) => chip("bSeason", v, l, b.season === v)).join("")}</div></div>
       <div class="two"><input class="in txt" id="bName" value="${esc(b.name)}" placeholder="${esc(sg.name)}" aria-label="Drink name"><input class="in" id="bPrice" type="number" min="0" step="0.05" value="${esc(b.price)}" placeholder="${sg.price.toFixed(2)}" aria-label="Price"></div>
       <div class="sum" id="bSum">${costs}</div>
       <button class="btn" data-act="bAdd">Add to the menu</button>
@@ -1405,10 +1542,10 @@ function addSpecial(){
   const d = bldDraft();
   if (!(d.price > 0)){ toast("gearToast", "Set a price."); return; }
   if (nameTaken(d.name)){ toast("gearToast", `${d.name} is already a drink. Pick another name.`); return; }
-  const sp = {id:"sp" + Date.now().toString(36), name:d.name, aliases:[], base:d.base, syrup:d.syrup, pumps:d.syrup ? d.pumps : 0, foam:d.foam, serve:d.serve, price:Math.round(d.price * 100) / 100, on:true};
+  const sp = {id:"sp" + Date.now().toString(36), name:d.name, aliases:[], base:d.base, syrup:d.syrup, pumps:d.syrup ? d.pumps : 0, foam:d.foam, serve:d.serve, price:Math.round(d.price * 100) / 100, on:true, sec:"specialty", season:UI.bld.season || ""};
   S.specials.push(sp);
-  UI.bld = {base:d.base, syrup:"", pumps:2, foam:false, serve:d.serve, name:"", price:""};
-  markDirty(); renderGear(); renderDrinkGrid(); renderMenu(); toast("gearToast", `${sp.name} is on the log and the menu.`);
+  UI.bld = {base:d.base, syrup:"", pumps:2, foam:false, serve:d.serve, season:UI.bld.season, name:"", price:""};
+  markDirty(); renderGear(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); toast("gearToast", `${sp.name} is on the log and the menu as a specialty drink. Make it a signature drink in the drink bank.`);
 }
 function saveNewBase(){
   const nb = UI.nb, name = String(nb.name || "").trim(), price = +nb.price, size = +nb.size, oz = +nb.oz || 8;
@@ -1428,12 +1565,11 @@ function renderMenu(){
   const A = allDrinks();
   const costCell = d => servesOf(d).map(sv => `<div>${servesOf(d).length > 1 ? `<span class="muted">${sv === "iced" ? "Iced" : "Hot"}</span> ` : ""}${F.usd2(costOf(d, sv, "dairy"))}</div>`).join("");
   const mgCell = d => servesOf(d).map(sv => { const m = marginOf(d.price, costOf(d, sv, "dairy")); return `<div><span class="${mCls(m)}">${F.frac(m)}</span></div>`; }).join("");
-  const row = d => `<tr class="${isOn(d) ? "" : "zero"}"><td class="l"><button class="drink" data-act="diagram" data-id="${esc(d.id)}">${esc(d.name)}</button>${d.sp ? `<div class="note-sm">${esc(specialSummary(d.sp))}</div>` : ""}</td><td class="l">${SERVE_TAG[d.serve]}</td><td>${F.usd2(d.price)}</td><td>${costCell(d)}</td><td>${mgCell(d)}</td></tr>`;
+  const row = d => `<tr><td class="l"><button class="drink" data-act="diagram" data-id="${esc(d.id)}">${esc(d.name)}</button>${d.sp ? `<div class="note-sm">${esc(specialSummary(d.sp))}</div>` : ""}</td><td class="l">${SERVE_TAG[d.serve]}</td><td>${F.usd2(d.price)}</td><td class="adm">${costCell(d)}</td><td class="adm">${mgCell(d)}</td></tr>`;
   let h = "";
   SECS.forEach(([s, label]) => { const xs = A.filter(d => d.sec === s && isOn(d)); if (xs.length) h += `<tr class="band"><td colspan="5">${label}</td></tr>` + xs.map(row).join(""); });
-  const off = A.filter(d => !isOn(d)); if (off.length) h += `<tr class="band"><td colspan="5">Off the menu</td></tr>` + off.map(row).join("");
   const dairy8 = expand([["milk", 8]], "dairy").reduce((s,l) => s + l.cost, 0), alt8 = m => expand([["milk", 8]], m).reduce((s,l) => s + l.cost, 0) - dairy8;
-  const addon = (name, charge, cost, note) => `<tr><td class="l">${name}<div class="note-sm">${note}</div></td><td class="l"></td><td>${F.usd2(charge)}</td><td>${F.usd2(cost)}</td><td><span class="${mCls(marginOf(charge, cost))}">${F.frac(marginOf(charge, cost))}</span></td></tr>`;
+  const addon = (name, charge, cost, note) => `<tr><td class="l">${name}<div class="note-sm adm">${note}</div></td><td class="l"></td><td>${F.usd2(charge)}</td><td class="adm">${F.usd2(cost)}</td><td class="adm"><span class="${mCls(marginOf(charge, cost))}">${F.frac(marginOf(charge, cost))}</span></td></tr>`;
   h += `<tr class="band"><td colspan="5">Add-ons and food</td></tr>`
     + addon("Oat milk", +S.addons.altCharge, alt8("oat"), "8 oz instead of 2%, cost over dairy")
     + addon("Almond milk", +(S.addons.almCharge ?? S.addons.altCharge), alt8("almond"), "8 oz instead of 2%, cost over dairy")
@@ -1441,6 +1577,52 @@ function renderMenu(){
     + addon("Cold foam", +S.addons.foamCharge, foamCost(), "2 oz from the batch. Contains dairy")
     + addon("Pastry", +S.pastry.price, +S.pastry.cost, "Price and cost set in the gear");
   box.innerHTML = h;
+}
+
+/* ------------------------------------------------------------------ drink bank
+   Every signature and specialty drink ever made, on the menu or not. Sales likelihood is the share of signature and specialty
+   drinks sold that were this one (Clover item report plus sales logged after it), so all of them add up to 1.
+   ponytail: a plain share, so a drink that was on the menu for one weekend competes with one that ran all term. */
+UI.bank = {q:"", sort:"pop", view:"season"};
+const curSeason = () => { const m = new Date().getMonth(); return m >= 2 && m <= 4 ? "spring" : m >= 5 && m <= 7 ? "summer" : m >= 8 && m <= 10 ? "fall" : "winter"; };
+const secSeg = d => { const st = isOn(d) ? d.sec : "off";
+  return `<div class="segc sm" role="group" aria-label="${esc(d.name)} on the menu">${[["off","Off"],["specialty","Specialty"],["signature","Signature"]].map(([v,l]) => `<button class="${st === v ? "on" : ""}" data-act="bkSet" data-id="${esc(d.id)}" data-v="${v}" aria-pressed="${st === v}">${l}</button>`).join("")}</div>`; };
+function drinkCounts(){
+  const n = {}, inRep = d => S.clover.items.some(r => r.from && d >= r.from && d <= r.to);   // dates a Clover item report covers count from the report
+  allLines().forEach(({l}) => { if (isFood(l) || inRep(l.d)) return; const d = lineDrink(l); if (d) n[d.id] = (n[d.id] || 0) + +l.q; });
+  cloverRows().forEach(({r, d}) => n[d.id] = (n[d.id] || 0) + r.units);
+  return n;
+}
+function renderBank(){
+  const box = $("bankBody"); if (!box) return;
+  const B = UI.bank, cnt = drinkCounts();
+  const xs = allDrinks().filter(d => d.sec !== "core").map(d => ({d, n:cnt[d.id] || 0, sy:syrupOf(d)}));
+  const tot = xs.reduce((s,x) => s + x.n, 0), sold = xs.filter(x => x.n).length;
+  xs.forEach(x => x.p = tot ? x.n / tot : 0);
+  xs.slice().sort((a,b) => b.n - a.n).forEach((x,i) => x.rank = x.n ? i + 1 : 0);
+  const mx = Math.max(0.01, ...xs.map(x => x.p)), q = B.q.trim().toLowerCase(), SO = SEASONS.map(x => x[0]);
+  const sumOf = d => d.sp ? specialSummary(d.sp) : `Fixed recipe, ${SERVE_TAG[d.serve].toLowerCase()}`;
+  const cs = curSeason(), inSeason = x => !x.d.season || x.d.season === cs;
+  const vis = xs.filter(x => (B.view === "all" || inSeason(x)) && (!q || [x.d.name].concat(x.d.aliases || [], x.sy, seasonName(x.d.season), sumOf(x.d)).join(" ").toLowerCase().includes(q)));
+  const by = {pop:(a,b) => b.n - a.n || a.d.name.localeCompare(b.d.name), season:(a,b) => SO.indexOf(a.d.season || "") - SO.indexOf(b.d.season || "") || b.n - a.n,
+    syrup:(a,b) => (a.sy || "~").localeCompare(b.sy || "~") || b.n - a.n, name:(a,b) => a.d.name.localeCompare(b.d.name)};
+  vis.sort(by[B.sort] || by.pop);
+  $("bankSort").innerHTML = [["pop","Most popular"],["season","Season"],["syrup","Syrup"],["name","A to Z"]].map(([v,l]) => `<button class="${B.sort === v ? "on" : ""}" data-act="bankSort" data-v="${v}">${l}</button>`).join("");
+  $("bankView").innerHTML = [["season", `${seasonName(cs)} drinks`],["all","All seasons"]].map(([v,l]) => `<button class="${(B.view || "season") === v ? "on" : ""}" data-act="bankView" data-v="${v}">${l}</button>`).join("");
+  const onM = xs.filter(x => isOn(x.d));
+  $("bankHint").innerHTML = `<b>${onM.length} on the menu</b>: ${onM.filter(x => x.d.sec === "signature").length} signature, ${onM.filter(x => x.d.sec === "specialty").length} specialty. ${xs.filter(inSeason).length} ${seasonName(cs).toLowerCase()} and any-season drinks of ${xs.length}.
+    <span class="note-sm" style="display:block;margin-top:4px">Likelihood is out of 1: the share of the ${F.int(tot)} signature and specialty drinks sold that were this one.</span>`;
+  const grp = B.sort === "season" ? x => seasonName(x.d.season) : B.sort === "syrup" ? x => x.sy || "No syrup" : null;
+  let h = "", last = null;
+  vis.forEach(x => {
+    if (grp && grp(x) !== last){ last = grp(x); h += `<div class="ghead">${esc(last)}</div>`; }
+    h += `<div class="bk${isOn(x.d) ? "" : " off"}">
+      <div class="bk-n"><button class="drink" data-act="diagram" data-id="${esc(x.d.id)}">${esc(x.d.name)}</button><div class="note-sm">${esc(sumOf(x.d))}, ${F.usd2(x.d.price)}</div></div>
+      <div class="bk-l" title="${F.int(x.n)} sold"><div class="rb"><i style="width:${x.p / mx * 100}%"></i></div><span><b>${x.n ? x.p.toFixed(2) : "0"}</b> ${x.rank ? `#${x.rank} of ${sold}` : "no sales yet"}</span></div>
+      <select class="in txt" data-bkseason="${esc(x.d.id)}" aria-label="${esc(x.d.name)} season">${SEASONS.map(([v,l]) => `<option value="${v}"${(x.d.season || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
+      <div class="bk-a">${secSeg(x.d)}${x.d.sp && !x.n && !isOn(x.d) ? `<button class="x" data-act="bkDel" data-id="${esc(x.d.id)}" title="Delete ${esc(x.d.name)}" aria-label="Delete ${esc(x.d.name)}">✕</button>` : ""}</div>
+    </div>`; });
+  box.innerHTML = h || `<p class="empty">${B.q ? `No drink matches "${esc(B.q)}".` : `No ${seasonName(cs).toLowerCase()} drinks yet. Switch to All seasons, or build one with New drink.`}</p>`;
 }
 
 /* ---------- drink diagrams (from the recipes file)
@@ -1597,15 +1779,17 @@ function cupSVG(b, temp){
     ${lid}<g clip-path="url(#${id})">${fills}${deco}</g>
     <path d="${cup}" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>${labels}${note}</svg>`;
 }
-function openDiagram(id){
-  const d = drinkById(id), dlg = $("diagDlg"); if (!d || !dlg) return;
+function diagramHTML(d){
   const g = diagramFor(d);
   const builds = g ? Object.entries(g.builds).filter(([t]) => servesOf(d).includes(t)).sort(([a]) => a === "iced" ? -1 : 1) : [];
-  $("diagBody").innerHTML = `<div class="diag-h"><h2>${esc(d.name)}</h2><button class="btn ghost sm" data-act="diagClose">Close</button></div>`
-    + (builds.length ? `<div class="diag-builds">${builds.map(([t, b]) => { const c = costOf(d, t, "dairy");
-        return `<section class="diag-b"><h3>${t === "hot" ? "Hot, 12 oz cup" : "Iced, 16 oz cup"}</h3>${cupSVG(b, t)}
-        <div class="diag-m"><span>Price ${F.usd2(d.price)}</span><span>Cost ${F.usd2(c)}</span><span>Margin ${F.frac(marginOf(d.price, c))}</span></div></section>`; }).join("")}</div>`
-      : `<p class="empty">No diagram for this drink. ${esc(d.name)}: ${esc(SERVE_TAG[d.serve])}, ${F.usd2(d.price)}.</p>`);
+  return builds.length ? `<div class="diag-builds">${builds.map(([t, b]) => { const c = costOf(d, t, "dairy");
+      return `<section class="diag-b"><h3>${t === "hot" ? "Hot, 12 oz cup" : "Iced, 16 oz cup"}</h3>${cupSVG(b, t)}
+      <div class="diag-m"><span>Price ${F.usd2(d.price)}</span><span class="adm">Cost ${F.usd2(c)}</span><span class="adm">Margin ${F.frac(marginOf(d.price, c))}</span></div></section>`; }).join("")}</div>`
+    : `<p class="empty">No diagram for this drink. ${esc(d.name)}: ${esc(SERVE_TAG[d.serve])}, ${F.usd2(d.price)}.</p>`;
+}
+function openDiagram(id){
+  const d = drinkById(id), dlg = $("diagDlg"); if (!d || !dlg) return;
+  $("diagBody").innerHTML = `<div class="diag-h"><h2>${esc(d.name)}</h2><button class="btn ghost sm" data-act="diagClose">Close</button></div>` + diagramHTML(d);
   dlg.showModal();
 }
 const PREP_HTML = `<h4>Cup codes: drink, syrup, milk, add-ons</h4>
@@ -1630,6 +1814,7 @@ function ingCat(g){ if (!g) return "other"; if (g.cat && ING_CAT_SHORT[g.cat]) r
 const KIT_LBL = {iced:"Iced cups", hot:"Hot cups", both:"Every cup"};
 const cleanUrl = u => { u = String(u || "").trim(); if (!u) return ""; return /^https?:\/\//i.test(u) ? u : "https://" + u; };
 const buyBtn = item => item.url ? `<a class="btn ghost sm" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" title="${esc(item.url)}">Buy</a>` : `<span class="muted">No link</span>`;
+const storeSel = g => `<select class="in txt sel-s" data-ostore="${esc(g.id)}" aria-label="Store for ${esc(g.name)}"><option value="">Pick a store</option>${["BJ's","WebstaurantStore","Amazon"].map(x => `<option${storeOf(g.vendor) === x ? " selected" : ""}>${x}</option>`).join("")}</select>`;
 const rowActions = (kind, i, name) => { const a = `data-kind="${kind}" data-i="${i}"`;
   return UI.editRow === kind + "-" + i
     ? `<div class="lnk"><button class="btn sm" data-act="doneRow" ${a}>Done</button><button class="linkbtn" data-act="cancelRow" ${a}>Cancel</button><button class="x" data-act="${kind === "ing" ? "delIng" : "delPkg"}" data-i="${i}" title="Remove ${esc(name)}" aria-label="Remove ${esc(name)}">✕</button></div>`
@@ -1649,7 +1834,7 @@ function renderIngredients(){
         <label class="wide">Buy link<input class="in txt" data-bind="ingredients.${i}.url" value="${esc(g.url || "")}" placeholder="Paste the product page" aria-label="Buy link"></label>
       </div><div class="ingact">${rowActions("ing", i, g.name)}</div></td></tr>`;
     return `<tr><td class="l">${esc(g.name)}</td><td>${F.usd2(g.price)}</td><td>${fmtQty(+g.size || 0, "")}</td><td class="l">${esc(g.unit)}</td>
-      <td class="calc">${ucI(g)}</td><td class="l">${esc(g.vendor || "")}</td><td class="l">${buyBtn(g)}</td><td>${rowActions("ing", i, g.name)}</td></tr>`; };
+      <td class="calc adm">${ucI(g)}</td><td class="l">${storeSel(g)}</td><td class="l">${buyBtn(g)}</td><td class="adm">${rowActions("ing", i, g.name)}</td></tr>`; };
   const prow = (p, i) => {
     if (UI.editRow === "pkg-" + i) return `<tr class="editing"><td colspan="8"><div class="ingform">
         <label class="wide">Item<input class="in txt" data-bind="packaging.${i}.name" value="${esc(p.name)}" aria-label="Item name"></label>
@@ -1660,18 +1845,18 @@ function renderIngredients(){
         <label class="wide">Buy link<input class="in txt" data-bind="packaging.${i}.url" value="${esc(p.url || "")}" placeholder="Paste the product page" aria-label="Buy link"></label>
       </div><div class="ingact">${rowActions("pkg", i, p.name)}</div></td></tr>`;
     return `<tr><td class="l">${esc(p.name)}</td><td>${F.usd2(p.price)}</td><td>${F.int(p.size)}</td><td class="l">${KIT_LBL[p.kit] || p.kit}</td>
-      <td class="calc">${F.usd4(+p.size > 0 ? p.price / p.size : 0)} each</td><td class="l">${esc(p.vendor || "")}</td><td class="l">${buyBtn(p)}</td><td>${rowActions("pkg", i, p.name)}</td></tr>`; };
+      <td class="calc adm">${F.usd4(+p.size > 0 ? p.price / p.size : 0)} each</td><td class="l">${storeSel(p)}</td><td class="l">${buyBtn(p)}</td><td class="adm">${rowActions("pkg", i, p.name)}</td></tr>`; };
   const idx = S.ingredients.map((g,i) => i);
   box.innerHTML = ING_CATS.map(([c, lbl]) => { const g = idx.filter(i => ingCat(S.ingredients[i]) === c); return g.length ? `<tr class="band"><td colspan="8">${lbl}</td></tr>` + g.map(row).join("") : ""; }).join("")
     + `<tr class="band"><td colspan="8">Packaging. A served cup costs ${F.usd3(kitCost("iced"))} iced, ${F.usd3(kitCost("hot"))} hot</td></tr>` + S.packaging.map(prow).join("");
 }
 
 /* ------------------------------------------------------------------ stock and orders
-   On hand = last count + deliveries since − what logged sales used. Per cafe day = average of logged days
-   (or the planning number before any sales). Usage per drink follows the real mix once 20 drinks are logged. */
+   On hand = last count + deliveries since − what logged sales used. Per cafe day = average of logged days, or the Clover
+   days before any are logged. Usage per drink follows the logged mix once 20 drinks are logged, the Clover item report before that. */
 function trackedItems(){
   const items = [];
-  S.ingredients.forEach(i => { if (+i.price > 0) items.push({id:i.id, name:i.name, unit:i.unit, size:+i.size || 0, price:+i.price, vendor:i.vendor || "Other", url:i.url || ""}); });
+  S.ingredients.forEach(i => { if (+i.price > 0 || i.track) items.push({id:i.id, name:i.name, unit:i.unit, size:+i.size || 0, price:+i.price, vendor:i.vendor || "Other", url:i.url || ""}); });
   S.packaging.forEach(p => items.push({id:p.id, name:p.name, unit:"each", size:+p.size || 0, price:+p.price, vendor:p.vendor || "WebstaurantStore", url:p.url || ""}));
   return items;
 }
@@ -1693,7 +1878,13 @@ function trackModel(){
   });
   const logged = Object.keys(byDay).sort();
   const per = {};
+  const addPer = (id, v) => { if (id) per[id] = (per[id] || 0) + v; };
   if (drinks >= 20) items.forEach(it => per[it.id] = (actUse[it.id] || 0) / drinks);
+  else if (cloverRows().length){ const xs = cloverRows(), tot = xs.reduce((s,x) => s + x.r.units, 0);
+    xs.forEach(({r, d}) => { const w = r.units / tot, alt = d.milk ? (r.alt || 0) / r.units : 0, sv = servesOf(d);
+      sv.forEach(sx => { const k = w / sv.length; lineUsage({ice:sx === "iced", milk:"dairy"}, d, k * (1 - alt), addPer); if (alt) lineUsage({ice:sx === "iced", milk:"oat"}, d, k * alt, addPer); });
+      if (r.syrup) addPer(flavorId("vanilla"), w * r.syrup / r.units * 2 * PUMP_OZ);
+      if (r.foam) expand([["foam", FOAM_OZ]]).forEach(x => addPer(x.id, x.q * w * r.foam / r.units)); }); }
   else { const L = liveDrinks(); L.forEach(d => { const sv = servesOf(d); sv.forEach(s => lineUsage({ice:s === "iced", milk:"dairy"}, d, 1 / L.length / sv.length, (id, v) => { if (id) per[id] = (per[id] || 0) + v; })); }); }
   const ev = Store.stock.slice().sort((a,b) => String(a.ts).localeCompare(String(b.ts)));
   const onHand = {};
@@ -1706,9 +1897,11 @@ function trackModel(){
   });
   ensureDates();
   const cal = [...new Set(S.track.dates)].sort(), today = ymd(new Date()), remaining = cal.filter(x => x >= today);
-  const dayDrinks = logged.length ? drinks / logged.length : Math.max(0, +S.track.perDay || 60);
-  const cover = Math.max(1, Math.round(S.track.cover || 1)), buf = (S.track.buffer || 0) / 100;
-  const nextDates = remaining.slice(0, cover); while (nextDates.length < cover) nextDates.push(null);
+  const cpd = cloverPerDay();
+  const dayDrinks = logged.length ? drinks / logged.length : cpd || Math.max(0, +S.track.perDay || 60);
+  const src = logged.length ? `the average of ${logged.length} logged ${logged.length === 1 ? "day" : "days"}` : cpd ? "the Clover days" : "the planning number";
+  const wk = weekOf(remaining[0] || today), nextDates = remaining.filter(d => weekOf(d) === wk);   // the order covers the next open week
+  const cover = Math.max(1, nextDates.length), buf = (S.track.buffer || 0) / 100;
   const rows = items.map(it => {
     const perDay = (per[it.id] || 0) * dayDrinks, need = perDay * cover * (1 + buf), oh = onHand[it.id], short = need - oh;
     const packs = short > 1e-6 && it.size > 0 ? Math.ceil(short / it.size) : 0;
@@ -1723,137 +1916,111 @@ function trackModel(){
     return {...it, oh, perDay, need, short, packs, cost:packs * it.price, daysLeft, runsOut, status, cls};
   });
   const orders = rows.filter(r => r.packs > 0);
-  return {items, rows, orders, logged, drinks, dayDrinks, cal, remaining, next:remaining[0] || null, cover, buf, unknown:[...unknown], nextDates, today};
+  return {items, rows, orders, logged, drinks, dayDrinks, src, cal, remaining, next:remaining[0] || null, wk, cover, buf, unknown:[...unknown], nextDates, today};
 }
 function renderStock(T){
   const out = T.rows.filter(r => r.status === "Out").map(r => r.name), now = T.rows.filter(r => r.status === "Order now").map(r => r.name), low = T.rows.filter(r => r.status === "Running low").map(r => r.name);
   const ib = $("inv-banner"), list = a => a.slice(0, 6).join(", ") + (a.length > 6 ? ` and ${a.length - 6} more` : "");
   if (out.length){ ib.className = "banner bad"; ib.textContent = `Out of stock: ${list(out)}. Order these before the next cafe day.${now.length ? ` Also order: ${list(now)}.` : ""}`; }
-  else if (now.length){ ib.className = "banner bad"; ib.textContent = `Order now: ${list(now)}. Stock won't cover the next ${T.cover} cafe ${T.cover === 1 ? "day" : "days"}.`; }
+  else if (now.length){ ib.className = "banner bad"; ib.textContent = `Order now: ${list(now)}. Stock won't cover the week of ${fmtD(T.wk)}.`; }
   else if (low.length){ ib.className = "banner warn"; ib.textContent = `Running low: ${list(low)}.`; }
   else { ib.className = "banner"; ib.textContent = ""; }
-  const v = UI.stkView || "order";
-  $("stkView").innerHTML = [["order","What to order"],["stock","Stock on hand"]].map(([k,l]) => `<button class="${v === k ? "on" : ""}" data-act="stkView" data-v="${k}">${l}</button>`).join("");
-  $("orderView").hidden = v !== "order"; $("stockView").hidden = v !== "stock";
   if (!$("orderList").contains(document.activeElement)) renderBuyList(T);
-  const rank = {"Out":0, "Order now":1, "Running low":2, "OK":3, "Not used":4};
-  const stkRow = r => {
-    const frac = isFinite(r.daysLeft) ? Math.min(1, r.daysLeft / (T.cover + 4)) : 1;
-    const lasts = r.perDay <= 1e-9 ? "" : `<span class="dlw ${r.cls === "neg" ? "out" : r.cls}"><i style="width:${frac * 100}%"></i></span>${F.n1(r.daysLeft)} days${r.runsOut ? ", out " + fmtD(r.runsOut) : ""}`;
-    const pill = r.status === "Not used" ? `<span class="fit hot">Not used</span>` : `<span class="m${r.cls ? " " + r.cls : ""}">${r.status}</span>`;
-    return `<td class="l">${esc(r.name)}</td><td class="${r.oh < 0 ? "neg-t" : ""}">${fmtQty(r.oh, r.unit)}</td><td>${r.perDay > 1e-9 ? fmtQty(r.perDay, r.unit) : ""}</td><td class="l">${lasts}</td><td class="l">${pill}</td>`; };
-  UI.stkOpen = UI.stkOpen || {};
-  $("stockBody").innerHTML = STK_CATS.map(c => { const rs = T.rows.filter(r => stkCat(r.id, r.name) === c).sort((a,b) => rank[a.status] - rank[b.status] || a.name.localeCompare(b.name)); if (!rs.length) return "";
-    const open = !!UI.stkOpen[c], alerts = rs.filter(r => rank[r.status] <= 2), w = alerts.length ? rs[0] : null;
-    const sum = `${rs.length} ${rs.length === 1 ? "item" : "items"}${alerts.length ? `, ${alerts.length} need${alerts.length === 1 ? "s" : ""} attention` : ""}`;
-    return `<tr class="cathead${open ? " open" : ""}" data-act="stkCat" data-c="${c}" aria-expanded="${open}"><td class="l" colspan="4"><span class="car">▸</span>${c}<span class="cs">${sum}</span></td><td class="l">${w ? `<span class="m${w.cls ? " " + w.cls : ""}">${w.status}</span>` : ""}</td></tr>`
-      + rs.map(r => `<tr${open ? "" : " hidden"}>${stkRow(r)}</tr>`).join(""); }).join("");
+  renderCount(T);
   const itemName = id => trackedItems().find(i => i.id === id) || {name:id, unit:""};
   const evs = Store.stock.slice().sort((a,b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 12);
   $("stkLog").innerHTML = evs.length ? evs.map(e => { const it = itemName(e.item);
     return `<tr><td class="l">${e.type === "count" ? "Count" : "Delivery"}: ${esc(it.name)}, ${fmtQty(+e.qty || 0, it.unit)}, ${fmtD(String(e.ts).slice(0,10))}${e.inv ? `, invoice ${esc(e.inv)}` : ""}</td><td style="width:40px"><button class="x" data-act="delStock" data-id="${esc(e.id)}" title="Delete" aria-label="Delete">✕</button></td></tr>`; }).join("")
-    : `<tr><td class="l empty">None yet. Import an invoice or record a count.</td></tr>`;
+    : `<tr><td class="l empty">None yet. Save a closing count or tick Received on the order.</td></tr>`;
+}
+/* ------------------------------------------------------------------ closing count: what's left in reserve
+   At closing, type what's on the shelf next to each item, in packs (half packs are fine) or in the item's own unit, and save.
+   Each number becomes a count, which resets that item's on hand; blank lines are skipped. */
+UI.cnt = {}; UI.cntU = {};
+function renderCount(T){
+  const box = $("cntList"); if (!box || box.contains(document.activeElement)) return;
+  if (!$("cntDate").value) $("cntDate").value = ymd(new Date());
+  const last = Store.stock.filter(e => e.type === "count").map(e => String(e.ts).slice(0, 10)).sort().pop();
+  const need = T.rows.filter(r => ["Out","Order now","Running low"].includes(r.status)).length;
+  set("resSum", `${T.rows.length} items${need ? `, ${need} low` : ""}. ${last ? `Last count ${fmtD(last)}` : "Not counted yet"}`);
+  box.innerHTML = STK_CATS.map(c => { const rs = T.rows.filter(r => stkCat(r.id, r.name) === c).sort((a,b) => a.name.localeCompare(b.name)); if (!rs.length) return "";
+    return `<div class="ghead">${c}</div>` + rs.map(r => { const u = UI.cntU[r.id] || "packs", packs = r.size > 0 ? Math.max(0, r.oh) / r.size : 0;
+      const have = r.oh > 1e-9 ? `About ${packs >= 10 ? F.int(packs) : (Math.round(packs * 10) / 10)} × ${fmtQty(r.size, r.unit)} left` : "None on hand";
+      const tag = ["Out","Order now","Running low"].includes(r.status) ? ` <span class="m ${r.cls}">${r.status}</span>` : "";
+      return `<div class="cnt"><div class="nm"><b>${esc(r.name)}</b><small>${have}${tag}</small></div>
+        <input class="in" type="number" min="0" step="any" inputmode="decimal" data-cnt="${esc(r.id)}" value="${esc(UI.cnt[r.id] != null ? UI.cnt[r.id] : "")}" placeholder="–" aria-label="${esc(r.name)}, how many left">
+        <select class="in txt" data-cntu="${esc(r.id)}" aria-label="${esc(r.name)}, counted in"><option value="packs"${u === "packs" ? " selected" : ""}>× ${esc(fmtQty(r.size, r.unit))}</option><option value="units"${u === "units" ? " selected" : ""}>${esc(r.unit)}</option></select></div>`; }).join(""); }).join("");
+}
+async function saveCount(){
+  const items = trackedItems(), day = $("cntDate").value || ymd(new Date()), ts = day + "T" + hm(new Date()), at = new Date().toISOString();
+  const evs = Object.entries(UI.cnt).filter(([, v]) => String(v).trim() !== "").map(([id, v]) => { const it = items.find(i => i.id === id), x = parseFloat(v);
+    return it && isFinite(x) && x >= 0 ? {type:"count", item:id, qty: UI.cntU[id] === "units" ? x : x * it.size, ts, at} : null; }).filter(Boolean);
+  if (!evs.length){ toast("cntToast", "Type a count next to at least one item."); return; }
+  $("cntSave").disabled = true;
+  try { for (const e of evs) await Store.addStock(e); UI.cnt = {}; toast("cntToast", `Saved ${evs.length} ${evs.length === 1 ? "count" : "counts"} for ${fmtD(day)}.`); }
+  catch(e){ toast("cntToast", saveError(e)); }
+  $("cntSave").disabled = false; recalc();
+}
+/* a new item to keep in reserve: it's counted at closing and shows on the order list */
+function addInvItem(){
+  const v = id => ($(id).value || "").trim(), name = v("niName"), size = parseFloat(v("niSize")), price = parseFloat(v("niPrice")) || 0;
+  if (!name || !(size > 0)){ toast("niToast", "Give it a name and how much comes in one pack."); return; }
+  if (S.ingredients.concat(S.packaging).some(g => norm(g.name) === norm(name))){ toast("niToast", `${name} is already in inventory.`); return; }
+  S.ingredients.push({id:"c" + Date.now().toString(36), kind:"core", name, price, size, unit:v("niUnit") || "each", vendor:v("niStore"), url:cleanUrl(v("niUrl")), vol:1, custom:true, track:true, cat:v("niCat") || "other"});
+  ["niName","niPrice","niSize","niUrl"].forEach(id => $(id).value = "");
+  markDirty(); renderIngredients(); recalc(); toast("niToast", `Added ${name}. Count it at closing and it shows on the order list.`);
 }
 function renderTrackSliders(){
   $("trackSliders").innerHTML = `<div class="fields" style="margin-bottom:6px">
-    <label>Order enough for the next<small>cafe days</small></label><input class="in" type="number" min="1" max="8" step="1" data-bind="track.cover" data-type="int" aria-label="Cafe days to cover">
     <label>Safety buffer, %</label><input class="in" type="number" min="0" max="100" step="5" data-bind="track.buffer" data-type="num" aria-label="Safety buffer">
-    <label>Drinks per cafe day<small>Until sales are logged</small></label><input class="in" type="number" min="0" data-bind="track.perDay" data-type="num" step="1" aria-label="Drinks per cafe day before sales">
+    <label>Drinks per cafe day<small>Only used before any sales data</small></label><input class="in" type="number" min="0" data-bind="track.perDay" data-type="num" step="1" aria-label="Drinks per cafe day before sales">
   </div>`;
 }
-function renderStockForm(){
-  const items = trackedItems(), box = $("stkLines"); if (!box) return;
-  if (!UI.stkLines || !UI.stkLines.length) UI.stkLines = [{id:"", amt:1, unit:"packs"}];
-  UI.stkLines.forEach(l => { if (!items.some(i => i.id === l.id)) l.id = items[0] ? items[0].id : ""; });
-  if (!box.contains(document.activeElement)){
-    box.innerHTML = UI.stkLines.map((l, i) => { const it = items.find(x => x.id === l.id) || {size:1, unit:""};
-      return `<div class="stkline"><select class="in txt" data-sl="id" data-i="${i}" aria-label="Item ${i + 1}">${stkItemOpts(items, l.id)}</select>`
-        + `<input class="in" type="number" min="0" step="0.01" data-sl="amt" data-i="${i}" value="${esc(String(l.amt))}" aria-label="Amount ${i + 1}">`
-        + `<select class="in txt" data-sl="unit" data-i="${i}" aria-label="Unit ${i + 1}"><option value="packs"${l.unit !== "units" ? " selected" : ""}>packs of ${fmtQty(it.size, it.unit)}</option><option value="units"${l.unit === "units" ? " selected" : ""}>${esc(it.unit)}</option></select>`
-        + (UI.stkLines.length > 1 ? `<button class="x" data-act="stkDel" data-i="${i}" title="Remove this item" aria-label="Remove item ${i + 1}">✕</button>` : "") + `</div>`; }).join("");
-  }
-  if (!$("stkDate").value) $("stkDate").value = ymd(new Date());
-}
-function renderStockUnit(){ renderStockForm(); }
-/* ---------------------------------------------------- weekly buy list and PDF */
-const isAmazon = v => /amazon/i.test(v || "");
-function buyWeek(T){ const nx = (T && T.next) || S.track.dates.slice().sort().find(d => d >= ymd(new Date())) || ymd(new Date()); return weekOf(nx); }
+/* ---------------------------------------------------- weekly order checklist
+   The base order for a week: what that week's cafe days use at the current pace (logged sales, or the Clover item mix before
+   enough are logged), plus the buffer, minus stock on hand, in whole packs. Everything comes from BJ's, WebstaurantStore or Amazon.
+   Tick Ordered when it's placed and Received when it arrives: Received logs the delivery into stock, and unticking takes it back out. */
+const STORES = ["BJ's","WebstaurantStore","Amazon"];
+const storeOf = v => /bj/i.test(v || "") ? "BJ's" : /webstaurant/i.test(v || "") ? "WebstaurantStore" : /amazon/i.test(v || "") ? "Amazon" : "";
+const buyWeek = T => (T && T.wk) || weekOf(ymd(new Date()));
+function buyOrder(){ const wk = buyWeek(UI.T), o = S.orders[wk] || (S.orders[wk] = {}); if (!o.qty) o.qty = {}; if (!o.st) o.st = {}; return o; }
 function buyItems(T){
-  const rows = [];
-  (T.rows || []).forEach(r => { if (isAmazon(r.vendor)) return;
-    rows.push({id:r.id, name:r.name, vendor:r.vendor || "Other", url:r.url, size:r.size, unit:r.unit, price:r.price, sug:r.packs, why:r.packs ? `Short ${fmtQty(r.short, r.unit)}` : r.status === "Not used" ? "Not used" : `${F.n1(r.daysLeft)} days on hand`}); });
-  const wk = buyWeek(T), o = S.orders[wk] || {qty:{}, notes:{}};
-  rows.forEach(r => { r.vendor = String(r.vendor || "Other").trim().replace(/\s+/g, " ") || "Other"; r.qty = o.qty && o.qty[r.id] != null ? Math.max(0, +o.qty[r.id] || 0) : r.sug; r.cost = r.qty * (r.price || 0); r.edited = o.qty && o.qty[r.id] != null && +o.qty[r.id] !== r.sug; });
-  return {wk, rows, notes:o.notes || {}};
+  const wk = buyWeek(T), o = S.orders[wk] || {}, qty = o.qty || {}, st = o.st || {};
+  const rows = (T.rows || []).map(r => { const s = st[r.id] || {}, q = qty[r.id] != null ? Math.max(0, +qty[r.id] || 0) : r.packs;
+    return {id:r.id, name:r.name, store:storeOf(r.vendor), url:r.url, size:r.size, unit:r.unit, price:r.price, sug:r.packs, qty:q, cost:q * (r.price || 0), ordered:!!s.o, received:!!s.r,
+      why: r.perDay > 1e-9 ? `This week uses ${fmtQty(r.perDay * T.cover, r.unit)}, ${fmtQty(Math.max(0, r.oh), r.unit)} on hand` : "Not used by the menu"}; });
+  return {wk, rows};
 }
 function renderBuyList(T){
   const box = $("orderList"); if (!box) return;
-  const B = buyItems(T), showAll = !!UI.buyAll;
-  $("buyShow").innerHTML = `<button class="${showAll ? "" : "on"}" data-act="buyAll" data-v="0">To buy</button><button class="${showAll ? "on" : ""}" data-act="buyAll" data-v="1">All items</button>`;
-  const vkey = v => String(v || "").trim().toLowerCase(), onV = new Set(B.rows.filter(r => r.qty > 0).map(r => vkey(r.vendor)));
-  const vis = B.rows.filter(r => showAll || r.qty > 0 || onV.has(vkey(r.vendor)));
-  set("orderHint", `Week of ${fmtD(B.wk)}. Suggested amounts cover ${T.nextDates && T.nextDates.filter(Boolean).length ? T.nextDates.filter(Boolean).map(fmtD).join(" and ") : "the next service days"} plus a ${S.track.buffer}% buffer. Change any quantity. Amazon is kept off this list.`);
-  if (!vis.length){ box.innerHTML = `<p class="empty">Nothing to buy this week. Switch to All items to add something.</p>`; return; }
-  const byV = {}; vis.forEach(r => (byV[r.vendor] || (byV[r.vendor] = [])).push(r));
-  let h = "", tot = 0;
-  Object.keys(byV).sort((a,b) => a.localeCompare(b)).forEach(v => { const rs = byV[v].sort((a,b) => a.name.localeCompare(b.name)), sub = rs.reduce((s,r) => s + r.cost, 0); tot += sub;
-    h += `<div class="vendor"><h3>${esc(v)}</h3><textarea class="in" data-onote="${esc(v)}" placeholder="Notes for ${esc(v)} this week" aria-label="Notes for ${esc(v)}">${esc(B.notes[v] || "")}</textarea>
-      <div class="scroll"><table class="t"><thead><tr><th class="l">Item</th><th class="l">Why</th><th>Packs</th><th class="l">Pack</th><th>Cost</th><th></th></tr></thead><tbody>`
-      + rs.map(r => `<tr class="${r.qty ? "" : "zero"}"><td class="l">${esc(r.name)}</td><td class="l note-sm">${esc(r.why)}${r.edited ? `, suggested ${r.sug}` : ""}</td>
-          <td><input class="in q" type="number" min="0" step="1" data-oq="${esc(r.id)}" value="${r.qty}" aria-label="Packs of ${esc(r.name)}"></td>
-          <td class="l nw">${r.size ? fmtQty(r.size, r.unit) : ""}</td><td>${F.usd2(r.cost)}</td>
-          <td class="nw">${r.url ? `<a class="btn ghost sm" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Buy</a> ` : ""}${r.qty ? `<button class="btn ghost sm" data-act="received" data-id="${esc(r.id)}" data-q="${r.qty * (r.size || 0)}">Received</button>` : ""}</td></tr>`).join("")
-      + `<tr class="sub"><td class="l">${esc(v)} total</td><td></td><td></td><td></td><td>${F.usd2(sub)}</td><td></td></tr></tbody></table></div></div>`; });
-  h += `<table class="t"><tr class="tot"><td class="l">Order total</td><td>${F.usd2(tot)}</td></tr></table>`;
-  box.innerHTML = h;
+  const B = buyItems(T), showAll = !!UI.buyAll, days = (T.nextDates || []).filter(Boolean);
+  $("buyShow").innerHTML = `<button class="${showAll ? "" : "on"}" data-act="buyAll" data-v="0">To order</button><button class="${showAll ? "on" : ""}" data-act="buyAll" data-v="1">All items</button>`;
+  set("orderHint", `Week of ${fmtD(B.wk)}${days.length ? `, for ${days.map(fmtD).join(", ")}` : ""}. Amounts cover those days at ${F.int(T.dayDrinks)} drinks a day (${T.src}), plus a ${S.track.buffer}% buffer, minus what's on hand. Tick Ordered when you place it and Received when it arrives, which adds it to stock.`);
+  const vis = B.rows.filter(r => showAll || r.qty > 0 || r.ordered || r.received);
+  if (!vis.length){ box.innerHTML = `<p class="empty">Nothing to order this week. Switch to All items to add something.</p>`; return; }
+  const want = vis.filter(r => r.qty > 0);
+  let h = `<p class="note-sm" style="margin:0 0 4px">${want.filter(r => r.ordered).length} of ${want.length} ordered, ${want.filter(r => r.received).length} received.</p>`, tot = 0;
+  STORES.concat("").forEach(sto => { const rs = vis.filter(r => r.store === sto).sort((a,b) => a.name.localeCompare(b.name)); if (!rs.length) return;
+    const sub = rs.reduce((s,r) => s + r.cost, 0); tot += sub;
+    h += `<div class="vendor"><h3>${sto ? esc(sto) : "No store yet"} <span class="muted" style="font-weight:500">${F.usd2(sub)}</span></h3>${sto ? "" : `<p class="note-sm" style="margin:0">Pick a store for these in the full ordering list below.</p>`}`
+      + rs.map(r => `<div class="ordrow${r.received ? " done" : ""}${r.qty ? "" : " zero"}">
+        <div class="nm"><b>${esc(r.name)}</b><small>${esc(r.why)}${r.qty !== r.sug ? `. Suggested ${r.sug}` : ""}</small></div>
+        <div class="ock"><button class="pc${r.ordered ? " av" : ""}" data-act="oOrd" data-id="${esc(r.id)}" aria-pressed="${r.ordered}"${r.received ? " disabled" : ""}>Ordered</button><button class="pc${r.received ? " av" : ""}" data-act="oRec" data-id="${esc(r.id)}" aria-pressed="${r.received}"${r.qty > 0 || r.received ? "" : " disabled"}>Received</button></div>
+        <div class="ctl"><input class="in q" type="number" min="0" step="1" data-oq="${esc(r.id)}" value="${r.qty}" aria-label="Packs of ${esc(r.name)}"${r.received ? " disabled" : ""}><span class="muted nw">× ${fmtQty(r.size || 0, r.unit)}, ${F.usd2(r.cost)}</span></div></div>`).join("") + `</div>`; });
+  box.innerHTML = h + `<table class="t"><tr class="tot"><td class="l">Order total</td><td>${F.usd2(tot)}</td></tr></table>`;
 }
-function buyOrder(){ const T = UI.T; if (!T) return null; const wk = buyWeek(T); if (!S.orders[wk]) S.orders[wk] = {qty:{}, notes:{}}; const o = S.orders[wk]; if (!o.qty) o.qty = {}; if (!o.notes) o.notes = {}; return o; }
-function loadJsPDF(){
-  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
-  return new Promise((res, rej) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-    sc.onload = () => window.jspdf && window.jspdf.jsPDF ? res(window.jspdf.jsPDF) : rej(new Error("jspdf")); sc.onerror = () => rej(new Error("jspdf")); document.head.appendChild(sc); });
+async function orderTick(id, k){
+  const T = UI.T, r = buyItems(T).rows.find(x => x.id === id); if (!r) return;
+  const o = buyOrder(), s = o.st[id] || (o.st[id] = {});
+  o.qty[id] = r.qty;   // once ticked, the amount stays put even when the delivery changes the suggestion
+  if (k === "o"){ s.o = s.o ? "" : new Date().toISOString(); if (!s.o && !s.r) delete o.st[id]; markDirty(); renderBuyList(T); return; }
+  if (s.r){ const ev = s.ev; s.r = ""; s.ev = ""; markDirty(); renderBuyList(T); if (ev) Store.delStock(ev).catch(e => toast("buyToast", saveError(e))); toast("buyToast", `Took ${r.name.toLowerCase()} back out of stock.`); return; }
+  if (!(r.qty > 0)) return;
+  s.o = s.o || new Date().toISOString(); s.r = new Date().toISOString(); markDirty(); renderBuyList(T);
+  try { s.ev = await Store.addStock({type:"receive", item:id, qty:r.qty * (r.size || 0), ts:ymd(new Date()) + "T" + hm(new Date()), at:new Date().toISOString()});
+    markDirty(); toast("buyToast", `Added ${r.qty} × ${fmtQty(r.size || 0, r.unit)} ${r.name.toLowerCase()} to stock.`); }
+  catch(e){ s.r = ""; markDirty(); renderBuyList(T); toast("buyToast", saveError(e)); }
 }
-async function exportBuyPdf(){
-  const T = UI.T; if (!T) return;
-  const B = buyItems(T), rows = B.rows.filter(r => r.qty > 0);
-  if (!rows.length){ toast("buyToast", "Nothing on the list to export."); return; }
-  toast("buyToast", "Building the PDF…");
-  let JsPDF; try { JsPDF = await loadJsPDF(); } catch(e){ toast("buyToast", "The PDF library didn't load. Check your connection and try again."); return; }
-  const doc = new JsPDF({unit:"pt", format:"letter"}), W = 612, L = 48, R = W - 48; let y = 56;
-  const page = need => { if (y + need > 740){ doc.addPage(); y = 56; } };
-  doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(0, 53, 107); doc.text("Good Grace's Cafe buy list", L, y); y += 20;
-  doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(90);
-  const days = (T.nextDates || []).filter(Boolean).map(fmtD).join(" and ");
-  doc.text(`Week of ${fmtD(B.wk)}${days ? `. Covers ${days}` : ""}. Made ${fmtD(ymd(new Date()))}.`, L, y); y += 26;
-  const byV = {}; rows.forEach(r => (byV[r.vendor] || (byV[r.vendor] = [])).push(r));
-  let grand = 0;
-  Object.keys(byV).sort((a,b) => a.localeCompare(b)).forEach(v => {
-    const rs = byV[v].sort((a,b) => a.name.localeCompare(b.name)), sub = rs.reduce((s,r) => s + r.cost, 0); grand += sub;
-    page(70); doc.setDrawColor(210); doc.setFillColor(242, 242, 247); doc.roundedRect(L, y - 14, R - L, 22, 4, 4, "F");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(0); doc.text(v, L + 8, y + 1);
-    doc.setFontSize(11); doc.text(F.usd2(sub), R - 8, y + 1, {align:"right"}); y += 22;
-    const note = (B.notes[v] || "").trim();
-    if (note){ doc.setFont("helvetica", "italic"); doc.setFontSize(10); doc.setTextColor(70); const lines = doc.splitTextToSize("Note: " + note, R - L - 16); page(lines.length * 13 + 6); doc.text(lines, L + 8, y); y += lines.length * 13 + 4; }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(120);
-    doc.text("ITEM", L + 8, y); doc.text("QTY", 330, y, {align:"right"}); doc.text("PACK", 342, y); doc.text("EACH", 440, y, {align:"right"}); doc.text("TOTAL", 515, y, {align:"right"}); y += 14;
-    rs.forEach(r => { page(18);
-      doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(0);
-      const nm = doc.splitTextToSize(r.name, 230)[0];
-      if (r.url){ doc.setTextColor(10, 91, 196); doc.textWithLink(nm, L + 8, y, {url:r.url}); doc.setTextColor(0); } else doc.text(nm, L + 8, y);
-      doc.text(String(r.qty), 330, y, {align:"right"}); doc.setTextColor(90); doc.text(r.size ? fmtQty(r.size, r.unit) : "", 342, y); doc.setTextColor(0);
-      doc.text(F.usd2(r.price || 0), 440, y, {align:"right"}); doc.text(F.usd2(r.cost), 515, y, {align:"right"});
-      if (r.url){ doc.setTextColor(10, 91, 196); doc.textWithLink("Buy", R - 8, y, {url:r.url, align:"right"}); doc.setTextColor(0); }
-      doc.setDrawColor(230); doc.line(L + 8, y + 5, R - 8, y + 5); y += 18; });
-    y += 12; });
-  page(30); doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("Order total", L + 8, y); doc.text(F.usd2(grand), R - 8, y, {align:"right"});
-  y += 18; doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(120); doc.text("Blue item names and Buy open the product page.", L + 8, y);
-  const fname = `Good Graces buy list ${B.wk}.pdf`;
-  let dl = null; try { if (window.claude && typeof window.claude.use === "function") dl = await window.claude.use("downloads"); } catch(e){ dl = null; }
-  if (dl){ try { await dl.save({filename:fname, data:doc.output("arraybuffer")}); toast("buyToast", "Saved the buy list PDF."); }
-    catch(e){ toast("buyToast", e && e.code === "declined" ? "Export cancelled." : "Couldn't save the PDF here."); } }
-  else { try { doc.save(fname); toast("buyToast", "Downloaded the buy list PDF."); } catch(e){ toast("buyToast", "Couldn't save the PDF here."); } }
-}
-
 
 /* ------------------------------------------------------------------ WebstaurantStore invoices
    pdf.js reads the PDF's text with positions. Each line item is the row that carries the unit price; the item number and
@@ -1966,7 +2133,7 @@ async function saveInvoices(){
     } else { it.price = l.price; if (pack > 0) it.size = pack; it.sku = l.sku; if (!it.url) it.url = url; it.vendor = "WebstaurantStore"; upd++; }
     if (pack > 0) evs.push({type:"receive", item:it.id, qty:pack * l.qty, ts, at, inv:v.order || ""});
   }); S.invoices.push({order:v.order, date:v.date, at}); });
-  markDirty(); renderIngredients(); renderStockForm(); recalc();
+  markDirty(); renderIngredients(); recalc();
   try { for (const e of evs) await Store.addStock(e); } catch(e){ toast("invResult", saveError(e)); return; }
   UI.inv = null; $("invIn").value = "";
   $("invResult").innerHTML = `<p class="res-ok">Updated ${upd} ${upd === 1 ? "item" : "items"}${added ? `, added ${added} new` : ""}, and logged ${evs.length} ${evs.length === 1 ? "delivery" : "deliveries"} into stock.</p>`;
@@ -1980,12 +2147,16 @@ function patternFor(dow){
   p.forEach(sh => { sh.start = +sh.start || 0; sh.end = Math.max(sh.start + 0.5, +sh.end || 0); sh.seats = Math.max(1, Math.round(+sh.seats || 1)); });
   return p.slice().sort((a,b) => a.start - b.start);
 }
-const shiftsOf = d => patternFor(toDate(d).getDay());
+/* a day's shifts come from the weekly-hours rule that opened it, so saving new hours never rewrites past weeks */
+const shiftsOf = d => { const rl = S.cal ? ruleFor(d) : null, w = toDate(d).getDay(), p = rl && rl.pattern && rl.pattern[w];
+  return Array.isArray(p) && p.length ? p.map(q => ({start:+q.start, end:+q.end, seats:Math.max(1, +q.seats || 1)})).sort((a,b) => a.start - b.start) : patternFor(w); };
+const nextDow = (from, w) => addDays(from, (w - toDate(from).getDay() + 7) % 7);
+const dowShifts = w => shiftsOf(nextDow(ymd(new Date()), w));
 function ensureDay(d){
   if (!S.days || typeof S.days !== "object") S.days = {};
   let x = S.days[d];
-  if (!x){ const rl = S.cal ? ruleFor(d) : null; x = S.days[d] = {kind:(rl && rl.kind) || "pilot", names:[]}; }
-  if (x.kind !== "ops") x.kind = "pilot";
+  if (!x) x = S.days[d] = {names:[]};
+  x.kind = "ops";   // pilot days are gone: every open day is an operations day
   if (!Array.isArray(x.names)) x.names = [];
   const sh = shiftsOf(d);                        // hours and shifts always come from the weekday's pattern
   x.n = sh.length; x.open = sh[0].start; x.close = Math.max(...sh.map(q => q.end));
@@ -1995,64 +2166,119 @@ function ensureDay(d){
 function staffing(d){ const x = ensureDay(d), sh = shiftsOf(d); let seats = 0, filled = 0;
   sh.forEach((q,i) => { seats += q.seats; filled += Math.min(q.seats, namesIn(x.names[i]).length); }); return {seats, filled}; }
 /* ------------------------------------------------------ cafe calendar */
-const KIND_LBL = {pilot:"Pilot", ops:"Operations"};
 const namesIn = v => String(v || "").split(",").map(t => t.trim()).filter(Boolean);
 function dayLabor(d){
-  const x = S.days && S.days[d]; if (!x || x.kind !== "ops") return {cost:0, ph:0};
+  const x = S.days && S.days[d]; if (!x) return {cost:0, ph:0};
   let ph = 0; shiftsOf(d).forEach((q,i) => ph += Math.max(q.seats, namesIn(x.names[i]).length) * (q.end - q.start));
   return {cost: ph * (+S.exp.wage || 0), ph};
 }
-function renderPattern(){
-  const box = $("patRows"); if (!box) return;
-  if (UI.patDow == null) UI.patDow = 6;
-  $("patDow").innerHTML = [[1,"M"],[2,"T"],[3,"W"],[4,"T"],[5,"F"],[6,"S"],[0,"S"]].map(([v,l]) => `<button class="${UI.patDow === v ? "on" : ""}" data-act="patDow" data-v="${v}" aria-label="${DOW[v]}">${l}</button>`).join("");
-  const dow = UI.patDow, raw = S.pattern[dow] && S.pattern[dow].length ? S.pattern[dow] : (patternFor(dow), S.pattern[dow]);
-  const opt = sel => { let o = ""; for (let h = 6; h <= 23; h += 0.5) o += `<option value="${h}"${Math.abs(h - sel) < 1e-9 ? " selected" : ""}>${tfmt(h)}</option>`; return o; };
-  box.innerHTML = `<div class="note-sm" style="margin-bottom:4px">${toDate(addDays(ymd(new Date()), (dow - new Date().getDay() + 7) % 7)).toLocaleDateString("en-US", {weekday:"long"})}s</div>`
-    + raw.map((q,i) => `<div class="pat"><select class="in txt" data-bind="pattern.${dow}.${i}.start" data-type="num" aria-label="Shift ${i + 1} start">${opt(q.start)}</select><span class="muted">to</span><select class="in txt" data-bind="pattern.${dow}.${i}.end" data-type="num" aria-label="Shift ${i + 1} end">${opt(q.end)}</select>
-      <span class="stepper"><button data-act="patSeat" data-i="${i}" data-v="-1" aria-label="Fewer people">−</button><span>${q.seats}</span><button data-act="patSeat" data-i="${i}" data-v="1" aria-label="More people">+</button></span>
-      <button class="x" data-act="patDel" data-i="${i}" aria-label="Remove shift"${raw.length <= 1 ? " disabled" : ""}>✕</button></div>`).join("")
-    + `<div class="note-sm" style="margin-top:6px">The stepper is how many people each shift needs.</div>`;
+/* ------------------------------------------------------ weekly hours, When2meet style
+   Rows are weekdays and the weekend, columns are half hours from 7 am to 10 pm. Each block is one shift with its own head count.
+   Drag across a row (or down several rows) to draw a shift; drawing over a block replaces that part of it. Drag a block's end
+   to resize it. Tap a block to set how many people it needs or delete it. Save as rule: from that date on, the cafe opens on the
+   days with shifts, and older rules end the day before. */
+const WK_ROWS = [1,2,3,4,5,6,0], NSLOT = HN * 2;
+const slotT = i => HMIN + i / 2, slotOf = t => Math.round((t - HMIN) * 2);
+function wkInit(){
+  const from = ymd(new Date()), W = UI.wk = {rows:{}, from, seats:2, pop:null};
+  WK_ROWS.forEach(w => { const d = S.track.dates.find(x => x >= from && toDate(x).getDay() === w) || nextDow(from, w);   // the next open day of that weekday
+    W.rows[w] = ruleFor(d) || S.track.dates.includes(d) ? shiftsOf(d).map(q => ({s:Math.max(0, slotOf(q.start)), e:Math.min(NSLOT, slotOf(q.end)), seats:q.seats})).filter(b => b.e > b.s) : []; });
 }
+/* take [s, e) out of a row's blocks, trimming or splitting what overlaps */
+const carve = (bs, s, e) => bs.flatMap(b => b.e <= s || b.s >= e ? [b] : [].concat(b.s < s ? [{...b, e:s}] : [], b.e > e ? [{...b, s:e}] : []));
+const wkShifts = w => UI.wk.rows[w].slice().sort((a,b) => a.s - b.s).map(b => ({start:slotT(b.s), end:slotT(b.e), seats:b.seats}));
+/* rows of blocks over a half-hour grid, starting at slot s0 and n slots wide; shared by the admin editor and the availability page */
+const wkCols = n => `grid-template-columns:repeat(${n},minmax(0,1fr))`;
+const wkHead = (s0, n) => `<div class="wk-r wk-hd"><span></span><div class="wk-c" style="${wkCols(n)}">${Array.from({length:n}, (_, i) => `<span style="grid-column:${i + 1}">${(s0 + i) % 4 === 2 ? hhmm(slotT(s0 + i) * 60) : ""}</span>`).join("")}</div></div>`;
+const wkRow = (label, s0, n, blocks, attrs) => `<div class="wk-r"${attrs || ""}><span class="wk-d">${label}</span><div class="wk-c" style="${wkCols(n)}">${Array.from({length:n}, (_, i) => `<i class="${(s0 + i) % 2 === 0 ? "hr" : ""}" style="grid-column:${i + 1}"></i>`).join("")}${blocks.join("")}</div></div>`;
+function renderWeekGrid(){
+  const box = $("wkGrid"); if (!box) return; if (!UI.wk) wkInit(); const W = UI.wk;
+  let h = wkHead(0, NSLOT);
+  WK_ROWS.forEach(w => {
+    if (w === 1) h += `<div class="wk-gap">Weekdays</div>`;
+    if (w === 6) h += `<div class="wk-gap">Weekend</div>`;
+    const bs = W.rows[w].map((b, k) => { const tm = `${DOW[w]} ${tfmt(slotT(b.s))} to ${tfmt(slotT(b.e))}`;
+      return `<div class="wk-b${W.pop && W.pop.w === w && W.pop.k === k ? " sel" : ""}" style="grid-column:${b.s + 1}/${b.e + 1}" data-wb="${w}:${k}" title="${tm}, ${b.seats} ${b.seats === 1 ? "person" : "people"}">
+        <span class="wk-g l" data-grip="l"></span><button class="wk-n" data-act="wkPop" data-w="${w}" data-k="${k}" aria-label="${tm}: ${b.seats} people. Change">${b.seats}</button><span class="wk-g r" data-grip="r"></span></div>`; });
+    h += wkRow(DOW[w], 0, NSLOT, bs, ` data-w="${w}"`);
+    const P = W.pop, b = P && P.w === w && W.rows[w][P.k];
+    if (b) h += `<div class="wk-pop" role="group" aria-label="Edit shift"><b>${DOW[w]} ${tfmt(slotT(b.s))} to ${tfmt(slotT(b.e))}</b>
+        <span class="stepper"><button data-act="wkPopSeat" data-v="-1" aria-label="Fewer people">−</button><span>${b.seats}</span><button data-act="wkPopSeat" data-v="1" aria-label="More people">+</button></span><span class="muted">${b.seats === 1 ? "person" : "people"}</span>
+        <span class="lnk"><button class="linkbtn" data-act="wkPopDel">Delete shift</button><button class="btn sm" data-act="wkPopClose">Done</button></span></div>`;
+  });
+  box.innerHTML = h;
+  const open = WK_ROWS.filter(w => W.rows[w].length);
+  $("wkSum").innerHTML = open.length ? open.map(w => `<div><b>${DOW[w]}</b> ${wkShifts(w).map(q => `${tfmt(q.start)}–${tfmt(q.end)} <span class="muted">(${q.seats})</span>`).join(", ")}</div>`).join("")
+    : `<span class="muted">No shifts yet. Drag across a day to draw one.</span>`;
+  if (!$("wkFrom").value) $("wkFrom").value = W.from;
+  const dn = ds => ds.slice().sort((a,b) => ((a + 6) % 7) - ((b + 6) % 7)).map(v => DOW[v]).join(", ").replace(/, ([^,]+)$/, " and $1");
+  $("ruleList").innerHTML = S.cal.rules.length ? S.cal.rules.map((rl,i) => { const n = ruleDates(rl).filter(d => !S.cal.closed.includes(d)).length;
+      return `<div class="rule"><span>${dn(rl.dows)} from ${fmtD(rl.from)}${rl.until ? " to " + fmtD(rl.until) : ", no end date"}. ${n} days</span><button class="x" data-act="ruleDel" data-i="${i}" aria-label="Remove this rule">✕</button></div>`; }).join("")
+    : `<p class="empty">No saved hours yet.</p>`;
+}
+function saveWeekRule(){
+  const from = $("wkFrom").value || ymd(new Date()), until = $("wkUntil").value || "";
+  if (until && until < from){ toast("calToast", "The end date is before the start date."); return; }
+  const pattern = {}, dows = WK_ROWS.filter(w => { const sh = wkShifts(w); if (sh.length) pattern[w] = sh; return sh.length; });
+  S.cal.rules = S.cal.rules.filter(rl => rl.from < from).map(rl => !rl.until || rl.until >= from ? Object.assign(rl, {until:addDays(from, -1)}) : rl);   // older hours end the day before
+  if (dows.length) S.cal.rules.push({dows, from, until, kind:"ops", pattern});
+  dows.forEach(w => S.pattern[w] = pattern[w]);   // the default for a single day opened by hand
+  S.cal.closed = S.cal.closed.filter(d => d < from || (until && d > until));
+  syncCalDates(); ensureDates();
+  const ds = dows.length ? ruleDates(S.cal.rules[S.cal.rules.length - 1]) : [];
+  toast("calToast", dows.length ? `Saved. Open ${dows.map(w => DOW[w]).join(", ")} from ${fmtD(from)}${until ? " to " + fmtD(until) : ""}, ${ds.length} days.` : `Saved. Closed from ${fmtD(from)}.`);
+  renderShifts();
+}
+(function wireWeek(){
+  /* the row under the pointer and the half hour from its x position, so blocks drawn on top never get in the way */
+  const at = e => { const r = [...document.querySelectorAll("#wkGrid .wk-r[data-w]")].find(el => { const b = el.getBoundingClientRect(); return e.clientY >= b.top - 2 && e.clientY <= b.bottom + 2; });
+    if (!r) return null; const c = r.querySelector(".wk-c").getBoundingClientRect();
+    return {w:+r.dataset.w, i:Math.max(0, Math.min(NSLOT - 1, Math.floor((e.clientX - c.left) / c.width * NSLOT)))}; };
+  const apply = p => { const D = UI.wkDrag, W = UI.wk; W.rows = JSON.parse(JSON.stringify(D.snap)); D.moved = true;
+    if (D.grip){ const bs = W.rows[D.w], b = bs[D.k]; if (D.grip === "l") b.s = Math.min(p.i, b.e - 1); else b.e = Math.max(p.i + 1, b.s + 1);
+      W.rows[D.w] = carve(bs.filter(x => x !== b), b.s, b.e).concat(b).sort((x,y) => x.s - y.s); }
+    else { const r0 = WK_ROWS.indexOf(D.w), r1 = WK_ROWS.indexOf(p.w), s = Math.min(D.i, p.i), e = Math.max(D.i, p.i) + 1;
+      WK_ROWS.forEach((w, r) => { if (r >= Math.min(r0, r1) && r <= Math.max(r0, r1)) W.rows[w] = carve(W.rows[w], s, e).concat({s, e, seats:W.seats}).sort((x,y) => x.s - y.s); }); }
+    W.pop = null; UI.wkDirty = true; renderWeekGrid(); };
+  document.addEventListener("pointerdown", e => { if (!e.target.closest || !e.target.closest("#wkGrid") || e.target.closest(".wk-n, .wk-pop") || !isAdmin()) return;
+    const p = at(e); if (!p) return; e.preventDefault();
+    const blk = e.target.closest("[data-wb]"), [bw, bk] = blk ? blk.dataset.wb.split(":").map(Number) : [];
+    UI.wkDrag = {w:p.w, i:p.i, snap:JSON.parse(JSON.stringify(UI.wk.rows)), grip: blk ? e.target.dataset.grip : null, k:bk, blk: blk ? {w:bw, k:bk} : null}; });
+  document.addEventListener("pointermove", e => { const D = UI.wkDrag; if (!D) return; const p = at(e); if (!p || (!D.moved && p.w === D.w && p.i === D.i)) return; apply(p); });
+  document.addEventListener("pointerup", () => { const D = UI.wkDrag; if (!D) return; UI.wkDrag = null;
+    if (!D.moved && D.blk && !D.grip){ UI.wk.pop = D.blk; renderWeekGrid(); } });   // a tap on a block opens its editor
+  document.addEventListener("pointercancel", () => { UI.wkDrag = null; });
+})();
 function renderCal(){
   const grid = $("calGrid"); if (!grid) return;
-  if (!UI.brush) UI.brush = "pilot";
-  if (!UI.ruleDows) UI.ruleDows = new Set([6, 0]);
+  if (!UI.brush || UI.brush === "pilot") UI.brush = "ops";
   const today = ymd(new Date()), t0 = toDate(today);
   if (UI.calOff == null) UI.calOff = 0;
   const open = new Set(S.track.dates), SD = UI.SD || {};
   const months = [0,1,2].map(k => new Date(t0.getFullYear(), t0.getMonth() + UI.calOff + k, 1));
   set("calRange", `${MON[months[0].getMonth()]} to ${MON[months[2].getMonth()]} ${months[2].getFullYear()}`);
-  $("calBrush").innerHTML = [["pilot","Pilot day"],["ops","Operations day"],["closed","Closed"]].map(([v,l]) => `<button class="${UI.brush === v ? "on" : ""}" data-act="calBrush" data-v="${v}">${l}</button>`).join("");
+  $("calBrush").innerHTML = [["ops","Open"],["closed","Closed"]].map(([v,l]) => `<button class="${UI.brush === v ? "on" : ""}" data-act="calBrush" data-v="${v}">${l}</button>`).join("");
   const sel = UI.drag ? UI.drag.set : new Set();
   grid.innerHTML = months.map(m0 => { const y = m0.getFullYear(), mo = m0.getMonth(), n = new Date(y, mo + 1, 0).getDate(), lead = (m0.getDay() + 6) % 7;
     let c = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(x => `<div class="dh">${x[0]}</div>`).join("");
     for (let i = 0; i < lead; i++) c += `<div class="cd pad"></div>`;
-    for (let dd = 1; dd <= n; dd++){ const d = ymd(new Date(y, mo, dd)), on = open.has(d), k = on ? (S.days[d] && S.days[d].kind) || "pilot" : "";
+    for (let dd = 1; dd <= n; dd++){ const d = ymd(new Date(y, mo, dd)), on = open.has(d), k = on ? "ops" : "";
       const sold = SD[d] ? SD[d].n : 0;
-      c += `<div class="cd${on ? " " + k : ""}${d < today ? " past" : ""}${d === today ? " today" : ""}${sel.has(d) ? " sel" : ""}" data-cd="${d}" title="${fmtD(d)}${on ? ", " + KIND_LBL[k] + " day" : ", closed"}${sold ? `, ${sold} sold` : ""}">${dd}${sold ? `<small>${sold}</small>` : ""}</div>`; }
+      c += `<div class="cd${on ? " " + k : ""}${d < today ? " past" : ""}${d === today ? " today" : ""}${sel.has(d) ? " sel" : ""}" data-cd="${d}" title="${fmtD(d)}${on ? ", open" : ", closed"}${sold ? `, ${sold} sold` : ""}">${dd}${sold ? `<small>${sold}</small>` : ""}</div>`; }
     return `<div class="calm"><h4>${["January","February","March","April","May","June","July","August","September","October","November","December"][mo]} ${y}</h4><div class="calw">${c}</div></div>`; }).join("");
-  // rules
-  $("ruleDows").innerHTML = [[1,"M"],[2,"T"],[3,"W"],[4,"T"],[5,"F"],[6,"S"],[0,"S"]].map(([v,l]) => `<button class="${UI.ruleDows.has(v) ? "on" : ""}" data-act="ruleDow" data-v="${v}" aria-label="${DOW[v]}">${l}</button>`).join("");
-  if (!$("ruleFrom").value) $("ruleFrom").value = today;
-  if (!$("ruleUntil").value) $("ruleUntil").value = addDays(today, 7 * 12);
-  const dn = ds => ds.slice().sort((a,b) => ((a + 6) % 7) - ((b + 6) % 7)).map(v => DOW[v]).join(", ");
-  $("ruleList").innerHTML = S.cal.rules.length ? S.cal.rules.map((rl,i) => { const n = ruleDates(rl).filter(d => !S.cal.closed.includes(d)).length;
-      return `<div class="rule"><span><span class="kind ${rl.kind}">${KIND_LBL[rl.kind]}</span> Every ${dn(rl.dows).replace(/, ([^,]+)$/, " and $1")} from ${fmtD(rl.from)}${rl.until ? " to " + fmtD(rl.until) : ", no end date"}. ${n} days</span><button class="x" data-act="ruleDel" data-i="${i}" aria-label="Remove rule">✕</button></div>`; }).join("")
-    : `<p class="empty">No repeating rules. Add one above, or paint days on the calendar.</p>`;
 }
 function paintDates(ds, brush){
   if (!ds.length) return;
   if (brush === "closed") setDates(S.track.dates.filter(d => !ds.includes(d)));
   else { setDates(S.track.dates.concat(ds)); ds.forEach(d => { ensureDay(d).kind = brush; }); }
   markDirty(); syncFields(); recalc();
-  toast("calToast", `${brush === "closed" ? "Closed" : `Set as ${KIND_LBL[brush].toLowerCase()} ${ds.length === 1 ? "day" : "days"}:`} ${ds.length === 1 ? fmtD(ds[0]) : `${ds.length} days, ${fmtD(ds[0])} to ${fmtD(ds[ds.length - 1])}`}.`);
+  toast("calToast", `${brush === "closed" ? "Closed" : "Opened"} ${ds.length === 1 ? fmtD(ds[0]) : `${ds.length} days, ${fmtD(ds[0])} to ${fmtD(ds[ds.length - 1])}`}.`);
 }
 (function wireCal(){
   const rng = (a, b) => { if (a > b) [a, b] = [b, a]; const out = []; for (let d = a; d <= b && out.length < 400; d = addDays(d, 1)) out.push(d); return out; };
   const cellAt = e => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.closest ? el.closest("[data-cd]") : null; };
   const preview = () => document.querySelectorAll("#calGrid [data-cd]").forEach(c => { const on = UI.drag.set.has(c.dataset.cd); c.classList.toggle("sel", on); c.classList.toggle("unsel", on && UI.drag.brush === "closed"); });
-  document.addEventListener("pointerdown", e => { const c = e.target.closest && e.target.closest("#calGrid [data-cd]"); if (!c) return;
+  document.addEventListener("pointerdown", e => { const c = e.target.closest && e.target.closest("#calGrid [data-cd]"); if (!c || !isAdmin()) return;
     if (e.button !== 0 && e.button !== 2) return;
     e.preventDefault(); UI.drag = {start:c.dataset.cd, set:new Set([c.dataset.cd]), brush: e.button === 2 ? "closed" : UI.brush}; preview(); });
   document.addEventListener("contextmenu", e => { if (e.target.closest && e.target.closest("#calGrid")) e.preventDefault(); });
@@ -2146,7 +2372,7 @@ function renderPf(){
     + (mgr ? `<div class="pf-f"><label>Name<input class="in txt" data-pf="name" value="${esc(p.name)}"></label><label>Email<input class="in txt" type="email" data-pf="email" value="${esc(p.email || "")}" autocomplete="off"></label><label>Phone<input class="in txt" type="tel" data-pf="phone" value="${esc(p.phone || "")}" autocomplete="off"></label><label>Role<input class="in txt" data-pf="role" value="${esc(p.role || "")}" placeholder="Barista, Support"></label><label>Class year<input class="in txt" data-pf="year" value="${esc(p.year || "")}" inputmode="numeric"></label><label class="chk"><input type="checkbox" data-act="pfTrained"${p.trained ? " checked" : ""}> Completed barista training</label><div><button class="btn sm" data-act="pfSave">Save details</button></div></div>` : "")
     + `<p class="toast" id="pfToast" role="status"></p><h3>Usual availability</h3>`
     + (mgr ? `<p class="note-sm" style="margin:-4px 0 8px">Tap the shifts they can usually work. This repeats every week.</p>` + [1,2,3,4,5,6,0].map(w => { const r = (p.rule || {})[w];
-        return `<div class="sh-slot"><div class="top"><span>${WDAY[w]}</span></div><div class="pchips">${patternFor(w).map((q,i) => { const on = covers(r, q); return `<button class="pc ${on ? "av" : "off"}" data-act="pfRule" data-w="${w}" data-i="${i}" aria-pressed="${on}">${tfmt(q.start)} to ${tfmt(q.end)}</button>`; }).join("")}</div></div>`; }).join("")
+        return `<div class="sh-slot"><div class="top"><span>${WDAY[w]}</span></div><div class="pchips">${dowShifts(w).map((q,i) => { const on = covers(r, q); return `<button class="pc ${on ? "av" : "off"}" data-act="pfRule" data-w="${w}" data-i="${i}" aria-pressed="${on}">${tfmt(q.start)} to ${tfmt(q.end)}</button>`; }).join("")}</div></div>`; }).join("")
       : `<p class="tw">${esc(ruleText(p))}</p><p class="note-sm">Ask a manager to change your usual days and times.</p><p class="tw">Barista training: ${p.trained ? "completed" : "not yet"}</p>`)
     + `<h3>Weeks off</h3><p class="note-sm" style="margin:-4px 0 8px">Tap a week to take it off. Red weeks are off, so ${mgr ? "they" : "you"} won't show as available.</p>
       <div class="pchips">${offWeeks().map(w => { const off = (p.off || []).includes(w); return `<button class="pc ${off ? "off" : "av"}" data-act="pfOff" data-w="${w}" aria-pressed="${off}">Week of ${fmtD(w)}</button>`; }).join("")}</div>`
@@ -2165,11 +2391,10 @@ function renderDayPanel(){
   const L = dayLabor(d);
   let h = `<div class="tile-h"><h2 id="dpTitle">${fmtD(d)}</h2><button class="x" data-act="dpClose" aria-label="Close">✕</button></div>`;
   if (!open){
-    h += `<p class="hint">The cafe is closed this day.</p><div class="chips"><button class="chip" data-act="dpOpen" data-v="pilot">Open as a pilot day</button><button class="chip" data-act="dpOpen" data-v="ops">Open as an operations day</button></div>`;
+    h += `<p class="hint">The cafe is closed this day.</p><div class="chips"><button class="chip" data-act="dpOpen" data-v="ops">Open this day</button></div>`;
     box.innerHTML = h; return;
   }
-  h += `<div class="calbar" style="margin:10px 0 0"><span class="segc sm">${["pilot","ops"].map(k => `<button class="${x.kind === k ? "on" : ""}" data-act="dayKind" data-d="${d}" data-v="${k}">${k === "ops" ? "Operations day" : "Pilot day"}</button>`).join("")}</span><button class="btn ghost sm" data-act="dpCloseDay">Close this day</button></div>
-    <p class="tw" style="margin:10px 0 0">${tfmt(x.open)} to ${tfmt(x.close)}, from the ${toDate(d).toLocaleDateString("en-US", {weekday:"long"})} pattern. About ${F.int((UI.T || {}).dayDrinks || 0)} drinks${x.kind === "ops" ? `. Labor ${F.usd0(L.cost)}` : ". Volunteer-run"}.</p>
+  h += `<div class="calbar" style="margin:10px 0 0"><span class="tw">${tfmt(x.open)} to ${tfmt(x.close)}, from the weekly hours. About ${F.int((UI.T || {}).dayDrinks || 0)} drinks. Labor ${F.usd0(L.cost)}.</span><button class="btn ghost sm" data-act="dpCloseDay">Close this day</button></div>
     <h3>Shifts</h3>`;
   const SH = shiftsOf(d);
   for (let i = 0; i < x.n; i++){
@@ -2197,6 +2422,20 @@ function setShiftNames(d, i, fn){ const x = ensureDay(d); x.names[i] = fn(namesI
 const availDoc = (wk, pid) => (Store.avail || []).find(a => a.week === wk && a.pid === pid) || null;
 const availUrl = wk => location.origin + location.pathname + "?avail=" + wk;
 const weekDays = wk => [0,1,2,3,4,5,6].map(i => addDays(wk, i)).filter(d => S.track.dates.includes(d));
+/* the week's shifts as blocks: people available so far (from this week's answers) out of people needed. With a person and their
+   picks it becomes their form: their picks count live and tapping a block toggles it. */
+const availCount = (wk, d, q, exceptPid) => team().filter(p => { if (p.id === exceptPid) return false; const a = availDoc(wk, p.id); return a && !a.none && covers((a.days || {})[d], q); }).length;
+function coverageGrid(wk, me){
+  const days = weekDays(wk), all = days.flatMap(d => shiftsOf(d)); if (!all.length) return "";
+  const s0 = Math.max(0, Math.floor(slotOf(Math.min(...all.map(q => q.start))) / 2) * 2), s1 = Math.min(NSLOT, Math.ceil(slotOf(Math.max(...all.map(q => q.end))) / 2) * 2), n = Math.max(2, s1 - s0);
+  let open = 0;
+  const rows = days.map(d => wkRow(`${DOW[toDate(d).getDay()]} ${toDate(d).getDate()}`, s0, n, shiftsOf(d).map((q, i) => {
+    const mine = !!(me && !me.none && me.sel[d] && me.sel[d][i]), have = availCount(wk, d, q, me && me.pid) + (mine ? 1 : 0), left = Math.max(0, q.seats - have); open += left;
+    const lbl = `${toDate(d).toLocaleDateString("en-US", {weekday:"long"})} ${tfmt(q.start)} to ${tfmt(q.end)}: ${have} of ${q.seats} available${left ? `, needs ${left} more` : ""}`;
+    return `<button class="wk-b av ${mine ? "mine" : left ? "need" : "ok"}" style="grid-column:${slotOf(q.start) - s0 + 1}/${slotOf(q.end) - s0 + 1}" title="${lbl}" aria-label="${lbl}${me ? (mine ? ". You're in" : ". Tap if you can work it") : ""}"${me && !me.none ? ` data-act="avTog" data-d="${d}" data-i="${i}" aria-pressed="${mine}"` : " disabled"}>${have}/${q.seats}${mine ? " ✓" : ""}</button>`; })));
+  return `<div class="wkg ro">${wkHead(s0, n)}${rows.join("")}</div>
+    <p class="note-sm" style="margin:4px 0 0">${open ? `<b class="neg-t">${open} ${open === 1 ? "spot still needs" : "spots still need"} someone.</b> ` : `<b class="status-ok">Every shift is covered.</b> `}Each shift shows people available so far out of people needed: orange still needs people, green is covered${me ? ", blue is you" : ""}.</p>`;
+}
 function renderAvailBox(){
   const box = $("availBox"); if (!box) return;
   const wk = UI.mxWk || weekOf(ymd(new Date())), days = weekDays(wk);
@@ -2204,6 +2443,7 @@ function renderAvailBox(){
   const done = teamSorted().filter(p => availDoc(wk, p.id)), todo = teamSorted().filter(p => !availDoc(wk, p.id));
   box.innerHTML = `<div class="alink"><b style="flex:1 1 100%">Availability for the week of ${fmtD(wk)}</b><code>${esc(availUrl(wk))}</code>
     <button class="btn sm" data-act="availCopy" data-w="${wk}">Copy for the group chat</button><a class="btn ghost sm" href="${esc(availUrl(wk))}" target="_blank" rel="noopener">Open</a>
+    <div style="flex:1 1 100%">${coverageGrid(wk, null)}</div>
     <span class="note-sm" style="flex:1 1 100%">${done.length} of ${team().length} answered${done.length ? ": " + done.map(p => esc(p.name) + (availDoc(wk, p.id).none ? " (can't work)" : "")).join(", ") : ""}.${todo.length && done.length ? ` Still waiting on ${todo.map(p => { const f = p.name.split(" ")[0]; return esc(team().filter(x => x.name.split(" ")[0] === f).length > 1 ? p.name : f); }).join(", ")}.` : ""}</span></div>`;
 }
 async function copyAvail(wk){
@@ -2217,7 +2457,7 @@ function renderAvailView(){
   const box = $("availView"); if (!box) return;
   const wk = UI.av.wk || nextAvailWeek(), days = weekDays(wk), A = UI.av;
   let pid = A.pid; if (pid && !team().some(p => p.id === pid)) pid = A.pid = "";
-  let h = `<div class="sec"><h2>Your availability</h2><p class="hint">Week of ${fmtD(wk)} to ${fmtD(addDays(wk, 6))}. Tap every shift you can work, then Save.</p>`;
+  let h = `<div class="sec"><h2>Your availability</h2><p class="hint">Week of ${fmtD(wk)} to ${fmtD(addDays(wk, 6))}. Pick your name, tap every shift you can work, then Save.</p>`;
   if (!Store.loaded){ box.innerHTML = h + `<p class="empty">Loading…</p></div>`; return; }
   if (!days.length){ box.innerHTML = h + `<p class="empty">The cafe isn't open that week. Nothing to fill in.</p></div>`; return; }
   h += `<label class="pf-f" style="margin:0"><span class="note-sm">Your name</span><select class="in txt" id="avName" aria-label="Your name"><option value="">Choose your name</option>${teamSorted().map(p => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
@@ -2227,12 +2467,12 @@ function renderAvailView(){
       A.selFor = pid + wk; A.none = !!(doc && doc.none);
       A.sel = {}; days.forEach(d => A.sel[d] = shiftsOf(d).map(q => doc ? covers((doc.days || {})[d], q) : covers((p.rule || {})[toDate(d).getDay()], q)));
       A.had = !!doc; }
-    h += days.map(d => `<div class="sh-slot${A.none ? " off" : ""}"><div class="top"><span>${toDate(d).toLocaleDateString("en-US", {weekday:"long", month:"short", day:"numeric"})}</span><button class="linkbtn" data-act="avAll" data-d="${d}"${A.none ? " disabled" : ""}>${A.sel[d].every(Boolean) ? "Clear" : "All day"}</button></div>
-        <div class="pchips">${shiftsOf(d).map((q,i) => `<button class="pc ${A.sel[d][i] ? "av" : ""}" data-act="avTog" data-d="${d}" data-i="${i}" aria-pressed="${!!A.sel[d][i]}"${A.none ? " disabled" : ""}>${tfmt(q.start)} to ${tfmt(q.end)}</button>`).join("")}</div></div>`).join("")
+    h += coverageGrid(wk, {pid, sel:A.sel, none:A.none})
       + `<label class="swrow"><span>I can't work this week</span><input type="checkbox" class="switch" id="avNone"${A.none ? " checked" : ""}></label>
       <button class="btn big" style="width:100%;margin-top:6px" data-act="avSave">${A.had ? "Update my availability" : "Save my availability"}</button>
       <p class="toast" id="avToast" role="status"></p>`;
   }
+  else h += coverageGrid(wk, null);
   box.innerHTML = h + `</div>`;
 }
 async function saveAvail(){
@@ -2258,60 +2498,60 @@ function salesDays(){
   return out;
 }
 
-/* ------------------------------------------------------------------ home */
+/* ------------------------------------------------------------------ home: shifts, this week's menu, how to build it */
 function renderHome(){
-  if (!$("homeWeek")) return;
-  const today = ymd(new Date()), SD = UI.SD || salesDays(), T = UI.T || {rows:[], dayDrinks:0}, dates = S.track.dates.slice().sort(), cw = weekOf(today);
-  const wks = UI.homeWks = [...new Set([cw].concat(dates.map(weekOf)))].sort();
-  if (!UI.homeWk || !wks.includes(UI.homeWk)) UI.homeWk = cw;
-  const wk = UI.homeWk, wi = wks.indexOf(wk);
-  document.querySelectorAll("[data-act=homeWk]").forEach(b => { const v = +b.dataset.v; b.disabled = v < 0 ? wi <= 0 : v > 0 ? wi >= wks.length - 1 : wk === cw; });
-  const rel = wk === cw ? "This week" : wk === addDays(cw, 7) ? "Next week" : wk === addDays(cw, -7) ? "Last week" : wk < cw ? "Past week" : "Coming week";
-  $("homeWeekTitle").innerHTML = `${rel}<span class="wk-sub">${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</span>`;
-  let wh = "";
-  for (let i = 0; i < 7; i++){ const d = addDays(wk, i), dn = `<span class="wd-d${d === today ? " now" : ""}">${fmtD(d)}</span>`;
-    if (!dates.includes(d)){ wh += `<div class="wday off">${dn}<span class="muted">${SD[d] ? `${F.int(SD[d].n)} drinks sold` : "Closed"}</span></div>`; continue; }
-    const x = ensureDay(d), sh = shiftsOf(d);
-    wh += `<div class="wday">${dn}<div><div class="wd-h"><span class="kind ${x.kind}">${KIND_LBL[x.kind]}</span> ${tfmt(x.open)} to ${tfmt(x.close)}${SD[d] ? `, ${F.int(SD[d].n)} drinks sold` : d < today ? "" : `, about ${F.int(T.dayDrinks)} drinks`}</div>`
-      + sh.map((q,j) => { const ns = namesIn(x.names[j]), open = Math.max(0, q.seats - ns.length);
-          return `<div class="wd-s"><span class="muted">${tfmt(q.start)} to ${tfmt(q.end)}</span> ${ns.map(nameH).join(", ")}${open ? ` <span class="neg-t">${open} open</span>` : ""}</div>`; }).join("")
-      + `</div><button class="btn ghost sm" data-act="dpShow" data-d="${d}">Shifts</button></div>`; }
-  $("homeWeek").innerHTML = wh;
-  const L = liveDrinks();
-  $("homeMenu").innerHTML = `<table class="t">` + SECS.map(([s, label]) => { const xs = L.filter(d => d.sec === s);
-    return xs.length ? `<tr class="band"><td colspan="3">${label}</td></tr>` + xs.map(d => `<tr><td class="l">${esc(d.name)}</td><td class="muted">${SERVE_TAG[d.serve]}</td><td>${F.usd2(d.price)}</td></tr>`).join("") : ""; }).join("")
-    + `<tr class="band"><td colspan="3">Food</td></tr><tr><td class="l">Pastry</td><td class="muted"></td><td>${F.usd2(+S.pastry.price || 0)}</td></tr></table>`;
-  const Bw = buyWeek(T), BL = buyItems(T).rows.filter(r => r.qty > 0);
-  set("homeOrderTitle", `To order for the week of ${fmtD(Bw)}`);
-  $("homeOrder").innerHTML = BL.length ? `<table class="t">` + BL.map(r => `<tr><td class="l">${esc(r.name)}<div class="note-sm">${esc(r.vendor)}</div></td><td class="nw">${r.qty} × ${fmtQty(r.size || 0, r.unit)}</td><td>${F.usd2(r.cost)}</td></tr>`).join("")
-      + `<tr class="tot"><td class="l">Total</td><td></td><td>${F.usd2(BL.reduce((s,r) => s + r.cost, 0))}</td></tr></table>`
-    : `<p class="empty">Nothing to order. Stock covers the next cafe days.</p>`;
+  if (!$("homeShifts")) return;
+  const today = ymd(new Date()), dates = S.track.dates.slice().sort(), isToday = dates.includes(today), nx = dates.find(d => d >= today);
+  const days = isToday ? [today] : nx ? dates.filter(d => d >= today && weekOf(d) === weekOf(nx)) : [];   // today if the cafe is open, else the next open weekend
+  $("homeShiftTitle").innerHTML = isToday ? `Today's shifts<span class="wk-sub">${fmtD(today)}</span>` : days.length ? `${weekOf(nx) === weekOf(today) ? "This weekend" : "Next cafe days"}<span class="wk-sub">${days.map(fmtD).join(" and ")}</span>` : "Shifts";
+  $("homeShifts").innerHTML = days.length ? `<div class="hd-days">${days.map(d => { const x = ensureDay(d);
+      return `<div class="hd-day">${days.length > 1 ? `<h3>${fmtD(d)}</h3>` : ""}${shiftsOf(d).map((q, i) => { const ns = namesIn(x.names[i]), open = Math.max(0, q.seats - ns.length);
+          return `<div class="hsh"><span class="t">${tfmt(q.start)}–${tfmt(q.end)}</span><span>${ns.length ? ns.map(nameH).join(", ") : `<span class="muted">Nobody yet</span>`}${open ? ` <span class="neg-t">${open} open</span>` : ""}</span></div>`; }).join("")}
+        <button class="linkbtn adm" data-act="dpShow" data-d="${d}">Edit shifts</button></div>`; }).join("")}</div>`
+    : `<p class="empty">No cafe days coming up.${isAdmin() ? " Set the hours under Weeks and shifts." : ""}</p>`;
+  const L = liveDrinks(), grp = (lbl, xs) => xs.length ? `<div><h3>${lbl}</h3>${xs.map(d => `<div class="mrow2"><button class="drink" data-act="diagram" data-id="${esc(d.id)}">${esc(d.name)}</button><span class="muted">${F.usd2(d.price)}</span></div>`).join("")}</div>` : "";
+  $("homeMenu").innerHTML = `<div class="hmenu">${grp("Signature", L.filter(d => d.sec === "signature"))}${grp("Specialty", L.filter(d => d.sec === "specialty"))}${grp("Core", L.filter(d => d.sec === "core"))}<div><h3>Food</h3><div class="mrow2"><span>Pastry</span><span class="muted">${F.usd2(+S.pastry.price || 0)}</span></div></div></div>`;
+  const cs = curSeason(), cand = allDrinks().filter(d => d.sec !== "core" && (!d.season || d.season === cs)).sort((a,b) => (isOn(b) - isOn(a)) || a.name.localeCompare(b.name));
+  $("homeConfig").innerHTML = `<details class="fold2" id="homeCfgBox"${UI.homeCfg ? " open" : ""}><summary>Change this week's signature and specialty drinks</summary>
+      <p class="note-sm" style="margin:8px 0 6px">${seasonName(cs)} and any-season drinks. The rest are in the drink bank.</p>
+      ${cand.map(d => `<div class="hcfg"><span>${esc(d.name)} <span class="muted">${F.usd2(d.price)}</span></span>${secSeg(d)}</div>`).join("") || `<p class="empty">No ${seasonName(cs).toLowerCase()} drinks yet.</p>`}
+      <div class="chips" style="margin-top:8px"><button class="chip" data-act="gearOpen">New drink</button><button class="chip" data-act="tab" data-tab="bank">Drink bank</button></div></details>`;
+  const box = $("homeDiag"), S2 = L.filter(d => d.sec !== "core");
+  box.innerHTML = S2.length ? [["signature","How to make the signature drinks"],["specialty","How to make the specialty drinks"]].map(([sec, lbl]) => { const xs = S2.filter(d => d.sec === sec);
+      return xs.length ? `<div class="sec"><h2>${lbl}</h2><div class="hgrid">${xs.map(d => `<section class="hcard"><div class="diag-h"><h3>${esc(d.name)}</h3><span class="muted">${F.usd2(d.price)}</span></div>${diagramHTML(d)}</section>`).join("")}</div></div>` : ""; }).join("") : "";
 }
 
-/* ------------------------------------------------------------------ analytics: everything here comes from logged sales */
+/* ------------------------------------------------------------------ analytics: logged sales and Clover, for any date range */
+UI.an = {from:"", to:""};
 function renderAnalytics(){
   if (!$("anKpis")) return;
-  const range = UI.anRange || "all", today = ymd(new Date()), cw = weekOf(today);
-  $("anRange").innerHTML = [["4","Last 4 weeks"],["8","Last 8 weeks"],["all","All time"]].map(([v,l]) => `<button class="${range === v ? "on" : ""}" data-act="anRange" data-v="${v}">${l}</button>`).join("");
-  const from = range === "all" ? "" : addDays(cw, -7 * (+range - 1));
+  const A = UI.an, today = ymd(new Date()), cw = weekOf(today), from = A.from || "", to = A.to || "9999-12-31", inR = d => !!d && d >= from && d <= to;
+  [["anFrom","from"],["anTo","to"]].forEach(([id, k]) => { const el = $(id); if (el && el !== document.activeElement) el.value = A[k] || ""; });
+  const pre = anPreset();
+  $("anRange").innerHTML = [["all","All time"],["wk","Last cafe weekend"],["30","Last 30 days"]].map(([v,l]) => `<button class="${pre === v ? "on" : ""}" data-act="anRange" data-v="${v}">${l}</button>`).join("");
+  /* Clover is the register: a day with Clover orders takes its money and orders from Clover, and dates an item report covers take
+     their drink counts from the report, so nothing is counted twice when the same weekend is also logged here */
+  const C = S.clover, cdays = Object.keys(C.orders).filter(inR).sort(), cset = new Set(cdays);
+  const reps = C.items.filter(r => r.from && r.to && inR(r.from) && inR(r.to)), inRep = d => C.items.some(r => r.from && d >= r.from && d <= r.to);
   const unknown = new Set(), byDrink = {}, byDay = {}, byWeek = {}, byHour = new Array(HN).fill(0), syr = {};
   let n = 0, food = 0, rev = 0, cogs = 0, orders = 0, foodRev = 0;
   const H = {both:0, iced:0, milkD:0, oat:0, alm:0, sy:0, fo:0};
+  const dayOf = d => byDay[d] || (byDay[d] = {n:0, food:0, rev:0, drinks:{}});
+  const addItem = (id, name, sec, on, q, r) => { const x = byDrink[id] || (byDrink[id] = {name, sec, on, n:0, rev:0}); x.n += q; x.rev += r; };
   Store.sales.forEach(doc => {
-    const ls = (doc.lines || []).filter(l => +l.q > 0 && l.d && l.d >= from); if (!ls.length) return;
+    const ls = (doc.lines || []).filter(l => +l.q > 0 && inR(l.d)); if (!ls.length) return;
     const ok = new Set();
     ls.forEach(l => {
       const q = +l.q, d = lineDrink(l);
       if (!isFood(l) && !d){ unknown.add(l.k); return; }
-      const r = (l.p != null ? +l.p : lineRevenue(l, d)) * q;
-      rev += r; cogs += lineCost(l, d) * q;
-      ok.add(doc.kind === "upload" ? (l.o ? "o:" + l.o : l.d + " " + l.tm) : "doc");
-      const day = byDay[l.d] || (byDay[l.d] = {n:0, food:0, rev:0, drinks:{}}); day.rev += r;
-      if (isFood(l)){ food += q; foodRev += r; day.food += q; const x = byDrink.pastry || (byDrink.pastry = {name:"Pastry", sec:"food", n:0, rev:0}); x.n += q; x.rev += r; return; }
+      const r = (l.p != null ? +l.p : lineRevenue(l, d)) * q, day = dayOf(l.d);
+      if (!cset.has(l.d)){ rev += r; cogs += lineCost(l, d) * q; day.rev += r; if (isFood(l)) foodRev += r; ok.add(doc.kind === "upload" ? (l.o ? "o:" + l.o : l.d + " " + l.tm) : "doc"); }
+      if (inRep(l.d)) return;
+      if (isFood(l)){ food += q; day.food += q; addItem("pastry", "Pastry", "food", true, q, r); return; }
       n += q; day.n += q; day.drinks[d.name] = (day.drinks[d.name] || 0) + q;
       byWeek[weekOf(l.d)] = (byWeek[weekOf(l.d)] || 0) + q;
       const h = parseInt(l.tm, 10) - HMIN; if (h >= 0 && h < HN) byHour[h] += q;
-      const x = byDrink[d.id] || (byDrink[d.id] = {name:d.name, sec:d.sec, on:isOn(d), n:0, rev:0}); x.n += q; x.rev += r;
+      addItem(d.id, d.name, d.sec, isOn(d), q, r);
       if (d.serve === "both"){ H.both += q; if (l.ice) H.iced += q; }
       if (d.milk){ H.milkD += q; if (l.milk === "oat") H.oat += q; if (l.milk === "almond") H.alm += q; }
       if (l.sy){ H.sy += q; const k = syOf(l); syr[k] = (syr[k] || 0) + q; }
@@ -2319,6 +2559,13 @@ function renderAnalytics(){
     });
     orders += ok.size;
   });
+  cdays.forEach(d => { const o = C.orders[d], dr = o.log.reduce((s, [, v]) => s + v, 0), no = o.log.filter(([, v]) => v > 0).length;
+    rev += dr; cogs += dr * (+C.cogsRate || 0); orders += no; const day = dayOf(d); day.rev += dr; day.orders = no; });
+  reps.forEach(rp => (rp.rows || []).forEach(r => { const u = +r.units || 0; if (!(u > 0)) return; const d = r.cat === "drink" && findDrink(r.name);
+    if (d){ n += u; addItem(d.id, d.name, d.sec, isOn(d), u, +r.revenue || 0);
+      if (d.milk || (d.iced || d.hot || []).some(x => x[0] === "oat")){ H.milkD += u; H.oat += +r.alt || 0; }
+      H.sy += +r.syrup || 0; H.fo += +r.foam || 0; }
+    else { food += u; addItem("cl:" + norm(r.name), r.name, "food", true, u, +r.revenue || 0); } }));
   const days = Object.keys(byDay).sort(), Fe = S.fees;
   const card = rev * (+Fe.cardPct || 0) / 100 + orders * (+Fe.cardFix || 0), fee = rev * (+Fe.feePct || 0) / 100, char = rev * (+Fe.charityPct || 0) / 100;
   const profit = rev - cogs - card - fee - char;
@@ -2327,30 +2574,30 @@ function renderAnalytics(){
   else { bn.className = "banner"; bn.textContent = ""; }
   const kpi = (l, v, s, cls) => `<div class="kpi"><div class="l">${l}</div><div class="v${cls ? " " + cls : ""}">${v}</div><div class="s">${s}</div></div>`;
   $("anKpis").innerHTML = kpi("Drinks sold", F.int(n), `${F.int(food)} ${food === 1 ? "pastry" : "pastries"} too`)
-    + kpi("Sales", F.usd0(rev), orders ? `${F.int(orders)} orders, ${F.usd2(rev / orders)} each` : "No sales yet")
+    + kpi("Sales", F.usd0(rev), orders ? `${F.int(orders)} orders, ${F.usd2(rev / orders)} each` : "No sales in this range")
     + kpi("Profit", F.usd0(profit), rev ? `${F.frac(profit / rev)} of sales, after costs, fees and charity` : "", profit < 0 ? "neg" : "pos")
-    + kpi("Cafe days logged", F.int(days.length), days.length ? `${F.int(n / days.length)} drinks a day on average` : "");
-  // drinks by week
-  { const wks = []; const first = days.length ? weekOf(days[0]) : cw, start = from ? weekOf(from) : first;
-    for (let w = start < first && !from ? first : start; w <= cw && wks.length < 26; w = addDays(w, 7)) wks.push(w);
+    + kpi("Cafe days", F.int(days.length), cdays.length ? `${F.int(cdays.length)} from Clover` : days.length ? `${F.int(n / days.length)} drinks a day on average` : "");
+  // drinks by week (logged sales; Clover item reports have no dates inside them)
+  { const first = days.length ? weekOf(days[0]) : cw, start = from ? weekOf(from) : first, end = A.to && weekOf(A.to) < cw ? weekOf(A.to) : cw;
+    let wks = []; for (let w = start; w <= end && wks.length < 400; w = addDays(w, 7)) wks.push(w); wks = wks.slice(-26);
     const W = 640, Hh = 200, m = {l:34, r:8, t:16, b:26}, iw = W - m.l - m.r, ih = Hh - m.t - m.b, mx = Math.max(10, ...wks.map(w => byWeek[w] || 0)) * 1.12, bw = iw / Math.max(1, wks.length), y = v => m.t + ih - v / mx * ih;
     let g = ""; [0, mx / 2].forEach(v => g += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${m.l - 5}" y="${y(v) + 4}" text-anchor="end">${Math.round(v)}</text>`);
     const every = Math.ceil(wks.length / 10);
     wks.forEach((w, i) => { const v = byWeek[w] || 0, x = m.l + i * bw + bw * .18, bwid = bw * .64;
       if (v > 0) g += `<rect class="b-dem" x="${x}" y="${y(v)}" width="${bwid}" height="${m.t + ih - y(v)}" rx="3"/><text class="vl" x="${x + bwid / 2}" y="${y(v) - 3}" text-anchor="middle">${F.int(v)}</text>`;
       if (i % every === 0) g += `<text class="ax" x="${x + bwid / 2}" y="${Hh - 8}" text-anchor="middle"${w === cw ? ' style="font-weight:700;fill:var(--label)"' : ""}>${w === cw ? "This wk" : fmtD(w).replace(/^\w+ /, "")}</text>`; });
-    if (!wks.some(w => byWeek[w])) g += `<text class="ax" x="${W / 2}" y="${Hh / 2}" text-anchor="middle">No sales logged yet</text>`;
+    if (!wks.some(w => byWeek[w])) g += `<text class="ax" x="${W / 2}" y="${Hh / 2}" text-anchor="middle">No drinks logged here in this range. Clover days are in the Clover tile.</text>`;
     $("anWeeks").innerHTML = g; }
-  // average cafe day by hour
-  { const avg = byHour.map(v => days.length ? v / days.length : 0), W = 640, Hh = 170, m = {l:30, r:8, t:14, b:24}, iw = W - m.l - m.r, ih = Hh - m.t - m.b, mx = Math.max(5, ...avg) * 1.12, bw = iw / HN, y = v => m.t + ih - v / mx * ih;
+  // average cafe day by hour, over days with logged drinks
+  { const ld = days.filter(d => byDay[d].n).length, avg = byHour.map(v => ld ? v / ld : 0), W = 640, Hh = 170, m = {l:30, r:8, t:14, b:24}, iw = W - m.l - m.r, ih = Hh - m.t - m.b, mx = Math.max(5, ...avg) * 1.12, bw = iw / HN, y = v => m.t + ih - v / mx * ih;
     let g = ""; [0, mx / 2].forEach(v => g += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${m.l - 5}" y="${y(v) + 4}" text-anchor="end">${Math.round(v)}</text>`);
     avg.forEach((v,i) => { const x = m.l + i * bw + bw * .15, w = bw * .7;
       if (v > 0) g += `<rect class="b-dem" x="${x}" y="${y(v)}" width="${w}" height="${m.t + ih - y(v)}" rx="2"/><text class="vl" x="${x + w / 2}" y="${y(v) - 3}" text-anchor="middle">${F.n1(v).replace(/\.0$/, "")}</text>`;
       if (i % 2 === 0) g += `<text class="ax" x="${x + w / 2}" y="${Hh - 6}" text-anchor="middle">${tfmt(HMIN + i)}</text>`; });
     $("anHours").innerHTML = g; }
   $("dayBody").innerHTML = days.length ? days.slice().reverse().map(x => { const d = byDay[x], top = Object.entries(d.drinks).sort((a,b) => b[1] - a[1])[0];
-      return `<tr><td class="l">${fmtD(x)}</td><td>${F.int(d.n)}</td><td>${F.int(d.food)}</td><td>${F.usd2(d.rev)}</td><td class="l">${top ? esc(top[0]) : ""}</td></tr>`; }).join("")
-    : `<tr><td class="l empty" colspan="5">No sales logged yet.</td></tr>`;
+      return `<tr><td class="l">${fmtD(x)}${cset.has(x) ? ` <span class="note-sm">Clover, ${plural(d.orders, "order")}</span>` : ""}</td><td>${d.n ? F.int(d.n) : "–"}</td><td>${d.food ? F.int(d.food) : "–"}</td><td>${F.usd2(d.rev)}</td><td class="l">${top ? esc(top[0]) : ""}</td></tr>`; }).join("")
+    : `<tr><td class="l empty" colspan="5">No sales in this range.</td></tr>`;
   // what sells
   const rank = (xs, cls) => { const mx = Math.max(1, ...xs.map(x => x.n)), tot = xs.reduce((s,x) => s + x.n, 0);
     return xs.length ? `<tbody>${xs.sort((a,b) => b.n - a.n).map(x => `<tr class="${cls || ""}"><td class="l">${esc(x.name)}${x.on === false ? ` <span class="note-sm">off the menu</span>` : ""}</td><td class="bar"><div class="rb"><i style="width:${x.n / mx * 100}%"></i></div></td><td>${F.int(x.n)}</td><td class="muted">${F.frac(tot ? x.n / tot : 0)}</td><td>${F.usd0(x.rev)}</td></tr>`).join("")}</tbody>`
@@ -2359,22 +2606,31 @@ function renderAnalytics(){
   $("anSpec").innerHTML = rank(X.filter(x => x.sec === "signature" || x.sec === "specialty"), "sp");
   $("anCore").innerHTML = rank(X.filter(x => x.sec === "core" || x.sec === "food"));
   const pct = (a, b) => b ? F.frac(a / b) : "None";
-  $("anHabits").innerHTML = [["Iced, when there's a choice", pct(H.iced, H.both)], ["Oat milk", pct(H.oat, H.milkD)], ["Almond milk", pct(H.alm, H.milkD)], ["Added syrup", pct(H.sy, n)], ["Cold foam", pct(H.fo, n)], ["Items per order", orders ? F.n1((n + food) / orders) : "None"]]
+  $("anHabits").innerHTML = [["Iced, when there's a choice", pct(H.iced, H.both)], ["Alt milk", pct(H.oat + H.alm, H.milkD)], ["Added syrup", pct(H.sy, n)], ["Cold foam", pct(H.fo, n)], ["Items per order", orders ? F.n1((n + food) / orders) : "None"]]
     .map(([l, v]) => `<div><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
   const st = Object.values(syr).reduce((s,v) => s + v, 0);
   $("anSyr").innerHTML = st ? Object.entries(syr).sort((a,b) => b[1] - a[1]).map(([id, q]) => `<tr><td class="l">${esc(flavorName(id))}</td><td>${F.int(q)}</td><td class="muted">${F.frac(q / st)}</td></tr>`).join("")
-    : `<tr><td class="l empty">No syrups added yet.</td></tr>`;
+    : `<tr><td class="l empty">No syrups added in logged sales yet.</td></tr>`;
   // money
   stack("anStack", [{k:"mat",v:cogs,label:"Ingredients and cups"},{k:"card",v:card,label:"Card"},{k:"fee",v:fee,label:"Additional fees"},{k:"char",v:char,label:"Charity"},{k:"net",v:profit,label:"Profit"}], F.usd0);
   const mrow = (k, l, v, neg) => `<tr><td class="l">${k ? `<i class="sw k-${k}"></i>` : ""}${l}</td><td>${neg ? "−" : ""}${F.usd2(v)}</td><td class="muted">${F.frac(rev ? v / rev : 0)}</td></tr>`;
-  const charges = (S.charges || []).reduce((s,x) => s + (+x.amount || 0), 0), allProfit = range === "all" ? profit : null;
-  $("anMoney").innerHTML = `<tr><td class="l">Sales${foodRev ? `, ${F.usd0(foodRev)} of it food` : ""}</td><td class="calc">${F.usd2(rev)}</td><td class="muted">100%</td></tr>`
-    + mrow("mat", "Ingredients and cups, at today's prices", cogs, true) + mrow("card", "Card processing", card, true)
+  const charges = (S.charges || []).reduce((s,x) => s + (+x.amount || 0), 0), allProfit = pre === "all" ? profit : null;
+  $("anMoney").innerHTML = `<tr><td class="l">Sales${foodRev ? `, ${F.usd0(foodRev)} of the logged sales food` : ""}</td><td class="calc">${F.usd2(rev)}</td><td class="muted">100%</td></tr>`
+    + mrow("mat", `Ingredients and cups${cdays.length ? `, Clover days at ${F.frac(+C.cogsRate || 0)}` : ""}`, cogs, true) + mrow("card", "Card processing", card, true)
     + mrow("fee", `Additional fees, ${F.pct(+Fe.feePct || 0)}`, fee, true) + mrow("char", `Charity, ${F.pct(+Fe.charityPct || 0)}`, char, true)
     + `<tr class="tot"><td class="l">Profit</td><td class="${profit < 0 ? "neg-t" : ""}">${F.usd2(profit)}</td><td>${F.frac(rev ? profit / rev : 0)}</td></tr>`
     + (charges > 0 && allProfit != null ? `<tr><td class="l">Equipment paid back</td><td>${F.usd0(Math.min(charges, Math.max(0, allProfit)))} of ${F.usd0(charges)}</td><td class="muted">${F.frac(Math.min(1, Math.max(0, allProfit) / charges))}</td></tr>` : "");
-  renderCharges();
+  renderCharges(); renderClover(cdays, reps);
 }
+/* date range presets; the range itself is any two dates */
+function lastCafeWeek(){
+  const today = ymd(new Date()), past = [...new Set(S.track.dates.concat(Object.keys(S.clover.orders)))].filter(d => d <= today).sort(), last = past[past.length - 1];
+  if (!last) return {from:"", to:""};
+  const wk = past.filter(d => weekOf(d) === weekOf(last)); return {from:wk[0], to:last};
+}
+function anPreset(){ const A = UI.an, t = ymd(new Date()), w = lastCafeWeek();
+  return !A.from && !A.to ? "all" : A.from === w.from && A.to === w.to ? "wk" : A.from === addDays(t, -29) && A.to === t ? "30" : ""; }
+function setAnPreset(v){ const t = ymd(new Date()); UI.an = v === "wk" ? lastCafeWeek() : v === "30" ? {from:addDays(t, -29), to:t} : {from:"", to:""}; renderAnalytics(); }
 function stack(id, parts, fmt){
   const el = $(id); if (!el) return;
   const tot = parts.reduce((s,p) => s + Math.max(0, p.v), 0);
@@ -2389,6 +2645,176 @@ function renderCharges(){
     <td><input class="in w-sm" type="number" min="0" step="1" data-bind="charges.${i}.amount" data-type="num" value="${+x.amount || 0}" aria-label="Amount"></td>
     <td style="width:40px"><button class="x" data-act="delCharge" data-i="${i}" aria-label="Remove charge">✕</button></td></tr>`).join("")
     || `<tr><td class="l empty" colspan="3">Nothing to pay back.</td></tr>`;
+}
+
+/* ---------- Clover analytics: sales curves, order sizes, peaks, top drinks (Good-Graces-Sales-Analytics.md)
+   Clover days and item reports live in the shared settings (S.clover), added with Import sales. orders: {date: {label, open,
+   close, log:[[time, total]]}}, one row per Clover transaction. items: [{label, from, to, rows}], one per item sales report.
+   Each renderer draws into its own element and does nothing if it's missing. */
+const cloverRows = () => S.clover.items.flatMap(rp => (rp.rows || []).filter(r => r.cat === "drink" && +r.units > 0)).map(r => ({r, d:findDrink(r.name)})).filter(x => x.d);
+/* ponytail: Clover logs orders, not drinks; most orders are one drink, so orders a day stands in for drinks a day */
+const cloverPerDay = () => { const D = Object.values(S.clover.orders); return D.length ? D.reduce((s,o) => s + o.log.filter(([, v]) => v > 0).length, 0) / D.length : 0; };
+const toMin = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const hhmm = m => { const h = Math.floor(m / 60), mm = m % 60; return `${h % 12 || 12}${mm ? ":" + String(mm).padStart(2, "0") : ""}${h < 12 ? "a" : "p"}`; };
+const CLR = ["var(--tint)", "var(--orange)", "var(--green)", "var(--purple)", "var(--teal)", "var(--pink)", "var(--indigo)", "var(--brown)"];
+function cloverDays(dates){
+  const C = S.clover, card = C.card || {pct:0.023, fixed:0.10};
+  return dates.map((date, i) => { const o = C.orders[date];
+    const sales = o.log.filter(([, v]) => v > 0), rev = o.log.reduce((s, [, v]) => s + v, 0);
+    const bins = {}; sales.forEach(([t, v]) => { const k = Math.floor(toMin(t) / 30) * 30; (bins[k] = bins[k] || {n:0, rev:0}).n++; bins[k].rev += v; });
+    const ms = sales.map(([t]) => toMin(t)).sort((a, b) => a - b);
+    let peak = {n:0, at:0}; ms.forEach(m => { const n = ms.filter(x => x >= m && x < m + 30).length; if (n > peak.n) peak = {n, at:m}; });
+    const fees = sales.reduce((s, [, v]) => s + v * card.pct + card.fixed, 0);
+    return {date, label:o.label || fmtD(date), open:toMin(o.open || (sales[0] || ["09:00"])[0]), close:toMin(o.close || (sales[sales.length - 1] || ["17:00"])[0]), orders:sales.length, rev, avg:sales.length ? rev / sales.length : 0,
+      first:ms[0], last:ms[ms.length - 1], bins, peak, log:sales, profit:rev - rev * (+C.cogsRate || 0) - fees, color:CLR[i % CLR.length]};
+  }).filter(d => d.orders);
+}
+function renderSalesCurve(D){
+  const el = $("anCurve"); if (!el) return;
+  if (!D.length){ el.innerHTML = `<text class="ax" x="320" y="110" text-anchor="middle">No Clover days in this range. Add them with Import sales.</text>`; return; }
+  const W = 640, Hh = 220, m = {l:30, r:10, t:14, b:40}, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const t0 = Math.floor(Math.min(...D.map(d => Math.min(d.open, d.first))) / 30) * 30, t1 = Math.max(...D.map(d => Math.max(d.close, d.last + 30)));
+  const slots = []; for (let t = t0; t < t1; t += 30) slots.push(t);
+  const mx = Math.max(4, ...D.flatMap(d => slots.map(s => (d.bins[s] || {n:0}).n))) * 1.1;
+  const x = s => m.l + (s - t0 + 15) / (t1 - t0) * iw, y = v => m.t + ih - v / mx * ih;
+  let g = "";
+  [0, Math.round(mx / 2), Math.round(mx)].forEach(v => g += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${m.l - 5}" y="${y(v) + 4}" text-anchor="end">${v}</text>`);
+  slots.forEach((s, i) => { if (i % 2 === 0) g += `<text class="ax" x="${x(s)}" y="${m.t + ih + 16}" text-anchor="middle">${hhmm(s)}</text>`; });
+  D.forEach(d => {
+    const pts = slots.filter(s => s >= Math.min(d.open, d.first) - 30 && s < Math.max(d.close, d.last + 1)).map(s => [x(s), y((d.bins[s] || {n:0}).n), s]);
+    g += `<polyline fill="none" stroke="${d.color}" stroke-width="2.2" stroke-linejoin="round" points="${pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}"/>`;
+    pts.forEach(([px, py, s]) => g += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="2.6" fill="${d.color}"><title>${esc(d.label)}, ${hhmm(s)}: ${(d.bins[s] || {n:0}).n} orders, ${F.usd2((d.bins[s] || {rev:0}).rev)}</title></circle>`);
+  });
+  let lx = m.l; D.slice(0, 6).forEach(d => { g += `<rect x="${lx}" y="${Hh - 12}" width="12" height="3" rx="1" fill="${d.color}"/><text class="ax" x="${lx + 16}" y="${Hh - 8}">${esc(d.label)}</text>`; lx += 30 + d.label.length * 6.2; });
+  el.innerHTML = g;
+}
+function renderOrderSizes(D){
+  const el = $("anOrderSize"); if (!el) return;
+  const B = [["Under $4", 0, 4], ["$4 to 4.99", 4, 5], ["$5 to 5.99", 5, 6], ["$6 to 7.99", 6, 8], ["$8 to 11.99", 8, 12], ["$12 and up", 12, 1e9]];
+  const all = D.flatMap(d => d.log.map(([, v]) => v));
+  if (!all.length){ el.innerHTML = `<tbody><tr><td class="l empty">No Clover orders in this range.</td></tr></tbody>`; return; }
+  const n = B.map(([, a, b]) => all.filter(v => v >= a && v < b).length), mx = Math.max(...n);
+  el.innerHTML = `<tbody>${B.map(([l], i) => `<tr><td class="l">${l}</td><td class="bar"><div class="rb"><i style="width:${n[i] / mx * 100}%"></i></div></td><td>${F.int(n[i])}</td><td class="muted">${F.frac(n[i] / all.length)}</td></tr>`).join("")}</tbody>`;
+}
+function renderCloverDays(D){
+  const el = $("anCloverDays"); if (!el) return;
+  el.innerHTML = D.length ? D.map(d => `<tr><td class="l">${esc(d.label)}</td><td>${F.int(d.orders)}</td><td>${F.usd2(d.rev)}</td><td>${F.usd2(d.avg)}</td><td>${hhmm(d.peak.at)}, ${d.peak.n}</td><td>${F.usd2(d.profit)}</td></tr>`).join("")
+    : `<tr><td class="l empty" colspan="6">No Clover days in this range.</td></tr>`;
+}
+/* Clover item reports inside the range, added up by item */
+function renderTopDrinks(reps){
+  const el = $("anTop"); if (!el) return;
+  const by = {}; reps.forEach(rp => (rp.rows || []).forEach(r => { const k = norm(r.name), x = by[k] || (by[k] = {name:r.name, cat:r.cat, units:0, revenue:0, cost:0, alt:0, syrup:0, foam:0});
+    ["units","revenue","alt","syrup","foam"].forEach(f => x[f] += +r[f] || 0); x.cost += (+r.revenue || 0) * (1 - (r.margin != null ? +r.margin : 1)); }));
+  const rows = Object.values(by).filter(r => r.units > 0).sort((a, b) => b.units - a.units);
+  set("anTopLabel", reps.length ? reps.map(r => r.label || `${fmtD(r.from)} to ${fmtD(r.to)}`).join("; ") : "No Clover item report falls inside this range.");
+  const box = $("anMods");
+  if (!rows.length){ el.innerHTML = ""; if (box) box.innerHTML = ""; return; }
+  const mx = Math.max(...rows.map(r => r.units)), drinks = rows.filter(r => r.cat === "drink").reduce((s, r) => s + r.units, 0);
+  el.innerHTML = `<thead><tr><th class="l">Item</th><th></th><th>Sold</th><th>Share</th><th>Sales</th><th>Margin</th></tr></thead><tbody>${rows.map(r => `<tr><td class="l">${esc(r.name)}${r.cat !== "drink" ? ` <span class="note-sm">${esc(r.cat)}</span>` : ""}</td><td class="bar"><div class="rb"><i style="width:${r.units / mx * 100}%"></i></div></td><td>${F.int(r.units)}</td><td class="muted">${r.cat === "drink" && drinks ? F.frac(r.units / drinks) : ""}</td><td>${F.usd2(r.revenue)}</td><td>${r.revenue ? F.frac(1 - r.cost / r.revenue) : ""}</td></tr>`).join("")}</tbody>`;
+  const milky = rows.filter(r => { const d = r.cat === "drink" && findDrink(r.name); return d && (d.milk || (d.iced || d.hot || []).some(x => x[0] === "oat")); });   // drinks with milk in the recipe
+  const sum = k => rows.reduce((s, r) => s + (r[k] || 0), 0), mu = milky.reduce((s, r) => s + r.units, 0), pastry = rows.filter(r => r.cat !== "drink").reduce((s, r) => s + r.units, 0);
+  if (box) box.innerHTML = [["Alt milk, milk drinks", F.frac(mu ? sum("alt") / mu : 0)], ["Added syrup, all drinks", F.frac(drinks ? sum("syrup") / drinks : 0)], ["Cold foam, all drinks", F.frac(drinks ? sum("foam") / drinks : 0)], ["Pastry per 10 drinks", F.n1(drinks ? pastry / drinks * 10 : 0)]]
+    .map(([l, v]) => `<div><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
+}
+function renderClover(dates, reps){
+  if (!$("anCurve")) return;
+  const D = cloverDays(dates);
+  renderSalesCurve(D); renderOrderSizes(D); renderCloverDays(D); renderTopDrinks(reps);
+}
+
+/* ------------------------------------------------------------ Import sales: this weekend's files, all at once (Analytics)
+   Each file is sorted by its columns. A drink and a date per row (a line-item export or your own sheet) becomes logged sales.
+   A time and an order total with no item (Clover transactions) becomes that day's Clover orders. An item and a count with no
+   date (Clover item sales report) becomes an item report for the dates you pick. A sales-data.json file is read as is.
+   ponytail: column names are matched loosely since no Clover export was on hand to copy; the preview shows what was read. */
+const plural = (n, w) => `${F.int(n)} ${w}${Math.round(n) === 1 ? "" : "s"}`;
+const findCol = (head, re, not) => head.findIndex(h => re.test(h) && !(not && not.test(h)));
+const money = v => { if (typeof v === "number") return v; const s = String(v).replace(/[$,\s]/g, ""), neg = /^\(.*\)$/.test(s), x = parseFloat(s.replace(/[()]/g, "")); return isFinite(x) ? (neg ? -x : x) : null; };
+function sniff(aoa){
+  const hi = aoa.findIndex(r => r && r.filter(c => String(c).trim() !== "").length >= 2); if (hi < 0) return {error:"No header row."};
+  const h = aoa[hi].map(x => String(x).trim().toLowerCase());
+  const item = findCol(h, /^(drink|item|items|product|name|item name|menu item|line item)$/), date = findCol(h, /date|day|time|timestamp|created|paid/), qty = findCol(h, /sold|qty|quantity|count|units|^#$/);
+  const amt = findCol(h, /amount|total|net sales|gross sales|sales|revenue|price/, /tip|tax|refund|fee|discount|count|qty/);
+  if (item >= 0 && date >= 0) return {kind:"lines"};
+  if (item >= 0 && qty >= 0) return {kind:"items", hi, item, qty, amt};
+  if (date >= 0 && amt >= 0) return {kind:"orders", hi, date, amt, time:findCol(h, /^(time|hour|order time|payment time)$/)};
+  return {error:"Couldn't tell what this is. It needs a drink and a date, an item and a count sold, or a time and an order total."};
+}
+async function readSheet(file){
+  if (/\.json$/i.test(file.name)) return {json:JSON.parse(await readAs(file, "text"))};
+  if (/\.csv$/i.test(file.name) || file.type === "text/csv") return {aoa:parseCSV(await readAs(file, "text"))};
+  const X = await loadSheetJS(), wb = X.read(await readAs(file, "buf"), {type:"array"});
+  return {aoa:X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:true, defval:""})};
+}
+const blankRow = r => !r || r.every(c => String(c).trim() === "");
+async function readImports(files){
+  const box = $("impResult"); box.innerHTML = `<p class="hint">Reading ${files.length} ${files.length === 1 ? "file" : "files"}…</p>`;
+  const out = [];
+  for (const f of files){
+    try {
+      const r = await readSheet(f);
+      if (r.json){ const j = r.json, nd = Object.keys(j.orders || {}).length, ni = [].concat(j.items || []).length;
+        out.push(nd || ni ? {file:f.name, kind:"json", json:j, text:`${nd} Clover ${nd === 1 ? "day" : "days"} and ${ni} item ${ni === 1 ? "report" : "reports"}`} : {file:f.name, error:"This JSON isn't a sales-data file."}); continue; }
+      const k = sniff(r.aoa);
+      if (k.error){ out.push({file:f.name, error:k.error}); continue; }
+      if (k.kind === "lines"){ const res = rowsToLines(r.aoa); if (res.error){ out.push({file:f.name, error:res.error}); continue; }
+        const ds = [...new Set(res.lines.map(l => l.d))].sort();
+        out.push({file:f.name, kind:"lines", lines:res.lines, dates:ds, text:`Logged sales: ${F.int(res.lines.reduce((s,l) => s + l.q, 0))} items on ${ds.map(fmtD).join(", ")}${res.skipped.length ? `. ${res.skipped.length} rows skipped` : ""}`}); continue; }
+      if (k.kind === "orders"){ const days = {};
+        for (let i = k.hi + 1; i < r.aoa.length; i++){ const row = r.aoa[i]; if (blankRow(row)) continue;
+          const d = parseDateVal(row[k.date]), tm = parseTimeVal(k.time >= 0 ? row[k.time] : row[k.date]), v = money(row[k.amt]);
+          if (d && tm && v != null) (days[d] || (days[d] = [])).push([tm, Math.round(v * 100) / 100]); }
+        const ds = Object.keys(days).sort();
+        out.push(ds.length ? {file:f.name, kind:"orders", days, dup:ds.filter(d => S.clover.orders[d]),
+          text:`Clover orders: ${ds.map(d => `${fmtD(d)}, ${plural(days[d].filter(x => x[1] > 0).length, "order")}, ${F.usd2(days[d].reduce((s,x) => s + x[1], 0))}`).join("; ")}`} : {file:f.name, error:"No rows with a readable time and order total."}); continue; }
+      const rows = [];
+      for (let i = k.hi + 1; i < r.aoa.length; i++){ const row = r.aoa[i]; if (blankRow(row)) continue;
+        const name = String(row[k.item]).trim(), u = money(row[k.qty]); if (!name || !(u > 0) || /^(sub)?total|soft launch/i.test(name)) continue;
+        const d = findDrink(name), rv = k.amt >= 0 ? money(row[k.amt]) || 0 : 0;
+        const cat = d ? "drink" : /pastr|donut|doughnut|cake|cookie|muffin|croissant|scone|biscoff|bagel|danish|brownie|loaf/i.test(name) ? "pastry" : "other";
+        const cost = d ? costOf(d, d.serve === "hot" ? "hot" : "iced", "dairy") * u : 0;
+        rows.push({name: d ? d.name : name, cat, units:u, revenue:rv, cost:Math.round(cost * 100) / 100, margin: d && rv ? Math.round((1 - cost / rv) * 1000) / 1000 : 1, alt:0, syrup:0, foam:0}); }
+      const odd = rows.filter(x => x.cat === "other").map(x => x.name);
+      out.push(rows.length ? {file:f.name, kind:"items", rows, text:`Item report: ${rows.length} items, ${F.int(rows.reduce((s,x) => s + x.units, 0))} sold${odd.length ? `. Not on the menu: ${odd.slice(0, 5).join(", ")}${odd.length > 5 ? "…" : ""}` : ""}`} : {file:f.name, error:"No items with a count sold."});
+    } catch(e){ out.push({file:f.name, error: /xlsx/.test(e && e.message) ? "Excel files need a library that didn't load. Save it as CSV and try again." : "Couldn't read this file."}); }
+  }
+  // an item report has no dates in it: default to the Clover days in this batch, or the last cafe weekend
+  const od = out.filter(x => x.kind === "orders").flatMap(x => Object.keys(x.days)).sort(), lw = lastCafeWeek();
+  out.filter(x => x.kind === "items").forEach(x => { x.from = od[0] || lw.from || ymd(new Date()); x.to = od[od.length - 1] || lw.to || x.from; });
+  UI.imp = out; renderImports();
+}
+function renderImports(){
+  const box = $("impResult"), L = UI.imp || []; if (!L.length){ box.innerHTML = ""; return; }
+  const ok = L.filter(x => !x.error).length;
+  box.innerHTML = L.map((x, i) => x.error ? `<div class="impf bad"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.error)}</div></div>`
+    : `<div class="impf"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.text)}</div>${x.dup && x.dup.length ? `<p class="res-bad" style="margin:4px 0 0">Already imported ${x.dup.map(fmtD).join(", ")}. These replace them.</p>` : ""}${x.kind === "lines" && x.dates.some(d => UI.SD && UI.SD[d]) ? `<p class="res-bad" style="margin:4px 0 0">Some of these days already have logged sales. Importing adds to them.</p>` : ""}
+      ${x.kind === "items" ? `<div class="calbar" style="margin:6px 0 0"><label class="tw">Covers <input class="in txt" type="date" data-impd="${i}:from" value="${x.from}"></label><label class="tw">to <input class="in txt" type="date" data-impd="${i}:to" value="${x.to}"></label></div>` : ""}</div>`).join("")
+    + (ok ? `<p style="margin-top:10px"><button class="btn" data-act="impAll">Import ${ok === 1 ? "it" : `all ${ok}`}</button> <button class="btn ghost" data-act="impCancel">Cancel</button></p>` : "");
+}
+const hStr = x => `${pad2(Math.floor(x))}:${pad2(Math.round((x % 1) * 60))}`;
+const addReport = r => { S.clover.items = S.clover.items.filter(x => !(x.from === r.from && x.to === r.to)).concat(r); };
+function putCloverDay(d, log){ log.sort((a,b) => a[0].localeCompare(b[0])); const sh = S.track.dates.includes(d) ? shiftsOf(d) : null;
+  S.clover.orders[d] = {label:fmtD(d), open: sh ? hStr(sh[0].start) : log[0][0], close: sh ? hStr(Math.max(...sh.map(q => q.end))) : log[log.length - 1][0], log}; }
+function mergeClover(j){
+  Object.entries(j.orders || {}).forEach(([d, o]) => { if (o && Array.isArray(o.log)) S.clover.orders[d] = {label:o.label || fmtD(d), open:o.open, close:o.close, log:o.log}; });
+  [].concat(j.items || []).forEach(it => { if (it && Array.isArray(it.rows)) addReport({label:it.label || "", from:it.from || "", to:it.to || "", rows:it.rows}); });
+  if (j.cogsRate != null) S.clover.cogsRate = +j.cogsRate;
+  if (j.card) S.clover.card = j.card;
+}
+async function importAll(){
+  const L = (UI.imp || []).filter(x => !x.error), box = $("impResult"); if (!L.length) return;
+  box.innerHTML = `<p class="hint">Importing…</p>`;
+  try {
+    for (const x of L){
+      if (x.kind === "lines") for (let i = 0; i < x.lines.length; i += 700) await Store.addSale({kind:"upload", file:x.file, at:new Date().toISOString(), lines:x.lines.slice(i, i + 700)});
+      if (x.kind === "orders") Object.entries(x.days).forEach(([d, log]) => putCloverDay(d, log));
+      if (x.kind === "items") addReport({label:`${fmtD(x.from)} to ${fmtD(x.to)}`, from:x.from, to:x.to, rows:x.rows});
+      if (x.kind === "json") mergeClover(x.json);
+    }
+  } catch(e){ box.innerHTML = `<p class="res-bad">${esc(saveError(e))}</p>`; return; }
+  UI.imp = null; $("impIn").value = ""; markDirty(); recalc();
+  box.innerHTML = `<p class="res-ok">Imported ${L.length} ${L.length === 1 ? "file" : "files"}. The numbers below include ${L.length === 1 ? "it" : "them"} now.</p>`;
 }
 
 /* ------------------------------------------------------------ sales file uploads */
@@ -2469,38 +2895,51 @@ function rowsToLines(aoa){
 }
 const readAs = (file, kind) => (kind === "text" && file.text) ? file.text() : (kind === "buf" && file.arrayBuffer) ? file.arrayBuffer()
   : new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); kind === "text" ? r.readAsText(file) : r.readAsArrayBuffer(file); });
-async function handleFile(file){
-  const box = $("fileResult"); box.innerHTML = `<p class="hint">Reading ${esc(file.name)}…</p>`;
-  try {
-    let aoa;
-    if (/\.csv$/i.test(file.name) || file.type === "text/csv") aoa = parseCSV(await readAs(file, "text"));
-    else {
-      let X; try { X = await loadSheetJS(); } catch(e){ box.innerHTML = `<p class="res-bad">Excel files need a library that didn't load. Save the sheet as CSV and upload that instead.</p>`; return; }
-      const wb = X.read(await readAs(file, "buf"), {type:"array"});
-      aoa = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:true, defval:""});
-    }
-    const res = rowsToLines(aoa);
-    if (res.error){ box.innerHTML = `<p class="res-bad">${esc(res.error)}</p>`; UI.pending = null; return; }
-    UI.pending = {file:file.name, lines:res.lines};
-    const dates = [...new Set(res.lines.map(l => l.d))].sort();
-    const already = dates.filter(x => UI.SD && UI.SD[x]);
-    const n = res.lines.reduce((s,l) => s + l.q, 0);
-    box.innerHTML = `<p class="${res.lines.length ? "res-ok" : "res-bad"}"><b>${F.int(n)} items ready</b> from ${dates.length} ${dates.length === 1 ? "day" : "days"}${dates.length ? ": " + dates.map(fmtD).join(", ") : ""}.</p>`
-      + (already.length ? `<p class="res-bad">You already have sales on ${already.map(fmtD).join(", ")}. Importing will add to them.</p>` : "")
-      + (res.skipped.length ? `<p class="hint">${res.skipped.length} ${res.skipped.length === 1 ? "row" : "rows"} skipped. ${res.skipped.slice(0,5).map(esc).join(". ")}${res.skipped.length > 5 ? ". …" : ""}</p>` : "")
-      + (res.lines.length ? `<p><button class="btn" data-act="import">Import ${F.int(n)} items</button> <button class="btn ghost" data-act="cancelImport">Cancel</button></p>` : "");
-  } catch(e){ box.innerHTML = `<p class="res-bad">That file couldn't be read. Check it's a CSV or Excel file with a header row.</p>`; UI.pending = null; }
-}
-async function doImport(){
-  const p = UI.pending; if (!p) return;
-  const box = $("fileResult"); box.innerHTML = `<p class="hint">Importing…</p>`;
-  try {
-    for (let i = 0; i < p.lines.length; i += 700) await Store.addSale({kind:"upload", file:p.file, at:new Date().toISOString(), lines:p.lines.slice(i, i + 700)});
-    box.innerHTML = `<p class="res-ok">Imported ${F.int(p.lines.reduce((s,l) => s + l.q, 0))} items from ${esc(p.file)}.</p>`;
-  } catch(e){ box.innerHTML = `<p class="res-bad">${esc(saveError(e))}</p>`; }
-  UI.pending = null; $("fileIn").value = "";
-}
 
+/* ------------------------------------------------------------------ admin lock
+   Staff see Home, Log sales, the schedule, Inventory and Menu. The admin password (top right) unlocks prices, the drink bank,
+   analytics, cafe hours and the team, and stays unlocked on that device until Lock. The password is fixed in code as a salted
+   PBKDF2 hash; to change it, hash the new one the same way (200,000 rounds, SHA-256) and replace ADMIN_PW.
+   ponytail: this hides screens in the browser; anyone with the link can still read and write the data underneath (see
+   firestore.rules). Real protection means Firebase Auth on writes. */
+const ADMIN_PW = {salt:"gg-hopper-2026", hash:"665daa1806e9dc37dcd7bc3021d16a43c9de9dc8c51b1d97155a962bf9d25433"};
+const isAdmin = () => UI.admin === true;
+async function pwHash(pw, salt){
+  const enc = new TextEncoder(), k = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const b = await crypto.subtle.deriveBits({name:"PBKDF2", salt:enc.encode(salt), iterations:200000, hash:"SHA-256"}, k, 256);
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+function checkAdmin(){ let k = ""; try { k = localStorage.getItem("gg-admin") || ""; } catch(e){} UI.admin = k === ADMIN_PW.hash; applyRole(); }
+function showTab(tab){
+  document.querySelectorAll(".step").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "pane-" + tab));
+}
+function applyRole(){
+  const a = isAdmin(); document.body.classList.toggle("admin", a);
+  const b = $("admBtn"); if (b) b.textContent = a ? "Admin" : "Admin sign-in";
+  const cur = document.querySelector(".step.on"); if (!a && cur && cur.classList.contains("adm")) showTab("home");
+  if (!a){ if (!$("gearPanel").hidden) closeSheet("gearPanel"); if (UI.dayPanel) closeDay(); if (UI.pf) closeSheet("pfPanel"); }
+}
+function renderAdm(){
+  const box = $("admBody"); if (!box) return;
+  const on = isAdmin();
+  box.innerHTML = `<div class="mh"><div><h2 id="admTitle">${on ? "Admin" : "Admin sign-in"}</h2>
+      <div class="p">${on ? "Everything is unlocked on this device." : "Unlocks prices, the drink bank, analytics, cafe hours and the team."}</div></div>
+      <button class="x" data-act="admClose" aria-label="Close">✕</button></div>`
+    + (on ? `<button class="btn" data-act="admLock">Lock this device</button>`
+          : `<form class="admf" data-adm="login"><input type="text" name="username" value="admin" autocomplete="username" hidden>
+      <input class="in txt" type="password" id="admPw" autocomplete="current-password" placeholder="Password" aria-label="Password" required>
+      <button class="btn" type="submit">Unlock</button></form>`)
+    + `<p class="toast" id="admToast" role="status" style="margin:0"></p>`;
+}
+function openAdm(){ renderAdm(); const dl = $("admDlg"); if (!dl.open) dl.showModal(); const f = $("admPw"); if (f) f.focus(); }
+async function admSubmit(){
+  const pw = ($("admPw") || {}).value || "";
+  if (!(window.crypto && crypto.subtle)){ toast("admToast", "This browser can't check passwords on this page. Open the portal at its https address."); return; }
+  if (await pwHash(pw, ADMIN_PW.salt) !== ADMIN_PW.hash){ toast("admToast", "That password isn't right."); $("admPw").select(); return; }
+  try { localStorage.setItem("gg-admin", ADMIN_PW.hash); } catch(e){}
+  UI.admin = true; $("admDlg").close(); applyRole(); renderAll();
+}
 
 /* ------------------------------------------------------------------ persistence */
 const Store = {mode:"memory", db:null, sales:[], stock:[], avail:[], loaded:false};
@@ -2530,8 +2969,10 @@ function applyConfig(cfg, boot){
   const D = JSON.parse(S_DEF);
   Object.keys(D).forEach(k => { S[k] = cfg[k] !== undefined && cfg[k] !== null ? cfg[k] : D[k]; });
   ["ingredients","packaging","specials","bases","off","syrHide","charges","invoices","team"].forEach(k => { if (!Array.isArray(S[k])) S[k] = D[k]; });
-  ["prices","pattern","orders","days"].forEach(k => { if (!S[k] || typeof S[k] !== "object" || Array.isArray(S[k])) S[k] = D[k]; });
-  ["addons","pastry","fees","track"].forEach(k => { S[k] = Object.assign({}, D[k], S[k] && typeof S[k] === "object" ? S[k] : {}); });
+  ["prices","assign","pattern","orders","days"].forEach(k => { if (!S[k] || typeof S[k] !== "object" || Array.isArray(S[k])) S[k] = D[k]; });
+  ["addons","pastry","fees","track","clover"].forEach(k => { S[k] = Object.assign({}, D[k], S[k] && typeof S[k] === "object" ? S[k] : {}); });
+  if (!S.clover.orders || typeof S.clover.orders !== "object" || Array.isArray(S.clover.orders)) S.clover.orders = {};
+  if (!Array.isArray(S.clover.items)) S.clover.items = [];
   S.exp = {wage: +(cfg.exp || {}).wage || D.exp.wage};
   [].concat(S.ingredients, S.packaging).forEach(i => { if (typeof i.vendor === "string") i.vendor = i.vendor.trim().replace(/\s+/g, " "); });
   if (S.addons.almCharge == null) S.addons.almCharge = S.addons.altCharge;
@@ -2540,17 +2981,20 @@ function applyConfig(cfg, boot){
   { const have = new Set(S.team.map(p => p.name)); Object.values(S.days).forEach(x => (x.names || []).forEach(v => namesIn(v).forEach(n => { if (!have.has(n)){ have.add(n); S.team.push({name:n, rule:{}, off:[]}); } }))); }
   S.team.forEach(p => { if (!p.id) p.id = stableId(p.name); });   // stable, so the availability form and the portal agree on who's who
   if (!(cfg.v >= 5)){ migrateV4(cfg); if (!boot) markDirty(); }
-  S.v = 5;
+  if (cfg.v === 5){ S.specials = S.specials.filter(sp => sp.on !== false); if (!boot) markDirty(); }   // v5 carried every recipe-lab idea over, off the menu; only real drinks stay
+  if (!UI.wkDirty) UI.wk = null;   // the weekly-hours grid starts again from the saved hours unless it's mid-edit
+  checkAdmin();
+  S.v = 6;
   ensureDates();
   if (!boot) renderAll();
 }
-/* settings saved before Oct 2026 (v4) carried forecasts, a recipe lab and editable recipes. Recipes are fixed now; old menu and
-   lab drinks that are a latte, matcha, chai or americano with a syrup become built specialty drinks, the rest are dropped. */
+/* settings saved before Oct 2026 (v4) carried forecasts, a recipe lab and editable recipes. Recipes are fixed now; old menu
+   drinks that are a latte, matcha, chai or americano with a syrup become built specialty drinks, the rest are dropped. */
 function migrateV4(cfg){
   const fixed = n => MENU.some(m => [m.name].concat(m.aliases || []).map(norm).includes(norm(n)));
   const ingName = id => ((cfg.ingredients || []).find(g => g.id === id) || {}).name || "";
   const live = new Set((cfg.drinks || []).map(d => norm(d.name))), seen = new Set();
-  [].concat(cfg.drinks || [], cfg.retired || [], cfg.drafts || []).forEach((d, k) => {
+  [].concat(cfg.drinks || [], cfg.retired || []).forEach((d, k) => {   // recipe-lab drafts were ideas, never made; they're dropped
     if (!d || !d.name || seen.has(norm(d.name)) || fixed(d.name)) return; seen.add(norm(d.name));
     const ids = (d.recipe || []).map(r => r[0]), milkOz = (d.recipe || []).filter(r => r[0] === "milk" || r[0] === "oat").reduce((s,r) => s + (+r[1] || 0), 0);
     const base = ids.includes("matcha") ? "matcha" : ids.includes("chai") ? "chai" : ids.includes("beans") && milkOz >= 4 ? "latte" : ids.includes("beans") ? "americano" : "";
@@ -2637,22 +3081,24 @@ async function initStore(){
 
 /* ------------------------------------------------------------------ render */
 function renderShifts(){
-  renderCal(); renderPattern(); renderTeam(); renderMatrix();
+  renderWeekGrid(); renderCal(); renderTeam(); renderMatrix();
   if (UI.dayPanel && !$("dayPanel").contains(document.activeElement)) renderDayPanel();
   const people = new Set(team().map(p => p.name)); Object.values(S.days || {}).forEach(x => (x.names || []).forEach(v => namesIn(v).forEach(t => people.add(t))));
   $("peopleList").innerHTML = [...people].sort().map(n => `<option value="${esc(n)}">`).join("");
 }
 function recalc(){
   if (UI.availMode){ renderAvailView(); return; }
+  if (UI.seed && Store.loaded){ if (!Object.keys(S.clover.orders).length && !S.clover.items.length){ mergeClover(UI.seed); markDirty(); } UI.seed = null; }
   UI.SD = salesDays(); const T = UI.T = trackModel();
-  renderStock(T); renderRecent(); renderMenu(); renderAnalytics();
+  renderStock(T); renderRecent(); renderMenu(); renderBank(); renderAnalytics();
   const ae = document.activeElement;
   if (!($("pane-shifts").contains(ae) && (ae.tagName === "INPUT" || ae.tagName === "SELECT"))) renderShifts();
   try { renderHome(); } catch(e){ console.error(e); }
 }
 function renderAll(){
   if (UI.availMode){ renderAvailView(); return; }
-  renderDrinkGrid(); renderTicket(); renderWhen(); renderIngredients(); renderStockForm(); renderTrackSliders();
+  applyRole();
+  renderDrinkGrid(); renderTicket(); renderWhen(); renderIngredients(); renderTrackSliders();
   if (!$("gearPanel").hidden) renderGear();
   if (UI.mod) renderMod();
   syncFields(); recalc();
@@ -2671,26 +3117,35 @@ function onEdit(e){
   if (/^(addons|pastry)\./.test(path)){ renderDrinkGrid(); if (UI.mod) renderMod(); }
   recalc();
 }
+const ADMIN_BIND = /^(exp|fees|charges|addons|pastry|track)\./;
+const adminOnlyField = d => d.gprice != null || d.gname != null || d.gon != null || d.bkseason != null || d.syshow != null || ADMIN_BIND.test(d.bind || "");
 document.addEventListener("input", e => {
   const t = e.target, d = t.dataset || {};
+  if (adminOnlyField(d) && !isAdmin()) return;
+  if (t.id === "bankQ"){ UI.bank.q = t.value; renderBank(); return; }
   if (d.gprice != null){ const x = drinkById(d.gprice), v = parseFloat(t.value); if (!x || !(v >= 0)) return;
-    if (x.sp) x.sp.price = v; else S.prices[x.id] = v; markDirty(); renderDrinkGrid(); renderMenu(); return; }
+    if (x.sp) x.sp.price = v; else S.prices[x.id] = v; markDirty(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); return; }
   if (d.nb != null){ UI.nb[d.nb] = t.value; return; }
   if (t.id === "bName"){ UI.bld.name = t.value; return; }
   if (t.id === "bPrice"){ UI.bld.price = t.value; bldSum(); return; }
   if (d.invpack != null){ const [vi, li] = d.invpack.split(":").map(Number), l = UI.inv && UI.inv[vi] && UI.inv[vi].lines[li]; if (l) l.pack = parseFloat(t.value) || 0; return; }
-  if (d.sl === "amt"){ const l = (UI.stkLines || [])[+d.i]; if (l) l.amt = t.value; return; }
+  if (d.cnt != null){ UI.cnt[d.cnt] = t.value; return; }
+  if (d.impd != null){ const [i, k] = d.impd.split(":"), x = UI.imp && UI.imp[+i]; if (x) x[k] = t.value; return; }
   if (d.oq != null){ const o = buyOrder(); if (!o) return; const v = parseInt(t.value, 10); o.qty[d.oq] = isFinite(v) ? Math.max(0, v) : 0; markDirty(); return; }
-  if (d.onote != null){ const o = buyOrder(); if (!o) return; o.notes[d.onote] = t.value; markDirty(); return; }
   if (t.type !== "checkbox" && t.tagName !== "SELECT") onEdit(e);
 });
-document.addEventListener("focusout", e => { const d = e.target.dataset || {}; if (d.oq != null || d.onote != null) setTimeout(() => { if (!$("orderList").contains(document.activeElement)) renderBuyList(UI.T); }, 0); });
+document.addEventListener("focusout", e => { const d = e.target.dataset || {}; if (d.oq != null) setTimeout(() => { if (!$("orderList").contains(document.activeElement)) renderBuyList(UI.T); }, 0); });
 document.addEventListener("change", e => {
   const t = e.target, d = t.dataset || {};
+  if (adminOnlyField(d) && !isAdmin()) return;
+  if (d.bkseason != null){ const x = drinkById(d.bkseason); if (x){ setMeta(x, "season", t.value); markDirty(); renderBank(); } return; }
+  if (d.ostore != null){ const it = ingOf(d.ostore); if (it){ it.vendor = t.value; markDirty(); renderIngredients(); recalc(); } return; }
   if (t.id === "useNow"){ UI.opt.now = t.checked; renderWhen(); return; }
   if (t.id === "mFoam"){ if (UI.mod){ UI.mod.fo = t.checked; renderMod(); } return; }
   if (t.id === "bFoam"){ UI.bld.foam = t.checked; renderGear(); return; }
-  if (t.id === "fileIn" && t.files && t.files[0]){ handleFile(t.files[0]); return; }
+  if (t.id === "impIn" && t.files && t.files.length){ readImports([...t.files]); return; }
+  if (t.id === "anFrom" || t.id === "anTo"){ UI.an[t.id === "anFrom" ? "from" : "to"] = t.value; renderAnalytics(); return; }
+  if (d.cntu != null){ UI.cntU[d.cntu] = t.value; return; }
   if (t.id === "invIn" && t.files && t.files.length){ readInvoices([...t.files]); return; }
   if (t.id === "avName"){ UI.av.pid = t.value; UI.av.sel = null; try { localStorage.setItem("gg-avail-pid", t.value); } catch(err){} renderAvailView(); return; }
   if (t.id === "avNone"){ UI.av.none = t.checked; renderAvailView(); return; }
@@ -2699,25 +3154,41 @@ document.addEventListener("change", e => {
     if (n !== x.sp.name){ x.sp.aliases = [...new Set((x.sp.aliases || []).concat(x.sp.name))]; x.sp.name = n; }   // old name stays an alias so past sales still match
     markDirty(); renderDrinkGrid(); renderMenu(); return; }
   if (d.gon != null){ const x = drinkById(d.gon); if (!x) return;
-    if (x.sp) x.sp.on = t.checked; else S.off = t.checked ? S.off.filter(id => id !== x.id) : [...new Set(S.off.concat(x.id))];
-    markDirty(); renderGear(); renderDrinkGrid(); renderMenu(); renderHome(); return; }
+    setOn(x, t.checked); markDirty(); renderGear(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); return; }
   if (d.syshow != null){ S.syrHide = t.checked ? S.syrHide.filter(id => id !== d.syshow) : [...new Set(S.syrHide.concat(d.syshow))]; markDirty(); return; }
   if (d.invact != null){ const [vi, li] = d.invact.split(":").map(Number), l = UI.inv && UI.inv[vi] && UI.inv[vi].lines[li]; if (!l) return; l.act = t.value; l.pack = packFor(l, l.act); renderInvoices(); return; }
-  if (d.sl){ const l = (UI.stkLines || [])[+d.i]; if (!l) return; l[d.sl] = t.value; if (d.sl === "id"){ t.blur(); renderStockForm(); } return; }
   if (t.tagName === "SELECT" || t.type === "checkbox") onEdit(e);
-  if (/^pattern\./.test(d.bind || "")){ const dow = d.bind.split(".")[1], p = S.pattern[dow];
-    if (Array.isArray(p)){ p.forEach(q => { if (!(q.end > q.start)) q.end = q.start + 0.5; }); p.sort((a,b) => a.start - b.start); }
-    setTimeout(() => { renderPattern(); renderShifts(); renderDayPanel(); recalc(); }, 0); return; }
   if ($("pane-shifts").contains(t) && d.bind) setTimeout(renderShifts, 0);
 });
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-act]");
-  if (!t){ if (e.target.id === "modDlg") $("modDlg").close(); if (e.target.id === "diagDlg") $("diagDlg").close(); return; }
+  if (!t){ ["modDlg","diagDlg","admDlg"].forEach(id => { if (e.target.id === id) $(id).close(); }); return; }
   const a = t.dataset.act;
-  if (a === "tab"){
-    document.querySelectorAll(".step").forEach(b => b.classList.toggle("on", b.dataset.tab === t.dataset.tab));
-    document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "pane-" + t.dataset.tab));
-    window.scrollTo({top:0}); return; }
+  if (ADMIN_ACT.test(a) && !isAdmin()){ openAdm(); return; }
+  if (a === "tab"){ showTab(t.dataset.tab); window.scrollTo({top:0}); return; }
+  // admin
+  if (a === "admOpen"){ openAdm(); return; }
+  if (a === "admClose"){ $("admDlg").close(); return; }
+  if (a === "admLock"){ try { localStorage.removeItem("gg-admin"); } catch(err){} UI.admin = false; $("admDlg").close(); applyRole(); renderAll(); return; }
+  // drink bank
+  if (a === "bankSort"){ UI.bank.sort = t.dataset.v; renderBank(); return; }
+  if (a === "bankView"){ UI.bank.view = t.dataset.v; renderBank(); return; }
+  if (a === "bkDel"){ const x = drinkById(t.dataset.id); if (!x || !x.sp || !confirm(`Delete ${x.name}? It has no sales, so nothing else changes.`)) return;
+    S.specials = S.specials.filter(sp => sp !== x.sp); markDirty(); renderBank(); renderHome(); renderMenu(); if (!$("gearPanel").hidden) renderGear(); return; }
+  if (a === "bkSet"){ const x = drinkById(t.dataset.id); if (!x) return; const v = t.dataset.v;
+    setOn(x, v !== "off"); if (v !== "off") setMeta(x, "sec", v);
+    markDirty(); renderBank(); renderDrinkGrid(); renderMenu(); renderHome(); if (!$("gearPanel").hidden) renderGear(); return; }
+  // weekly hours
+  if (a === "wkPop"){ UI.wk.pop = {w:+t.dataset.w, k:+t.dataset.k}; renderWeekGrid(); const f = document.querySelector(".wk-pop [data-act=wkPopSeat]"); if (f) f.focus(); return; }
+  if (a === "wkPopSeat" || a === "wkPopDel"){ const P = UI.wk.pop, bs = P && UI.wk.rows[P.w], b = bs && bs[P.k]; if (!b) return; UI.wkDirty = true;
+    if (a === "wkPopDel"){ bs.splice(P.k, 1); UI.wk.pop = null; } else UI.wk.seats = b.seats = Math.max(1, Math.min(8, b.seats + +t.dataset.v));   // new shifts start with the last count used
+    renderWeekGrid(); const f = UI.wk.pop && document.querySelector(`.wk-pop [data-act=wkPopSeat][data-v="${t.dataset.v}"]`); if (f) f.focus(); return; }
+  if (a === "wkPopClose"){ UI.wk.pop = null; renderWeekGrid(); return; }
+  if (a === "wkClear"){ WK_ROWS.forEach(w => UI.wk.rows[w] = []); UI.wk.pop = null; UI.wkDirty = true; renderWeekGrid(); return; }
+  if (a === "wkReset"){ UI.wk = null; UI.wkDirty = false; renderWeekGrid(); return; }
+  if (a === "wkSave"){ saveWeekRule(); UI.wkDirty = false; return; }
+  // order checklist
+  if (a === "oOrd" || a === "oRec"){ orderTick(t.dataset.id, a === "oOrd" ? "o" : "r"); return; }
   // log sales
   if (a === "pick"){ openMod(t.dataset.id); return; }
   if (a === "pastry"){ addPastry(); return; }
@@ -2732,8 +3203,8 @@ document.addEventListener("click", e => {
   if (a === "submitTicket"){ submitTicket(); return; }
   if (a === "undo"){ if (UI.lastSale){ Store.delSale(UI.lastSale).catch(err => toast("toast", saveError(err))); UI.lastSale = null; toast("toast", "Removed that sale."); } return; }
   if (a === "delSale"){ Store.delSale(t.dataset.id).catch(err => toast("toast", saveError(err))); return; }
-  if (a === "import"){ doImport(); return; }
-  if (a === "cancelImport"){ UI.pending = null; $("fileResult").innerHTML = ""; $("fileIn").value = ""; return; }
+  if (a === "impAll"){ importAll(); return; }
+  if (a === "impCancel"){ UI.imp = null; $("impIn").value = ""; renderImports(); return; }
   // gear
   if (a === "gearOpen"){ openGear(); return; }
   if (a === "gearClose"){ closeSheet("gearPanel"); return; }
@@ -2744,62 +3215,41 @@ document.addEventListener("click", e => {
   if (a === "bSy"){ UI.bld.syrup = t.dataset.v; renderGear(); return; }
   if (a === "bPumps"){ UI.bld.pumps = +t.dataset.v; renderGear(); return; }
   if (a === "bServe"){ UI.bld.serve = t.dataset.v; renderGear(); return; }
+  if (a === "bSeason"){ UI.bld.season = t.dataset.v; renderGear(); return; }
   if (a === "bAdd"){ addSpecial(); return; }
   // menu
   if (a === "diagram"){ openDiagram(t.dataset.id); return; }
   if (a === "diagClose"){ $("diagDlg").close(); return; }
   // analytics
-  if (a === "anRange"){ UI.anRange = t.dataset.v; renderAnalytics(); return; }
+  if (a === "anRange"){ setAnPreset(t.dataset.v); return; }
   if (a === "addCharge"){ S.charges.push({name:"New charge", amount:0}); markDirty(); renderCharges(); recalc(); return; }
   if (a === "delCharge"){ S.charges.splice(+t.dataset.i, 1); markDirty(); renderCharges(); recalc(); return; }
   // inventory
   if (a === "invCancel"){ UI.inv = null; $("invIn").value = ""; renderInvoices(); return; }
   if (a === "invSave"){ saveInvoices(); return; }
-  if (a === "stkView"){ UI.stkView = t.dataset.v; renderStock(UI.T); return; }
-  if (a === "delStock"){ Store.delStock(t.dataset.id).catch(err => toast("stkToast", saveError(err))); return; }
-  if (a === "stktype"){ UI.stkType = t.dataset.v; document.querySelectorAll("#stkType button").forEach(b => b.classList.toggle("on", b.dataset.v === UI.stkType)); return; }
-  if (a === "stkCat"){ UI.stkOpen = UI.stkOpen || {}; UI.stkOpen[t.dataset.c] = !UI.stkOpen[t.dataset.c]; renderStock(UI.T); return; }
-  if (a === "stkAdd"){ const used = new Set(UI.stkLines.map(l => l.id)), nx = trackedItems().find(it => !used.has(it.id));
-    UI.stkLines.push({id: nx ? nx.id : "", amt:1, unit:"packs"}); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); renderStockForm(); return; }
-  if (a === "stkDel"){ UI.stkLines.splice(+t.dataset.i, 1); renderStockForm(); return; }
-  if (a === "stksave"){
-    const items = trackedItems(), ts = ($("stkDate").value || ymd(new Date())) + "T" + hm(new Date()), at = new Date().toISOString(), evs = [];
-    for (const l of UI.stkLines || []){ const it = items.find(i => i.id === l.id), amt = parseFloat(l.amt);
-      if (!it) continue; if (!isFinite(amt) || amt < 0){ toast("stkToast", `Enter an amount for ${it.name}.`); return; }
-      evs.push({it, ev:{type:UI.stkType, item:it.id, qty: l.unit === "units" ? amt : amt * it.size, ts, at}}); }
-    if (!evs.length){ toast("stkToast", "Pick an item."); return; }
-    const kind = UI.stkType === "count" ? "Count" : "Delivery", kinds = UI.stkType === "count" ? "counts" : "deliveries";
-    evs.reduce((pr, x) => pr.then(() => Store.addStock(x.ev)), Promise.resolve())
-      .then(() => { toast("stkToast", evs.length === 1 ? `${kind} saved: ${fmtQty(evs[0].ev.qty, evs[0].it.unit)} ${evs[0].it.name.toLowerCase()}.` : `Saved ${evs.length} ${kinds}.`);
-        UI.stkLines = [{id:"", amt:1, unit:"packs"}]; if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); renderStockForm(); })
-      .catch(err => toast("stkToast", saveError(err)));
-    return; }
-  if (a === "received"){ const it = trackedItems().find(i => i.id === t.dataset.id); if (!it) return;
-    Store.addStock({type:"receive", item:it.id, qty:+t.dataset.q, ts:ymd(new Date()) + "T" + hm(new Date()), at:new Date().toISOString()}).catch(err => toast("buyToast", saveError(err))); return; }
+  if (a === "cntSave"){ saveCount(); return; }
+  if (a === "niAdd"){ addInvItem(); return; }
+  if (a === "delStock"){ Store.delStock(t.dataset.id).catch(err => toast("cntToast", saveError(err))); return; }
   if (a === "editRow"){ const list = t.dataset.kind === "ing" ? S.ingredients : S.packaging;
     UI.editRow = t.dataset.kind + "-" + t.dataset.i; UI.rowBackup = JSON.stringify(list[+t.dataset.i]);
     renderIngredients(); const f = document.querySelector("tr.editing .in"); if (f) f.focus(); return; }
   if (a === "doneRow" || a === "cancelRow"){ const list = t.dataset.kind === "ing" ? S.ingredients : S.packaging, i = +t.dataset.i;
     if (a === "cancelRow" && UI.rowBackup) list[i] = JSON.parse(UI.rowBackup); else if (list[i]) list[i].url = cleanUrl(list[i].url);
-    UI.editRow = null; UI.rowBackup = null; markDirty(); renderIngredients(); renderStockForm(); renderDrinkGrid(); recalc(); return; }
+    UI.editRow = null; UI.rowBackup = null; markDirty(); renderIngredients(); renderDrinkGrid(); recalc(); return; }
   if (a === "addIng" || a === "addPkg"){ const pkg = a === "addPkg", list = pkg ? S.packaging : S.ingredients, id = "c" + Date.now().toString(36);
     list.push(pkg ? {id, name:"New packaging", price:0, size:1000, kit:"both", vendor:"", url:""} : {id, kind:"core", name:"New ingredient", price:0, size:1, unit:"oz", vendor:"", url:"", vol:1, custom:true});
     UI.editRow = (pkg ? "pkg-" : "ing-") + (list.length - 1); UI.rowBackup = null; markDirty(); renderIngredients();
     setTimeout(() => { const f = document.querySelector("tr.editing .in"); if (f){ f.focus(); f.select(); } }, 0); return; }
   if (a === "delIng" || a === "delPkg"){ const pkg = a === "delPkg", list = pkg ? S.packaging : S.ingredients, i = +t.dataset.i, g = list[i]; if (!g) return;
     list.splice(i, 1); UI.editRow = null; UI.removed = {pkg, item:g, idx:i};
-    $("ingToast").innerHTML = `Removed ${esc(g.name)}. <button data-act="undoRemove">Undo</button>`; markDirty(); renderIngredients(); renderStockForm(); recalc(); return; }
+    $("ingToast").innerHTML = `Removed ${esc(g.name)}. <button data-act="undoRemove">Undo</button>`; markDirty(); renderIngredients(); recalc(); return; }
   if (a === "undoRemove"){ const r = UI.removed; if (!r) return; (r.pkg ? S.packaging : S.ingredients).splice(r.idx, 0, r.item);
-    $("ingToast").textContent = `Restored ${r.item.name}.`; UI.removed = null; markDirty(); renderIngredients(); renderStockForm(); recalc(); return; }
+    $("ingToast").textContent = `Restored ${r.item.name}.`; UI.removed = null; markDirty(); renderIngredients(); recalc(); return; }
   if (a === "buyAll"){ UI.buyAll = t.dataset.v === "1"; renderBuyList(UI.T); return; }
-  if (a === "buyReset"){ const o = buyOrder(); if (o) o.qty = {}; markDirty(); renderBuyList(UI.T); toast("buyToast", "Quantities set back to the suggested amounts."); return; }
-  if (a === "buyPdf"){ exportBuyPdf(); return; }
-  // weeks and shifts
+  if (a === "buyReset"){ const o = buyOrder(); Object.keys(o.qty).forEach(id => { if (!o.st[id]) delete o.qty[id]; }); markDirty(); renderBuyList(UI.T); toast("buyToast", "Quantities set back to the suggested amounts."); return; }
   if (a === "availCopy"){ copyAvail(t.dataset.w); return; }
   if (a === "avTog"){ const s = UI.av.sel[t.dataset.d]; if (s){ s[+t.dataset.i] = !s[+t.dataset.i]; renderAvailView(); } return; }
-  if (a === "avAll"){ const s = UI.av.sel[t.dataset.d]; if (s){ const all = s.every(Boolean); s.fill(!all); renderAvailView(); } return; }
   if (a === "avSave"){ saveAvail(); return; }
-  if (a === "homeWk"){ const v = +t.dataset.v, W = UI.homeWks || []; UI.homeWk = v === 0 ? weekOf(ymd(new Date())) : W[Math.max(0, Math.min(W.length - 1, W.indexOf(UI.homeWk) + v))] || UI.homeWk; renderHome(); return; }
   if (a === "dpClose"){ closeDay(); return; }
   if (a === "dpShow"){ openDay(t.dataset.d); return; }
   if (a === "dpOpen"){ paintDates([UI.dayPanel], t.dataset.v); renderDayPanel(); return; }
@@ -2825,7 +3275,7 @@ document.addEventListener("click", e => {
     Object.assign(p, {name, email, phone:v("phone"), role:v("role"), year:v("year")});
     saveStaff(p).then(() => { renderStaff(); toast("pfToast", "Saved."); }).catch(err => toast("pfToast", saveError(err))); return; }
   if (a === "pfTrained"){ const p = pfPerson(); if (!p) return; p.trained = t.checked; saveStaff(p); renderMatrix(); renderTeam(); renderDayPanel(); renderHome(); return; }
-  if (a === "pfRule"){ const p = pfPerson(), w = +t.dataset.w, sh = patternFor(w); if (!p) return;
+  if (a === "pfRule"){ const p = pfPerson(), w = +t.dataset.w, sh = dowShifts(w); if (!p) return;
     const on = sh.map(q => covers((p.rule || {})[w], q)); on[+t.dataset.i] = !on[+t.dataset.i];
     p.rule = Object.assign({}, p.rule, {[w]: sh.filter((q,j) => on[j]).map(q => ({s:q.start, e:q.end}))}); if (!p.rule[w].length) delete p.rule[w];
     saveStaff(p); renderStaff(); return; }
@@ -2843,27 +3293,11 @@ document.addEventListener("click", e => {
     if (person(n)){ toast("staffToast", `${n} is already on the team.`); return; }
     const p = {id:stableId(n), name:n, email:"", phone:"", rule:{}, off:[]}; inp.value = "";
     saveStaff(p).then(() => { renderStaff(); openPf(p.id); }); return; }
-  if (a === "patDow"){ UI.patDow = +t.dataset.v; renderPattern(); return; }
-  if (a === "patAdd"){ const p = patternFor(UI.patDow), last = p[p.length - 1]; S.pattern[UI.patDow] = p.concat({start:last.end, end:Math.min(23, last.end + 4), seats:last.seats});
-    markDirty(); renderPattern(); recalc(); return; }
-  if (a === "patDel"){ const p = S.pattern[UI.patDow]; if (p && p.length > 1){ p.splice(+t.dataset.i, 1); markDirty(); renderPattern(); recalc(); } return; }
-  if (a === "patSeat"){ const q = (S.pattern[UI.patDow] || [])[+t.dataset.i]; if (!q) return; q.seats = Math.max(1, Math.min(8, (+q.seats || 1) + +t.dataset.v)); markDirty(); renderPattern(); renderDayPanel(); recalc(); return; }
-  if (a === "patCopy"){ const src = JSON.parse(JSON.stringify(patternFor(UI.patDow))), to = t.dataset.to === "all" ? [0,1,2,3,4,5,6] : t.dataset.to === "wk" ? [6,0] : [1,2,3,4,5];
-    to.forEach(v => S.pattern[v] = JSON.parse(JSON.stringify(src))); markDirty(); renderPattern(); recalc(); toast("calToast", "Copied the shift pattern."); return; }
   if (a === "calBrush"){ UI.brush = t.dataset.v; renderCal(); return; }
   if (a === "calMove"){ UI.calOff = (UI.calOff || 0) + 3 * +t.dataset.v; renderCal(); return; }
-  if (a === "ruleDow"){ const v = +t.dataset.v; UI.ruleDows.has(v) ? UI.ruleDows.delete(v) : UI.ruleDows.add(v); renderCal(); return; }
-  if (a === "ruleAdd"){ const from = $("ruleFrom").value, until = $("ruleUntil").value, dows = [...UI.ruleDows];
-    if (!from || !dows.length){ toast("calToast", "Pick at least one weekday and a start date."); return; }
-    if (until && until < from){ toast("calToast", "The end date is before the start date."); return; }
-    const rl = {dows, from, until, kind:$("ruleKind").value === "ops" ? "ops" : "pilot"}; S.cal.rules.push(rl);
-    const ds = ruleDates(rl); S.cal.closed = S.cal.closed.filter(d => !ds.includes(d));
-    syncCalDates(); ds.forEach(d => { ensureDay(d).kind = rl.kind; });
-    markDirty(); recalc(); toast("calToast", `Added ${ds.length} ${rl.kind === "ops" ? "operations" : "pilot"} days.`); return; }
   if (a === "ruleDel"){ const rl = S.cal.rules.splice(+t.dataset.i, 1)[0]; if (!rl) return;
     const still = new Set(S.cal.rules.flatMap(ruleDates)); S.cal.closed = S.cal.closed.filter(d => still.has(d));
     syncCalDates(); markDirty(); recalc(); toast("calToast", "Removed the rule and the days it added."); return; }
-  if (a === "dayKind"){ ensureDay(t.dataset.d).kind = t.dataset.v === "ops" ? "ops" : "pilot"; markDirty(); renderShifts(); renderDayPanel(); return; }
 });
 document.addEventListener("mousedown", e => { if (e.target.id === "dayPanel") closeDay(); if (e.target.id === "pfPanel" || e.target.id === "gearPanel") closeSheet(e.target.id); });
 document.addEventListener("keydown", e => {
@@ -2877,6 +3311,9 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape"){ const b = tr.querySelector("[data-act=cancelRow]"); if (b) b.click(); }
 });
 $("modDlg").addEventListener("close", () => { UI.mod = null; });
+document.addEventListener("toggle", e => { if (e.target.id === "homeCfgBox") UI.homeCfg = e.target.open; }, true);
+document.addEventListener("submit", e => { const k = e.target.dataset && e.target.dataset.adm; if (k){ e.preventDefault(); admSubmit(); } });
+const ADMIN_ACT = /^(gear|b[A-Z]|nb[A-Z]|bk[A-Z]|bank|mxTog|pf[A-Z]|team[A-Z]|wk[A-Z]|cal[A-Z]|rule[A-Z]|dp(Open|CloseDay|As|Un|Add)|addCharge|delCharge|anRange|imp[A-Z])/;
 
 /* ------------------------------------------------------------------ init */
 { const q = new URLSearchParams(location.search);
@@ -2884,6 +3321,7 @@ $("modDlg").addEventListener("close", () => { UI.mod = null; });
     const w = q.get("avail"); let pid = ""; try { pid = localStorage.getItem("gg-avail-pid") || ""; } catch(e){}
     UI.av = {wk: /^\d{4}-\d{2}-\d{2}$/.test(w || "") ? weekOf(w) : "", pid}; } }
 $("prepBody").innerHTML = PREP_HTML;
+if (!UI.availMode) fetch("sales-data.json").then(r => r.ok ? r.json() : null).then(d => { if (d && d.orders){ UI.seed = d; recalc(); } }).catch(() => {});   // first load only: copies the file into the shared settings
 applyConfig(CAFE_DATA, true);
 if (!UI.availMode) renderAll(); else renderAvailView();
 initStore();
