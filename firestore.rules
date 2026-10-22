@@ -46,6 +46,19 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Availability answers from the weekly link: one document per person per week, id <Monday>_<person id>.
+    // Anyone with the link can fill one in, matching how the rest of the portal works without sign-in.
+    match /avail/{id} {
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasOnly(['week', 'pid', 'name', 'days', 'none', 'at'])
+                            && request.resource.data.week is string && request.resource.data.pid is string
+                            && id == request.resource.data.week + '_' + request.resource.data.pid
+                            && request.resource.data.name is string && request.resource.data.name.size() <= 80
+                            && request.resource.data.days is map && request.resource.data.days.size() <= 7
+                            && request.resource.data.at is string;
+      allow delete: if false;
+    }
+
     // Staff profiles hold emails and phone numbers, so only signed-in people with a verified email can read them.
     // Managers (listed here and in firebase-config.js) manage every profile. Staff read their own and may only change their weeks off.
     match /staff/{id} {
