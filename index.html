@@ -1044,6 +1044,10 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
           <input class="in txt" type="time" id="logTime" aria-label="Sale time" disabled>
         </div>
       </details>
+      <details class="fold2 adm"><summary>Upload sales in bulk</summary>
+        <p class="note-sm" style="margin:8px 0">For a whole weekend at once, drinks per day or every order: download the guide, give it to Claude with the sales data, then import the file it writes under Analytics, Import sales.</p>
+        <div class="lnk"><button class="btn sm" data-act="impGuide">Download the import guide (.md)</button><button class="btn ghost sm" data-act="tab" data-tab="analytics">Go to Import sales</button></div>
+      </details>
       <details class="fold2"><summary>Recent entries</summary>
         <table class="t"><tbody id="recentBody"></tbody></table>
       </details>
@@ -1245,7 +1249,8 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
 
   <div class="sec" style="margin-top:24px">
     <h2><span class="ic" style="--c:#8E8E93" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg></span>Import sales</h2>
-    <p class="hint">Each weekend, drop in all of its files at once: Clover transactions (each order's time and total), the Clover item sales report, or a sheet with one drink per row. Each file is sorted out by its columns, and you check them before they're saved.</p>
+    <p class="hint">Sales come in two ways. <b>With Claude:</b> download the import guide, give it to Claude with the weekend's sales in whatever form they're in (Clover or Square exports, a sheet, a tally, photos), and import the JSON file Claude writes. It can hold each order and its drinks, or just the drinks sold per day. <b>Directly:</b> drop in Clover transactions, the Clover item sales report, or a sheet with one drink per row. Either way you check the preview before anything is saved.</p>
+    <p style="margin:0 0 10px"><button class="btn sm" data-act="impGuide">Download the import guide (.md)</button></p>
     <label class="dz">Choose files<input type="file" id="impIn" accept=".csv,.xlsx,.xls,.json" multiple aria-label="Sales files"></label>
     <div id="impResult" style="margin-top:10px"></div>
   </div>
@@ -1397,7 +1402,7 @@ const drinkById = id => allDrinks().find(d => d.id === id) || null;
 function findDrink(name, id){
   if (id){ const d = drinkById(id); if (d) return d; }
   const n = norm(name); if (!n) return null;
-  return allDrinks().find(d => [d.name].concat(d.aliases || []).map(norm).includes(n)) || null;
+  return allDrinks().find(d => [d.name].concat(d.aliases || [], d.code ? [d.code] : []).map(norm).includes(n)) || null;   // the register code (LAT) counts too
 }
 const servesOf = d => d.serve === "both" ? ["iced","hot"] : [d.serve];
 
@@ -2925,7 +2930,7 @@ function salesDays(){
       o.rev += (l.p != null ? +l.p : lineRevenue(l, d)) * q;
       if (isFood(l)) o.food += q; else { o.n += q; o.drinks[d.name] = (o.drinks[d.name] || 0) + q; }
       (ok[l.d] || (ok[l.d] = new Set())).add(doc.kind === "upload" ? (l.o ? "o:" + l.o : l.d + " " + l.tm) : "doc"); });
-    Object.entries(ok).forEach(([d, s]) => get(d).orders += s.size);
+    Object.entries(ok).forEach(([d, s]) => get(d).orders += doc.dayOrders && doc.dayOrders[d] != null ? +doc.dayOrders[d] : s.size);
   });
   return out;
 }
@@ -3220,7 +3225,7 @@ function dayMoney(){
     (doc.lines || []).forEach(l => { if (!(+l.q > 0) || !l.d || cset.has(l.d)) return; const d = lineDrink(l); if (!isFood(l) && !d) return;
       const q = +l.q, r = (l.p != null ? +l.p : lineRevenue(l, d)) * q, c = costSplit(l, d, q), x = D(l.d); x.sales += r; x.other += c.o; x.pUsed += c.p;
       (ok[l.d] || (ok[l.d] = new Set())).add(doc.kind === "upload" ? (l.o ? "o:" + l.o : l.tm) : "doc"); });
-    Object.entries(ok).forEach(([d, st]) => D(d).orders += st.size); });
+    Object.entries(ok).forEach(([d, st]) => D(d).orders += doc.dayOrders && doc.dayOrders[d] != null ? +doc.dayOrders[d] : st.size); });
   const ps = perishShare();
   Object.entries(C.orders).forEach(([d, o]) => { const dr = o.log.reduce((t, [, v]) => t + v, 0), cr = dr * (+C.cogsRate || 0), x = D(d);
     x.sales += dr; x.orders += o.log.filter(([, v]) => v > 0).length; x.other += cr * (1 - ps); x.pUsed += cr * ps; });
@@ -3404,7 +3409,8 @@ function renderClover(dates, reps){
 /* ------------------------------------------------------------ Import sales: this weekend's files, all at once (Analytics)
    Each file is sorted by its columns. A drink and a date per row (a line-item export or your own sheet) becomes logged sales.
    A time and an order total with no item (Clover transactions) becomes that day's Clover orders. An item and a count with no
-   date (Clover item sales report) becomes an item report for the dates you pick. A sales-data.json file is read as is.
+   date (Clover item sales report) becomes an item report for the dates you pick. A good-graces-sales JSON file, written by
+   Claude from the import guide, goes through parseGG. An older sales-data.json file is read as is.
    ponytail: column names are matched loosely since no Clover export was on hand to copy; the preview shows what was read. */
 const plural = (n, w) => `${F.int(n)} ${w}${Math.round(n) === 1 ? "" : "s"}`;
 const findCol = (head, re, not) => head.findIndex(h => re.test(h) && !(not && not.test(h)));
@@ -3432,6 +3438,7 @@ async function readImports(files){
   for (const f of files){
     try {
       const r = await readSheet(f);
+      if (r.json && r.json.format === GG_FORMAT){ out.push(parseGG(r.json, f.name)); continue; }
       if (r.json){ const j = r.json, nd = Object.keys(j.orders || {}).length, ni = [].concat(j.items || []).length;
         out.push(nd || ni ? {file:f.name, kind:"json", json:j, text:`${nd} Clover ${nd === 1 ? "day" : "days"} and ${ni} item ${ni === 1 ? "report" : "reports"}`} : {file:f.name, error:"This JSON isn't a sales-data file."}); continue; }
       const k = sniff(r.aoa);
@@ -3449,10 +3456,7 @@ async function readImports(files){
       const rows = [];
       for (let i = k.hi + 1; i < r.aoa.length; i++){ const row = r.aoa[i]; if (blankRow(row)) continue;
         const name = String(row[k.item]).trim(), u = money(row[k.qty]); if (!name || !(u > 0) || /^(sub)?total|soft launch/i.test(name)) continue;
-        const d = findDrink(name), rv = k.amt >= 0 ? money(row[k.amt]) || 0 : 0;
-        const cat = d ? "drink" : /pastr|donut|doughnut|cake|cookie|muffin|croissant|scone|biscoff|bagel|danish|brownie|loaf/i.test(name) ? "pastry" : "other";
-        const cost = d ? costOf(d, d.serve === "hot" ? "hot" : "iced", "dairy") * u : 0;
-        rows.push({name: d ? d.name : name, cat, units:u, revenue:rv, cost:Math.round(cost * 100) / 100, margin: d && rv ? Math.round((1 - cost / rv) * 1000) / 1000 : 1, alt:0, syrup:0, foam:0}); }
+        rows.push(reportRow(name, u, k.amt >= 0 ? money(row[k.amt]) || 0 : 0)); }
       const odd = rows.filter(x => x.cat === "other").map(x => x.name);
       out.push(rows.length ? {file:f.name, kind:"items", rows, text:`Item report: ${rows.length} items, ${F.int(rows.reduce((s,x) => s + x.units, 0))} sold${odd.length ? `. Not on the menu: ${odd.slice(0, 5).join(", ")}${odd.length > 5 ? "…" : ""}` : ""}`} : {file:f.name, error:"No items with a count sold."});
     } catch(e){ out.push({file:f.name, error: /xlsx/.test(e && e.message) ? "Excel files need a library that didn't load. Save it as CSV and try again." : "Couldn't read this file."}); }
@@ -3466,7 +3470,7 @@ function renderImports(){
   const box = $("impResult"), L = UI.imp || []; if (!L.length){ box.innerHTML = ""; return; }
   const ok = L.filter(x => !x.error).length;
   box.innerHTML = L.map((x, i) => x.error ? `<div class="impf bad"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.error)}</div></div>`
-    : `<div class="impf"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.text)}</div>${x.dup && x.dup.length ? `<p class="res-bad" style="margin:4px 0 0">Already imported ${x.dup.map(fmtD).join(", ")}. These replace them.</p>` : ""}${x.kind === "lines" && x.dates.some(d => UI.SD && UI.SD[d]) ? `<p class="res-bad" style="margin:4px 0 0">Some of these days already have logged sales. Importing adds to them.</p>` : ""}
+    : `<div class="impf"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.text)}</div>${x.kind === "gg" && x.replace ? `<p class="res-bad" style="margin:4px 0 0">Replaces anything already in the portal for ${x.dates.length === 1 ? fmtD(x.dates[0]) : `${plural(x.dates.length, "date")}, ${fmtD(x.dates[0])} to ${fmtD(x.dates[x.dates.length - 1])}`}.</p>` : ""}${x.dup && x.dup.length ? `<p class="res-bad" style="margin:4px 0 0">Already imported ${x.dup.map(fmtD).join(", ")}. These replace them.</p>` : ""}${x.kind === "lines" && x.dates.some(d => UI.SD && UI.SD[d]) ? `<p class="res-bad" style="margin:4px 0 0">Some of these days already have logged sales. Importing adds to them.</p>` : ""}
       ${x.kind === "items" ? `<div class="calbar" style="margin:6px 0 0"><label class="tw">Covers <input class="in txt" type="date" data-impd="${i}:from" value="${x.from}"></label><label class="tw">to <input class="in txt" type="date" data-impd="${i}:to" value="${x.to}"></label></div>` : ""}</div>`).join("")
     + (ok ? `<p style="margin-top:10px"><button class="btn" data-act="impAll">Import ${ok === 1 ? "it" : `all ${ok}`}</button> <button class="btn ghost" data-act="impCancel">Cancel</button></p>` : "");
 }
@@ -3489,10 +3493,237 @@ async function importAll(){
       if (x.kind === "orders") Object.entries(x.days).forEach(([d, log]) => putCloverDay(d, log));
       if (x.kind === "items") addReport({label:`${fmtD(x.from)} to ${fmtD(x.to)}`, from:x.from, to:x.to, rows:x.rows});
       if (x.kind === "json") mergeClover(x.json);
+      if (x.kind === "gg") await importGG(x);
     }
   } catch(e){ box.innerHTML = `<p class="res-bad">${esc(saveError(e))}</p>`; return; }
   UI.imp = null; $("impIn").value = ""; markDirty(); recalc();
   box.innerHTML = `<p class="res-ok">Imported ${L.length} ${L.length === 1 ? "file" : "files"}. The numbers below include ${L.length === 1 ? "it" : "them"} now.</p>`;
+}
+
+/* ------------------------------------------------------------ bulk sales import: a guide for Claude, and the file it writes
+   Download the guide (a .md built from the live menu), hand it to Claude with the raw sales data in whatever shape it's in,
+   and Claude writes one JSON file in the format below. Import sales reads it like any other file. Each date goes in at one
+   level of detail: transactions (each order and its items), daily (items per day), or periods (items over a range). Order
+   times and totals alone go in orders, on their own or beside daily. By default a file replaces what's there for its dates. */
+const GG_FORMAT = "good-graces-sales";
+function importGuide(){
+  const A = S.addons, today = ymd(new Date()), t = (cells) => "| " + cells.join(" | ") + " |";
+  const drinks = allDrinks().slice().sort((a, b) => (a.sec === "core" ? 0 : 1) - (b.sec === "core" ? 0 : 1) || a.name.localeCompare(b.name));
+  const past = S.track.dates.filter(d => d <= today).sort().slice(-40), next = S.track.dates.filter(d => d > today).sort().slice(0, 6);
+  const serveTxt = {hot:"hot only", iced:"iced only", both:"hot or iced"};
+  return `# Good Grace's Cafe: sales import guide (for Claude)
+
+Made by the portal on ${today}. The menu and prices below are current as of that day. Download a fresh copy from the portal after the menu changes.
+
+## Your job
+
+You'll be given raw sales data for Good Grace's Cafe, a student-run cafe at Grace Hopper College, Yale. It can come in any shape: point-of-sale exports (CSV or Excel), reports, spreadsheets, hand tallies, photos of tally sheets or receipts, or pasted text. Turn all of it into **one JSON file** in the format below and name it \`good-graces-sales-<first date>-to-<last date>.json\`.
+
+The manager uploads the file in the portal under **Analytics → Import sales**, checks the preview, and imports it. The file must be plain JSON: no comments, no trailing commas, nothing before or after it.
+
+When you hand the file over, also write a short summary:
+- the dates covered, and which section each date went into;
+- per day: orders, drinks, pastries and dollars;
+- anything you left out, and why;
+- any item names you couldn't match to the menu.
+
+## Choose one level of detail for each date
+
+Use the most detailed level the data supports. Each date goes in **exactly one** of these:
+
+1. **\`transactions\`**: each order with its items. Use it whenever you can see which items were in which order.
+2. **\`daily\`**: how many of each item sold that day.
+3. **\`periods\`**: item totals for a range of days that can't be split by day.
+
+**\`orders\`** holds order times and totals when the items aren't known. It can be the only data for a date, or sit beside \`daily\` for the same date (the portal then takes the money and the busy times from \`orders\`, and the drink counts from \`daily\`). Never put a date in both \`orders\` and \`transactions\`.
+
+## What the data might look like, and where it goes
+
+| You're given | Put it in |
+|:--|:--|
+| Clover orders or line-item export (order ID, date and time, item, modifiers, price) | \`transactions\`: group the rows by order ID |
+| Clover transactions or payments export (time and amount, no items) | \`orders\` |
+| Clover item sales report for one day | \`daily\` |
+| Clover item sales report for several days | \`periods\`, or \`daily\` if it's broken out by day |
+| Square item details CSV (date, time, item, quantity, modifiers applied, gross sales, transaction ID) | \`transactions\`: group by transaction ID |
+| Square transactions CSV | \`orders\` |
+| A sheet with one row per drink sold | \`transactions\`: rows sharing an order number are one order; without order numbers, each row is its own order |
+| A grid of counts: days by drinks, either way round | \`daily\` |
+| A hand tally sheet or a photo of one | \`daily\`. Count carefully, and list anything you can't read in the summary instead of guessing |
+| Receipts, on paper or in photos | \`transactions\` |
+| Several of these covering different days | One file, each date at its own level |
+| Several exports of the same days | Combine them, dropping duplicates by order ID |
+| Only a dollar total for a day | Can't be imported. Put it in \`notes\` and mention it in the summary |
+
+## Formats
+
+- **Dates:** \`YYYY-MM-DD\`. If the source leaves out the year, use the most recent past date with that month and day (the cafe opened in fall 2026). A sale on a day the cafe wasn't open is probably a date mistake: check it and mention it.
+- **Times:** 24-hour \`HH:MM\` in New Haven local time (Eastern). "2:05 PM" becomes \`14:05\`. If an export is in UTC (the times end in Z or the header says UTC), convert to Eastern.
+- **Money:** plain numbers in dollars, no "$". Use what the customer paid after discounts. Leave out tips, and leave out tax if it's shown separately.
+- **Quantities:** whole numbers above 0.
+- **Leave out:** refunds (and the sale they refund), voided items, test orders and gift card sales. Free or comped drinks stay in, with a price of 0, since they used stock.
+
+## The menu
+
+Write each item's \`name\` exactly as in the Name column. Every baked good (croissant, muffin, cookie and so on) is **Pastry**.
+
+${t(["Name", "Also called", "Served", "Price", "On the menu now"])}
+${t([":--", ":--", ":--", "--:", ":--"])}
+${drinks.map(d => t([d.name, [].concat(d.aliases || [], d.code ? [d.code] : []).filter((x, i, a) => norm(x) !== norm(d.name) && a.findIndex(y => norm(y) === norm(x)) === i).join(", "), serveTxt[d.serve] || d.serve, F.usd2(d.price), isOn(d) ? "yes" : "no"])).join("\n")}
+${t(["Pastry", "any baked good", "", F.usd2(+S.pastry.price || 0), "yes"])}
+
+If an item doesn't match anything here, don't force it onto the closest drink. Put it in \`unmatched\` with its date, name, quantity and revenue.
+
+**Milks:** \`dairy\` (2% or whole, the default), \`oat\`, \`almond\`.
+
+**Syrups** a customer can add: ${syrupItems().map(i => syrupShort(i)).join(", ")}.
+
+**Add-on prices:** oat milk ${F.usd2(+A.altCharge || 0)}, almond milk ${F.usd2(+(A.almCharge ?? A.altCharge) || 0)}, added syrup ${F.usd2(+A.syrupCharge || 0)} (covers 2 pumps), cold foam ${F.usd2(+A.foamCharge || 0)}. An item's price includes its add-ons.
+
+Signature and specialty drinks already include their own syrups and cold foam. Only set \`syrup\` or \`foam\` on an item when the customer added extra on top of the recipe.
+
+## Item fields
+
+Used inside \`transactions\`, \`daily\` and \`periods\`.
+
+| Field | Required | Meaning |
+|:--|:--|:--|
+| \`name\` | yes | Exactly as in the menu table |
+| \`qty\` | yes | How many |
+| \`temp\` | no | \`"iced"\` or \`"hot"\`. Only matters for drinks served hot or iced. Leave it out if you don't know |
+| \`milk\` | no | \`"dairy"\`, \`"oat"\` or \`"almond"\`. Leave it out for dairy |
+| \`syrup\` | no | An added syrup from the list, by name |
+| \`pumps\` | no | 1 or 2 (the default) |
+| \`foam\` | no | \`true\` when cold foam was added |
+| \`price\` | no | What the customer paid for **one** of this item, add-ons included. Use it in \`transactions\` |
+| \`revenue\` | no | What was paid for **all** of this item together. Handy in \`daily\` and \`periods\` |
+
+In \`periods\`, an item can also say how many of them had alt milk, an added syrup or cold foam: \`"alt": 4, "syrup": 7, "foam": 2\`.
+
+## Sections
+
+- **\`transactions\`**: \`[{ "date", "time", "id", "total", "items": [item, ...] }]\`. \`id\` is the order or receipt number; make one up if there isn't one, unique within the file. \`total\` is what the order cost after discounts, without tips.
+- **\`daily\`**: \`[{ "date", "items": [item, ...], "orders", "sales" }]\`. \`orders\` is how many orders there were that day, and \`sales\` the day's total in dollars, if you know them. The portal spreads \`sales\` over the items.
+- **\`orders\`**: \`[{ "date", "time", "total" }]\`, one per order.
+- **\`periods\`**: \`[{ "from", "to", "items": [item, ...] }]\`.
+- **\`unmatched\`**: \`[{ "date", "name", "qty", "revenue" }]\`, items you couldn't match. They aren't imported, but the portal lists them.
+- **\`notes\`**: a string for anything the manager should know.
+- **\`replace\`**: \`true\` (the default) replaces whatever the portal already has for the dates in this file, so redoing a week is safe. Use \`false\` only when told to add on top.
+
+## Checks before you hand it over
+
+- Each date is at one level (\`orders\` may sit beside \`daily\`).
+- Every item name matches the menu table exactly, or is in \`unmatched\`.
+- Where an order has a total, its item prices add up to it (within $0.05). If they don't, keep the item prices and say so in \`notes\`.
+- The counts and totals add up to the source's own totals.
+- No order ID appears twice.
+- It's valid JSON.
+
+## A complete example
+
+~~~json
+{
+  "format": "${GG_FORMAT}",
+  "version": 1,
+  "source": "Clover exports for the weekend of Oct 17",
+  "replace": true,
+  "transactions": [
+    { "date": "2026-10-17", "time": "10:42", "id": "QX4T9", "total": 10.25,
+      "items": [
+        { "name": "Latte", "qty": 1, "temp": "iced", "milk": "oat", "syrup": "Vanilla", "price": 5.25 },
+        { "name": "Chai Latte", "qty": 1, "temp": "hot", "price": 4.50 },
+        { "name": "Pastry", "qty": 1, "price": 0.50 }
+      ] }
+  ],
+  "daily": [
+    { "date": "2026-10-18", "orders": 41, "sales": 212.50,
+      "items": [ { "name": "Latte", "qty": 14 }, { "name": "Chai Latte", "qty": 9, "temp": "iced" }, { "name": "Pastry", "qty": 6 } ] }
+  ],
+  "orders": [
+    { "date": "2026-10-18", "time": "11:05", "total": 8.50 }
+  ],
+  "periods": [],
+  "unmatched": [ { "date": "2026-10-17", "name": "Hot cocoa", "qty": 2, "revenue": 7.00 } ],
+  "notes": "Two Oct 17 orders had item prices $0.25 over their totals; kept the item prices."
+}
+~~~
+
+## For reference: when the cafe was open
+
+Recent open days: ${past.length ? past.join(", ") : "none yet"}.${next.length ? ` Next: ${next.join(", ")}.` : ""}
+`;
+}
+function downloadGuide(){
+  const a = document.createElement("a"), url = URL.createObjectURL(new Blob([importGuide()], {type:"text/markdown"}));
+  a.href = url; a.download = `good-graces-sales-import-guide-${ymd(new Date())}.md`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+/* an item report row, from a name, units and revenue (Clover item reports and periods) */
+function reportRow(name, u, rv, x){
+  const d = findDrink(name), cat = d ? "drink" : /pastr|donut|doughnut|cake|cookie|muffin|croissant|scone|biscoff|bagel|danish|brownie|loaf/i.test(name) ? "pastry" : "other";
+  const cost = d ? costOf(d, d.serve === "hot" ? "hot" : "iced", "dairy") * u : 0;
+  return {name: d ? d.name : name, cat, units:u, revenue:rv, cost:Math.round(cost * 100) / 100, margin: d && rv ? Math.round((1 - cost / rv) * 1000) / 1000 : 1, alt:+(x || {}).alt || 0, syrup:+(x || {}).syrup || 0, foam:+(x || {}).foam || 0};
+}
+/* the file Claude writes, checked and turned into what the portal stores */
+function parseGG(j, file){
+  if (+j.version !== 1) return {file, error:`This file says version ${String(j.version)}. Download the import guide again and redo it.`};
+  const skipped = [], lines = [], dayOrders = {}, orders = {}, periods = [], tDates = new Set(), cnt = {tx:0, txItems:0, dItems:0, oN:0, oSum:0};
+  const syr = v => { if (!v) return false; const k = norm(String(v).replace(/syrup/i, "")); const hit = syrupItems().find(i => norm(syrupShort(i)) === k) || syrupItems().find(i => norm(i.name).includes(k)); return hit ? hit.id : false; };
+  const item = (x, d, tm, o) => {
+    const name = String((x || {}).name || "").trim(), q = Math.round(+(x || {}).qty || 0);
+    if (!(q > 0)){ skipped.push(`${fmtD(d)}: ${name || "an item"} with quantity ${(x || {}).qty}`); return null; }
+    const dr = findDrink(name), food = !dr && /^pastry$|pastr|croissant|muffin|scone|cookie|danish|bagel|donut|cake|brownie|loaf/i.test(name);
+    if (!dr && !food){ skipped.push(`${fmtD(d)}: "${name}" isn't on the menu`); return null; }
+    const paid = x.price != null && isFinite(+x.price) ? +x.price : x.revenue != null && isFinite(+x.revenue) ? +x.revenue / q : null, mk = String(x.milk || "").toLowerCase();
+    const l = food ? {d, tm, k:"Pastry", id:"pastry", food:"pastry", q, p: paid != null ? paid : +S.pastry.price || 0}
+      : {d, tm, k:dr.name, id:dr.id, q, ice: dr.serve === "iced" ? true : dr.serve === "hot" ? false : /^ice/i.test(String(x.temp || "")), milk: dr.milk && /oat|almond/.test(mk) ? mk.match(/oat|almond/)[0] : "dairy", sy:syr(x.syrup), fo: x.foam === true || /^(y|yes|true|1)$/i.test(String(x.foam || ""))};
+    if (!food){ if (l.sy) l.pumps = +x.pumps === 1 ? 1 : 2; l.p = paid != null ? Math.round(paid * 100) / 100 : Math.round(lineRevenue(l, dr) * 100) / 100; }
+    if (o) l.o = o; lines.push(l); return l; };
+  const day = (v, what) => { const d = /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : parseDateVal(v); if (!d) skipped.push(`${what}: no readable date`); return d; };
+  (j.transactions || []).forEach((t, i) => { const d = day(t.date, `Transaction ${i + 1}`); if (!d) return; const tm = parseTimeVal(t.time) || "";
+    const o = String(t.id || `${d} ${tm} #${i + 1}`), n = (t.items || []).map(x => item(x, d, tm, o)).filter(Boolean).length; if (n){ tDates.add(d); cnt.tx++; cnt.txItems += n; } });
+  (j.daily || []).forEach((dy, i) => { const d = day(dy.date, `Daily entry ${i + 1}`); if (!d) return;
+    if (tDates.has(d)){ skipped.push(`${fmtD(d)}: daily totals left out, the transactions already cover that day`); return; }
+    const its = Array.isArray(dy.items) ? dy.items : Object.entries(dy.items || {}).map(([name, qty]) => ({name, qty}));
+    const ls = its.map(x => item(x, d, "", "")).filter(Boolean); cnt.dItems += ls.reduce((s, l) => s + l.q, 0);
+    if (+dy.sales > 0 && ls.length){ const tot = ls.reduce((s, l) => s + l.p * l.q, 0); if (tot > 0) ls.forEach(l => l.p = Math.round(l.p * dy.sales / tot * 100) / 100); }
+    if (+dy.orders > 0) dayOrders[d] = Math.round(+dy.orders); });
+  (j.orders || []).forEach((o, i) => { const d = day(o.date, `Order ${i + 1}`), tm = parseTimeVal(o.time), v = +o.total; if (!d) return;
+    if (!tm || !isFinite(v)){ skipped.push(`Order ${i + 1} on ${fmtD(d)}: no readable time or total`); return; }
+    if (tDates.has(d)) return; (orders[d] || (orders[d] = [])).push([tm, Math.round(v * 100) / 100]); cnt.oN++; cnt.oSum += v; });
+  if ((j.orders || []).some(o => tDates.has(o.date))) skipped.push("Order totals on days with transactions were left out, the transactions cover them");
+  (j.periods || []).forEach((p, i) => { const from = day(p.from, `Period ${i + 1}`), to = day(p.to, `Period ${i + 1}`); if (!from || !to) return;
+    const rows = (p.items || []).map(x => { const u = Math.round(+x.qty || 0); return u > 0 && String(x.name || "").trim() ? reportRow(String(x.name).trim(), u, +x.revenue || (x.price != null ? +x.price * u : 0), x) : null; }).filter(Boolean);
+    if (rows.length) periods.push({label:`${fmtD(from)} to ${fmtD(to)}`, from, to, rows}); });
+  const dates = [...new Set(lines.map(l => l.d).concat(Object.keys(orders)))];
+  periods.forEach(p => { for (let d = p.from; d <= p.to && dates.length < 2000; d = addDays(d, 1)) if (!dates.includes(d)) dates.push(d); }); dates.sort();
+  if (!dates.length) return {file, error:"Nothing in this file could be imported." + (skipped.length ? " " + skipped.slice(0, 3).join(". ") : "")};
+  const um = j.unmatched || [], rng = ds => ds.length ? (ds.length > 1 ? `${fmtD(ds[0])} to ${fmtD(ds[ds.length - 1])}` : fmtD(ds[0])) : "";
+  const dd = [...new Set(lines.filter(l => !l.o).map(l => l.d))].sort(), td = [...tDates].sort(), od = Object.keys(orders).sort();
+  const text = [td.length ? `Transactions: ${plural(cnt.tx, "order")}, ${plural(cnt.txItems, "item line")}, ${rng(td)}` : "", dd.length ? `Daily totals: ${plural(dd.length, "day")}, ${F.int(cnt.dItems)} items, ${rng(dd)}` : "",
+    od.length ? `Order totals only: ${plural(od.length, "day")}, ${plural(cnt.oN, "order")}, ${F.usd2(cnt.oSum)}` : "", periods.length ? `Summaries: ${periods.map(p => p.label).join("; ")}` : ""].filter(Boolean).join(". ")
+    + (um.length ? `. Not imported, not on the menu: ${um.slice(0, 5).map(x => `${x.name} (${x.qty || "?"})`).join(", ")}${um.length > 5 ? "…" : ""}` : "")
+    + (skipped.length ? `. Skipped: ${skipped.slice(0, 4).join("; ")}${skipped.length > 4 ? ` and ${skipped.length - 4} more` : ""}` : "")
+    + (j.notes ? `. Notes: ${String(j.notes).slice(0, 300)}` : "");
+  return {file, kind:"gg", lines, dayOrders, orders, periods, dates, replace: j.replace !== false, text};
+}
+/* clear what's stored for these dates before a file replaces them: sales entries (a sale with other days on it is saved again
+   without these days), Clover days, and item reports that overlap */
+async function clearDates(ds){
+  const set = new Set(ds);
+  for (const doc of Store.sales.slice()){ const ls = doc.lines || []; if (!ls.some(l => set.has(l.d))) continue;
+    const keep = ls.filter(l => !set.has(l.d)), rest = Object.assign({}, doc); delete rest.id;
+    await Store.delSale(doc.id); if (keep.length) await Store.addSale(Object.assign(rest, {lines:keep})); }
+  ds.forEach(d => delete S.clover.orders[d]);
+  S.clover.items = S.clover.items.filter(r => !(r.from && r.to && ds.some(d => d >= r.from && d <= r.to)));
+}
+async function importGG(x){
+  if (x.replace) await clearDates(x.dates);
+  const by = {}; x.lines.forEach(l => (by[l.d] || (by[l.d] = [])).push(l));   // one day per saved entry, so a day's orders count once
+  for (const [d, ls] of Object.entries(by)) for (let i = 0; i < ls.length; i += 700){
+    const doc = {kind:"upload", file:x.file, at:new Date().toISOString(), lines:ls.slice(i, i + 700)}; if (x.dayOrders[d] != null && i === 0) doc.dayOrders = {[d]: x.dayOrders[d]};
+    await Store.addSale(doc); }
+  Object.entries(x.orders).forEach(([d, log]) => putCloverDay(d, log));
+  x.periods.forEach(addReport);
 }
 
 /* ------------------------------------------------------------ sales file uploads */
@@ -3662,13 +3893,14 @@ function applyConfig(cfg, boot){
   if (!(cfg.v >= 5)){ migrateV4(cfg); if (!boot) markDirty(); }
   if (cfg.v === 5){ S.specials = S.specials.filter(sp => sp.on !== false); if (!boot) markDirty(); }
   if (!(cfg.v >= 7)) S.ingredients.forEach(g => { if (!g.cat || g.cat === "mixin") g.cat = guessCat(g); });   // v7 split fresh items out of mix-ins
+  if (!(cfg.v >= 10)){ S.clover.orders = {}; S.clover.items = []; if (!boot) markDirty(); }   // v10: the sales copied in from sales-data.json are gone; everything comes from Import sales
   if (!(cfg.v >= 9)) S.specials.forEach(sp => { if (sp.ownPrice == null) sp.ownPrice = true; });   // v9: auto prices are for drinks built from now on
   if (!(cfg.v >= 8)) S.ingredients.forEach(g => { if (g.cat === "milk" && guessCat(g) === "alt") g.cat = "alt"; });   // v8: alt milk has its own category
   Object.keys(LIST_DEF).forEach(k => { if (!Array.isArray(S.lists[k])) S.lists[k] = LIST_DEF[k].map((t, i) => ({id:k + i, t})); });
   S.charges.forEach(c => { if (!c.date) c.date = (S.track.dates || []).slice().sort()[0] || ymd(new Date()); });   // undated spending counts from the first cafe day   // v5 carried every recipe-lab idea over, off the menu; only real drinks stay
   if (!UI.wkDirty) UI.wk = null;   // the weekly-hours grid starts again from the saved hours unless it's mid-edit
   checkAdmin();
-  S.v = 9;
+  S.v = 10;
   ensureDates();
   if (!boot) renderAll();
 }
@@ -3772,7 +4004,6 @@ function renderShifts(){
 }
 function recalc(){
   if (UI.availMode){ renderAvailView(); return; }
-  if (UI.seed && Store.loaded){ if (!Object.keys(S.clover.orders).length && !S.clover.items.length){ mergeClover(UI.seed); markDirty(); } UI.seed = null; }
   UI.SD = salesDays(); const T = UI.T = trackModel();
   renderStock(T); renderRecent(); renderMenu(); renderBank(); renderAnalytics();
   const ae = document.activeElement;
@@ -3896,6 +4127,7 @@ document.addEventListener("click", e => {
   if (a === "wkSave"){ saveWeekRule(); UI.wkDirty = false; return; }
   // order checklist
   if (a === "oOrd" || a === "oRec"){ orderTick(t.dataset.id, a === "oOrd" ? "o" : "r"); return; }
+  if (a === "impGuide"){ downloadGuide(); return; }
   if (a === "oxAdd"){ const o = buyOrder(); (o.extra || (o.extra = [])).push({name:"", qty:1, price:0}); markDirty(); renderBuyList(UI.T);
     const f = document.querySelector(`[data-ox="${o.extra.length - 1}:name"]`); if (f) f.focus(); return; }
   if (a === "oxDel" || a === "oxTick"){ const o = buyOrder(), x = (o.extra || [])[+t.dataset.i]; if (!x) return;
@@ -4069,7 +4301,6 @@ const ADMIN_ACT = /^(gear|bld|ns[A-Z]|b[A-Z]|nb[A-Z]|bk[A-Z]|bank|mxTog|pf[A-Z]|
 try { UI.me = localStorage.getItem("gg-me") || ""; } catch(e){ UI.me = ""; }
 { let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if ($("pane-analytics").classList.contains("on")) renderAnalytics(); }, 150); }); }
 if (!UI.availMode) setInterval(() => { if (!document.hidden) renderHome(); }, 60000);
-if (!UI.availMode) fetch("sales-data.json").then(r => r.ok ? r.json() : null).then(d => { if (d && d.orders){ UI.seed = d; recalc(); } }).catch(() => {});   // first load only: copies the file into the shared settings
 applyConfig(CAFE_DATA, true);
 if (!UI.availMode) renderAll(); else renderAvailView();
 initStore();
