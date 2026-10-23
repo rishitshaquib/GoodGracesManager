@@ -2376,9 +2376,8 @@ function renderBuyList(T){
   $("buyShow").innerHTML = `<button class="${showAll ? "" : "on"}" data-act="buyAll" data-v="0">To order</button><button class="${showAll ? "on" : ""}" data-act="buyAll" data-v="1">All items</button>`;
   set("orderHint", `Week of ${fmtD(B.wk)}${days.length ? `, for ${days.map(fmtD).join(", ")}` : ""}. Amounts cover those days at ${F.int(T.dayDrinks)} drinks a day (${T.src}), plus a ${S.track.buffer}% buffer, minus what's on hand. Tick Ordered when you place it and Received when it arrives, which adds it to stock.`);
   const vis = B.rows.filter(r => showAll || r.qty > 0 || r.ordered || r.received);
-  if (!vis.length){ box.innerHTML = `<p class="empty">Nothing to order this week. Switch to All items to add something.</p>`; return; }
   const want = vis.filter(r => r.qty > 0);
-  let h = `<p class="note-sm" style="margin:0 0 4px">${want.filter(r => r.ordered).length} of ${want.length} ordered, ${want.filter(r => r.received).length} received.</p>`, tot = 0;
+  let h = vis.length ? `<p class="note-sm" style="margin:0 0 4px">${want.filter(r => r.ordered).length} of ${want.length} ordered, ${want.filter(r => r.received).length} received.</p>` : `<p class="empty">Nothing from inventory to order this week. Switch to All items to add something.</p>`, tot = 0;
   const rowH = r => `<div class="ordrow${r.received ? " done" : ""}${r.qty ? "" : " zero"}">
         <div class="nm"><b>${esc(r.name)}</b><small>${esc(r.why)}${r.qty !== r.sug ? `. Suggested ${r.sug}` : ""}</small></div>
         <div class="ock"><button class="pc${r.ordered ? " av" : ""}" data-act="oOrd" data-id="${esc(r.id)}" aria-pressed="${r.ordered}"${r.received ? " disabled" : ""}>Ordered</button><button class="pc${r.received ? " av" : ""}" data-act="oRec" data-id="${esc(r.id)}" aria-pressed="${r.received}"${r.qty > 0 || r.received ? "" : " disabled"}>Received</button></div>
@@ -2392,6 +2391,13 @@ function renderBuyList(T){
     const sub = rs.reduce((s,r) => s + r.cost, 0); tot += sub;
     h += `<div class="vendor"><h3>${sto ? esc(sto) : "No store yet"} <span class="muted" style="font-weight:500">${F.usd2(sub)}</span></h3>${sto ? "" : `<p class="note-sm" style="margin:0">Pick a store for these in the full ordering list below.</p>`}`
       + rs.map(rowH).join("") + `</div>`; });
+  /* things for this week that inventory doesn't track: Received counts them as money spent that day, nothing goes into stock */
+  const ex = (S.orders[B.wk] || {}).extra || [], exSub = ex.reduce((s, x) => s + (+x.qty || 0) * (+x.price || 0), 0); tot += exSub;
+  h += `<div class="vendor"><h3>Other things to buy <span class="muted" style="font-weight:500">${F.usd2(exSub)}</span></h3><p class="note-sm" style="margin:0 0 6px">Anything this week that isn't in inventory, like cleaning supplies or decorations. Received counts it as money spent that day.</p>`
+    + ex.map((x, i) => `<div class="ordrow${x.r ? " done" : ""}"><div class="nm"><input class="in txt" data-ox="${i}:name" value="${esc(x.name)}" placeholder="What to buy" aria-label="Item"${x.r ? " disabled" : ""}></div>
+        <div class="ock"><button class="pc${x.o ? " av" : ""}" data-act="oxTick" data-i="${i}" data-k="o" aria-pressed="${!!x.o}"${x.r ? " disabled" : ""}>Ordered</button><button class="pc${x.r ? " av" : ""}" data-act="oxTick" data-i="${i}" data-k="r" aria-pressed="${!!x.r}">Received</button></div>
+        <div class="ctl"><input class="in q" type="number" min="0" step="1" data-ox="${i}:qty" value="${+x.qty || 0}" aria-label="How many"${x.r ? " disabled" : ""}><span class="muted nw">at</span><input class="in q" type="number" min="0" step="0.01" data-ox="${i}:price" value="${+x.price || 0}" aria-label="Price each"${x.r ? " disabled" : ""}><span class="muted nw">each, ${F.usd2((+x.qty || 0) * (+x.price || 0))}</span><button class="x" data-act="oxDel" data-i="${i}" aria-label="Remove ${esc(x.name || "item")}">✕</button></div></div>`).join("")
+    + `<button class="btn ghost sm" data-act="oxAdd" style="margin-top:8px">+ Add an item</button></div>`;
   box.innerHTML = h + `<table class="t"><tr class="tot"><td class="l">Order total</td><td>${F.usd2(tot)}</td></tr></table>`;
 }
 async function orderTick(id, k){
@@ -3220,6 +3226,7 @@ function dayMoney(){
     x.sales += dr; x.orders += o.log.filter(([, v]) => v > 0).length; x.other += cr * (1 - ps); x.pUsed += cr * ps; });
   Store.stock.forEach(e => { if (e.type === "waste"){ D(String(e.ts).slice(0, 10)).waste += (+e.qty || 0) * perUnit(e.item); return; } if (e.type !== "receive") return; const d = String(e.ts).slice(0, 10), v = (+e.qty || 0) * perUnit(e.item), x = D(d); x.deliv += v; if (perishId(e.item)) x.pBought += v; });
   (S.charges || []).forEach(c => { if (c.date) D(c.date).spent += +c.amount || 0; });
+  Object.values(S.orders || {}).forEach(o => (o.extra || []).forEach(x => { if (x.r) D(x.r).spent += (+x.qty || 0) * (+x.price || 0); }));   // extra order items, the day they arrived
   const bought = {}, Fe = S.fees; Object.entries(out).forEach(([d, x]) => { if (x.pBought > 0) bought[weekOf(d)] = true; });
   Object.entries(out).forEach(([d, x]) => { x.wkBought = !!bought[weekOf(d)]; x.p = x.wkBought ? x.pBought : x.pUsed; x.cogs = x.other + x.p;
     x.fees = x.sales * ((+Fe.cardPct || 0) + (+Fe.feePct || 0) + (+Fe.charityPct || 0)) / 100 + x.orders * (+Fe.cardFix || 0);
@@ -3810,10 +3817,11 @@ document.addEventListener("input", e => {
   if (d.invpack != null){ const [vi, li] = d.invpack.split(":").map(Number), l = UI.inv && UI.inv[vi] && UI.inv[vi].lines[li]; if (l) l.pack = parseFloat(t.value) || 0; return; }
   if (d.cnt != null){ UI.cnt[d.cnt] = t.value; return; }
   if (d.impd != null){ const [i, k] = d.impd.split(":"), x = UI.imp && UI.imp[+i]; if (x) x[k] = t.value; return; }
+  if (d.ox != null){ const [i, f] = d.ox.split(":"), x = (buyOrder().extra || [])[+i]; if (!x) return; x[f] = f === "name" ? t.value : Math.max(0, parseFloat(t.value) || 0); markDirty(); return; }
   if (d.oq != null){ const o = buyOrder(); if (!o) return; const v = parseInt(t.value, 10); o.qty[d.oq] = isFinite(v) ? Math.max(0, v) : 0; markDirty(); return; }
   if (t.type !== "checkbox" && t.tagName !== "SELECT") onEdit(e);
 });
-document.addEventListener("focusout", e => { const d = e.target.dataset || {}; if (d.oq != null) setTimeout(() => { if (!$("orderList").contains(document.activeElement)) renderBuyList(UI.T); }, 0); });
+document.addEventListener("focusout", e => { const d = e.target.dataset || {}; if (d.oq != null || d.ox != null) setTimeout(() => { if (!$("orderList").contains(document.activeElement)) renderBuyList(UI.T); }, 0); });
 document.addEventListener("change", e => {
   const t = e.target, d = t.dataset || {};
   if (adminOnlyField(d) && !isAdmin()) return;
@@ -3888,6 +3896,11 @@ document.addEventListener("click", e => {
   if (a === "wkSave"){ saveWeekRule(); UI.wkDirty = false; return; }
   // order checklist
   if (a === "oOrd" || a === "oRec"){ orderTick(t.dataset.id, a === "oOrd" ? "o" : "r"); return; }
+  if (a === "oxAdd"){ const o = buyOrder(); (o.extra || (o.extra = [])).push({name:"", qty:1, price:0}); markDirty(); renderBuyList(UI.T);
+    const f = document.querySelector(`[data-ox="${o.extra.length - 1}:name"]`); if (f) f.focus(); return; }
+  if (a === "oxDel" || a === "oxTick"){ const o = buyOrder(), x = (o.extra || [])[+t.dataset.i]; if (!x) return;
+    if (a === "oxDel") o.extra.splice(+t.dataset.i, 1); else { const k = t.dataset.k; x[k] = x[k] ? "" : ymd(new Date()); if (k === "r" && x.r) x.o = x.o || x.r; }
+    markDirty(); renderBuyList(UI.T); recalc(); return; }
   if (a === "pSafe"){ S.track.safety = t.dataset.v; markDirty(); recalc(); return; }
   if (a === "oMore"){ const g = ingOf(t.dataset.id); if (!g) return; const n = parseFloat(prompt(`How many more ${packLabel(g)} of ${g.name} did you buy?`, "1")); if (!(n > 0)) return;
     Store.addStock({type:"receive", item:g.id, qty:n * (+g.size || 0), ts:ymd(new Date()) + "T" + hm(new Date()), at:new Date().toISOString()}).then(() => toast("buyToast", `Added ${n} more to stock and to this week's perishables.`)).catch(e => toast("buyToast", saveError(e))); return; }
