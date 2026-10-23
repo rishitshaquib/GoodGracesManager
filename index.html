@@ -960,6 +960,13 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
 .cnt-item{padding:12px 0;border-bottom:.5px solid var(--sep)}
 .cnt-item .in{background:var(--tile)}
 .mxc.av{background:color-mix(in srgb, var(--green) 45%, var(--tile));color:#fff}
+.wk-b.av.mine.bku{background:var(--purple);color:#fff}
+.mxc.bku{background:color-mix(in srgb, var(--purple) 22%, var(--tile));color:var(--purple)}
+.sch-d{background:var(--fill);border-radius:14px;padding:10px 14px}
+.sch-d h3{margin:0 0 6px;font-size:15px}
+.sch-s{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;padding:6px 0;border-top:.5px solid var(--sep);font-size:14px}
+.sch-t{color:var(--label2);font-variant-numeric:tabular-nums}
+#schDlg .mbody{overflow:auto;max-height:calc(100dvh - 24px)}
 
 </style>
 <meta name="robots" content="noindex, nofollow">
@@ -1069,9 +1076,9 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
     </details>
   </div>
   <div class="sec" style="margin-top:18px">
-    <div class="tile-h"><div class="wknav"><button class="x" data-act="mxWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="mxTitle">Staffing</h2><button class="x" data-act="mxWk" data-v="1" aria-label="Next week">›</button></div><button class="btn ghost sm" data-act="mxWk" data-v="0">This week</button></div>
+    <div class="tile-h"><div class="wknav"><button class="x" data-act="mxWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="mxTitle">Staffing</h2><button class="x" data-act="mxWk" data-v="1" aria-label="Next week">›</button></div><span class="lnk"><button class="btn ghost sm" data-act="mxWk" data-v="0">This week</button><button class="btn sm" data-act="schView">View full schedule</button></span></div>
     <div id="availBox"></div>
-    <p class="note-sm adm" style="margin:0 0 10px">Green is available, from what each person put in that week's availability form. – means they said no, ? means they haven't answered yet. Tap a cell to put someone on a shift and tap again to take them off. Bold names have finished barista training.</p>
+    <p class="note-sm adm" style="margin:0 0 10px">Green is available, from what each person put in that week's availability form. B is a backup (the shift was full when they signed up), – means they said no, ? means they haven't answered yet. Tap a cell to put someone on a shift and tap again to take them off. Bold names have finished barista training.</p>
     <p class="note-sm staff" style="margin:0 0 10px">✓ marks who is on each shift. Use the link above to tell us when you can work.</p>
     <div id="mxGrid"></div>
     <p class="toast" id="staffToast" role="status"></p>
@@ -1249,6 +1256,7 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
 <dialog class="mdlg wmdlg" id="wmDlg" aria-labelledby="wmTitle"><div class="mbody" id="wmBody"></div></dialog>
 <dialog class="mdlg bdlg" id="bldDlg" aria-labelledby="bldTitle"><div class="mbody" id="bldBody"></div></dialog>
 <dialog class="mdlg" id="ckDlg" aria-labelledby="ckTitle"><div class="mbody" id="ckBody"></div></dialog>
+<dialog class="mdlg" id="schDlg" aria-labelledby="schTitle"><div class="mbody" id="schBody"></div></dialog>
 <div class="sheet-bg" id="gearPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="gearTitle"><div id="gearBody"></div></div></div>
 <div class="sheet-bg" id="pfPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pfTitle"><div id="pfBody"></div></div></div>
 <div class="sheet-bg" id="dayPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dpTitle"><div id="dpBody"></div></div></div>
@@ -2649,6 +2657,7 @@ function parseStaff(text){   // "Name  email  2028  Barista, Support  Saturday: 
     return p; }).filter(p => p.name);
 }
 function availFor(d, name, q){ const p = person(name), a = p && availDoc(weekOf(d), p.id); return !!a && !a.none && covers((a.days || {})[d], q); }   // only that week's form answer counts
+const bkFor = (d, name, q) => { const p = person(name), a = p && availDoc(weekOf(d), p.id); return !!a && !a.none && covers((a.bk || {})[d], q); };   // signed up as a backup: the shift was full when they picked it
 const answered = (d, name) => { const p = person(name); return !!(p && availDoc(weekOf(d), p.id)); };
 const availOn = (d, name) => shiftsOf(d).some(q => availFor(d, name, q));
 async function saveStaff(p){
@@ -2670,8 +2679,8 @@ function renderMatrix(){
   if (!people.length){ box.innerHTML = `<p class="empty">Add people to the team below to start assigning shifts.</p>`; return; }
   box.innerHTML = `<div class="scroll"><table class="mx"><thead><tr><th class="nm" rowspan="2">Name</th>${days.map(d => `<th class="d0" colspan="${shiftsOf(d).length}">${fmtD(d)}</th>`).join("")}</tr>
     <tr>${cols.map(c => `<th class="${c.first ? "d0" : ""}">${tfmt(c.q.start)}<br>${tfmt(c.q.end)}<div class="${c.on.length >= c.q.seats ? "status-ok" : "neg-t"}">${c.on.length}/${c.q.seats}</div></th>`).join("")}</tr></thead>
-    <tbody>${people.map(n => `<tr><th class="nm" scope="row" title="${esc(n)}">${nameH(n)}</th>${cols.map(c => { const as = c.on.includes(n), av = availFor(c.d, n, c.q);
-      return `<td class="${c.first ? "d0" : ""}"><button class="mxc${as ? " as" : ""}${av ? " av" : " na"}" data-act="mxTog" data-d="${c.d}" data-i="${c.i}" data-n="${esc(n)}" aria-pressed="${as}" aria-label="${esc(n)}, ${fmtD(c.d)} ${tfmt(c.q.start)} to ${tfmt(c.q.end)}, ${as ? "on this shift" : av ? "available" : answered(c.d, n) ? "not available" : "hasn't sent availability for this week"}"${c.d < today ? " disabled" : ""}>${as ? "✓" : av ? "" : answered(c.d, n) ? "–" : "?"}</button></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
+    <tbody>${people.map(n => `<tr><th class="nm" scope="row" title="${esc(n)}">${nameH(n)}</th>${cols.map(c => { const as = c.on.includes(n), av = availFor(c.d, n, c.q), bk = !av && bkFor(c.d, n, c.q);
+      return `<td class="${c.first ? "d0" : ""}"><button class="mxc${as ? " as" : ""}${av ? " av" : bk ? " bku" : " na"}" data-act="mxTog" data-d="${c.d}" data-i="${c.i}" data-n="${esc(n)}" aria-pressed="${as}" aria-label="${esc(n)}, ${fmtD(c.d)} ${tfmt(c.q.start)} to ${tfmt(c.q.end)}, ${as ? "on this shift" : av ? "available" : bk ? "backup" : answered(c.d, n) ? "not available" : "hasn't sent availability for this week"}"${c.d < today ? " disabled" : ""}>${as ? "✓" : av ? "" : bk ? "B" : answered(c.d, n) ? "–" : "?"}</button></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 function renderTeam(){
   const box = $("teamList"); if (!box) return;
@@ -2715,6 +2724,7 @@ function renderDayPanel(){
     h += `<div class="sh-slot"><div class="top"><span>${tfmt(q.start)} to ${tfmt(q.end)}</span><span class="${need ? "status-over" : "status-ok"}" style="font-size:12px">${on.length} of ${q.seats} filled</span></div>
       <div class="pchips">${on.map(n => `<button class="pc on" data-act="dpUn" data-i="${i}" data-n="${esc(n)}" title="Take ${esc(n)} off this shift">${nameH(n)}</button>`).join("")}${Array.from({length:need}, () => `<span class="seatempty">Open spot</span>`).join("")}</div>
       <div class="note-sm" style="margin-top:8px">${cand.length ? "Available, tap to add" : avail.some(n => availFor(d, n, q)) ? "Everyone available is already on this shift" : "Nobody is marked available for this shift"}</div>
+      ${(() => { const bks = people.filter(n => !on.includes(n) && bkFor(d, n, q)); return bks.length ? `<div class="note-sm" style="margin-top:8px">Backups, tap to add</div><div class="pchips">${bks.map(n => `<button class="pc add" data-act="dpAs" data-i="${i}" data-n="${esc(n)}">${nameH(n)} (backup)</button>`).join("")}</div>` : ""; })()}
       <div class="pchips">${cand.map(n => `<button class="pc add${onShift[n] ? " busy" : ""}" data-act="dpAs" data-i="${i}" data-n="${esc(n)}"${onShift[n] ? ` title="Also on shift ${onShift[n].map(k => k + 1).join(" and ")}"` : ""}>${nameH(n)}${onShift[n] ? ` (shift ${onShift[n].map(k => k + 1).join(", ")})` : ""}</button>`).join("")}</div>
       <div class="row2" style="margin-top:8px"><input class="in txt" list="peopleList" data-dpname="${i}" placeholder="Someone else" aria-label="Add a name to shift ${i + 1}" style="font-size:14px"><button class="btn ghost sm" data-act="dpAdd" data-i="${i}">Add</button></div></div>`;
   }
@@ -2737,16 +2747,44 @@ const weekDays = wk => [0,1,2,3,4,5,6].map(i => addDays(wk, i)).filter(d => S.tr
 /* the week's shifts as blocks: people available so far (from this week's answers) out of people needed. With a person and their
    picks it becomes their form: their picks count live and tapping a block toggles it. */
 const availCount = (wk, d, q, exceptPid) => team().filter(p => { if (p.id === exceptPid) return false; const a = availDoc(wk, p.id); return a && !a.none && covers((a.days || {})[d], q); }).length;
+const availBk = (wk, d, q, exceptPid) => team().filter(p => { if (p.id === exceptPid) return false; const a = availDoc(wk, p.id); return a && !a.none && covers((a.bk || {})[d], q); }).length;
+/* full: enough people already said yes, or enough are already on it in the schedule */
+const shiftFull = (wk, d, i, q, exceptPid) => Math.max(availCount(wk, d, q, exceptPid), namesIn((((S.days || {})[d] || {}).names || [])[i]).length) >= q.seats;
 function coverageGrid(wk, me){
   const days = weekDays(wk), all = days.flatMap(d => shiftsOf(d)); if (!all.length) return "";
   const s0 = Math.max(0, Math.floor(slotOf(Math.min(...all.map(q => q.start))) / 2) * 2), s1 = Math.min(NSLOT, Math.ceil(slotOf(Math.max(...all.map(q => q.end))) / 2) * 2), n = Math.max(2, s1 - s0);
   let open = 0;
   const rows = days.map(d => wkRow(`${DOW[toDate(d).getDay()]} ${toDate(d).getDate()}`, s0, n, shiftsOf(d).map((q, i) => {
-    const mine = !!(me && !me.none && me.sel[d] && me.sel[d][i]), have = availCount(wk, d, q, me && me.pid) + (mine ? 1 : 0), left = Math.max(0, q.seats - have); open += left;
-    const lbl = `${toDate(d).toLocaleDateString("en-US", {weekday:"long"})} ${tfmt(q.start)} to ${tfmt(q.end)}: ${have} of ${q.seats} available${left ? `, needs ${left} more` : ""}`;
-    return `<button class="wk-b av ${mine ? "mine" : left ? "need" : "ok"}" style="grid-column:${slotOf(q.start) - s0 + 1}/${slotOf(q.end) - s0 + 1}" title="${lbl}" aria-label="${lbl}${me ? (mine ? ". You're in" : ". Tap if you can work it") : ""}"${me && !me.none ? ` data-act="avTog" data-d="${d}" data-i="${i}" aria-pressed="${mine}"` : " disabled"}>${have}/${q.seats}${mine ? " ✓" : ""}</button>`; })));
+    const sel = me && !me.none && me.sel[d] ? me.sel[d][i] : false, mine = !!sel, bk = sel === "bk", pid = me && me.pid;
+    const have = availCount(wk, d, q, pid) + (mine && !bk ? 1 : 0), nb = availBk(wk, d, q, pid) + (bk ? 1 : 0), left = Math.max(0, q.seats - have), full = shiftFull(wk, d, i, q, pid); open += left;
+    const lbl = `${toDate(d).toLocaleDateString("en-US", {weekday:"long"})} ${tfmt(q.start)} to ${tfmt(q.end)}: ${have} of ${q.seats} available${left ? `, needs ${left} more` : ""}${nb ? `, ${nb} ${nb === 1 ? "backup" : "backups"}` : ""}`;
+    const tip = !me ? "" : bk ? ". You're a backup" : mine ? ". You're in" : full ? ". It's full. Tap to sign up as a backup" : ". Tap if you can work it";
+    return `<button class="wk-b av ${bk ? "mine bku" : mine ? "mine" : left ? "need" : "ok"}" style="grid-column:${slotOf(q.start) - s0 + 1}/${slotOf(q.end) - s0 + 1}" title="${lbl}${tip}" aria-label="${lbl}${tip}"${me && !me.none ? ` data-act="avTog" data-d="${d}" data-i="${i}" aria-pressed="${mine}"` : " disabled"}>${bk ? "Backup ✓" : `${have}/${q.seats}${mine ? " ✓" : !mine && me && full ? " · backup?" : ""}`}${nb && !bk ? ` +${nb}` : ""}</button>`; })));
   return `<div class="wkg ro">${wkHead(s0, n)}${rows.join("")}</div>
-    <p class="note-sm" style="margin:4px 0 0">${open ? `<b class="neg-t">${open} ${open === 1 ? "spot still needs" : "spots still need"} someone.</b> ` : `<b class="status-ok">Every shift is covered.</b> `}Each shift shows people available so far out of people needed: orange still needs people, green is covered${me ? ", blue is you" : ""}.</p>`;
+    <p class="note-sm" style="margin:4px 0 0">${open ? `<b class="neg-t">${open} ${open === 1 ? "spot still needs" : "spots still need"} someone.</b> ` : `<b class="status-ok">Every shift is covered.</b> `}Each shift shows people available so far out of people needed: orange still needs people, green is covered${me ? ", blue is you, purple means you're a backup. Tap a full shift to sign up as its backup" : ". +1 means one backup"}.</p>`;
+}
+/* the week's schedule as it stands, to screenshot or copy into the group chat */
+function scheduleOf(wk){
+  const short = n => { const f = n.split(" ")[0]; return team().filter(p => p.name.split(" ")[0] === f).length > 1 ? n : f; };
+  return weekDays(wk).map(d => { const x = ensureDay(d);
+    return {d, shifts: shiftsOf(d).map((q, i) => { const on = namesIn(x.names[i]);
+      return {q, on:on.map(short), open:Math.max(0, q.seats - on.length), bk:team().filter(p => !on.includes(p.name) && bkFor(d, p.name, q)).map(p => short(p.name))}; })}; });
+}
+const schDay = d => toDate(d).toLocaleDateString("en-US", {weekday:"long", month:"short", day:"numeric"});
+function openSchedule(){
+  const wk = UI.mxWk || weekOf(ymd(new Date())), days = scheduleOf(wk);
+  $("schBody").innerHTML = `<div class="mh"><div><h2 id="schTitle">Schedule</h2><div class="p">Week of ${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</div></div><button class="x" data-act="schClose" aria-label="Close">✕</button></div>`
+    + (days.length ? days.map(x => `<section class="sch-d"><h3>${schDay(x.d)}</h3>${x.shifts.map(s => `<div class="sch-s"><span class="sch-t">${tfmt(s.q.start)}–${tfmt(s.q.end)}</span><span>${s.on.map(esc).join(", ")}${s.open ? `${s.on.length ? ", " : ""}<span class="neg-t">${s.open} open ${s.open === 1 ? "spot" : "spots"}</span>` : ""}${s.bk.length ? `<br><span class="note-sm">Backup: ${s.bk.map(esc).join(", ")}</span>` : ""}</span></div>`).join("")}</section>`).join("")
+      + `<button class="btn big madd" data-act="schCopy">Copy for the group chat</button><p class="toast" id="schToast" role="status"></p>`
+      : `<p class="empty">The cafe is closed this week.</p>`);
+  $("schDlg").showModal();
+}
+async function copySchedule(){
+  const wk = UI.mxWk || weekOf(ymd(new Date()));
+  const msg = [`Good Grace's Cafe schedule, week of ${fmtD(wk)}`].concat(...scheduleOf(wk).map(x => ["", schDay(x.d)].concat(x.shifts.map(s =>
+    `${tfmt(s.q.start)}–${tfmt(s.q.end)}: ${s.on.concat(s.open ? [`${s.open} open ${s.open === 1 ? "spot" : "spots"}`] : []).join(", ")}${s.bk.length ? ` (backup: ${s.bk.join(", ")})` : ""}`)))).join("\n");
+  try { await navigator.clipboard.writeText(msg); toast("schToast", "Copied. Paste it in the group chat."); }
+  catch(e){ window.prompt("Copy this and paste it in the group chat:", msg); }
 }
 function renderAvailBox(){
   const box = $("availBox"); if (!box) return;
@@ -2777,7 +2815,7 @@ function renderAvailView(){
   if (pid){
     if (!A.sel || A.selFor !== pid + wk){ const doc = availDoc(wk, pid);
       A.selFor = pid + wk; A.none = !!(doc && doc.none);
-      A.sel = {}; days.forEach(d => A.sel[d] = shiftsOf(d).map(q => !!doc && covers((doc.days || {})[d], q)));
+      A.sel = {}; days.forEach(d => A.sel[d] = shiftsOf(d).map(q => !doc || doc.none ? false : covers((doc.bk || {})[d], q) ? "bk" : covers((doc.days || {})[d], q)));
       A.had = !!doc; }
     h += coverageGrid(wk, {pid, sel:A.sel, none:A.none})
       + `<label class="swrow"><span>I can't work this week</span><input type="checkbox" class="switch" id="avNone"${A.none ? " checked" : ""}></label>
@@ -2789,8 +2827,9 @@ function renderAvailView(){
 }
 async function saveAvail(){
   const A = UI.av, wk = A.wk || nextAvailWeek(), p = team().find(x => x.id === A.pid); if (!p) return;
-  const days = {}; if (!A.none) weekDays(wk).forEach(d => { const r = shiftsOf(d).filter((q,i) => A.sel[d][i]).map(q => ({s:q.start, e:q.end})); if (r.length) days[d] = r; });
-  const doc = {week:wk, pid:p.id, name:p.name, days, none:!!A.none, at:new Date().toISOString()};
+  const days = {}, bk = {}, pick = (v, out) => weekDays(wk).forEach(d => { const r = shiftsOf(d).filter((q,i) => A.sel[d][i] === v).map(q => ({s:q.start, e:q.end})); if (r.length) out[d] = r; });
+  if (!A.none){ pick(true, days); pick("bk", bk); }
+  const doc = {week:wk, pid:p.id, name:p.name, days, bk, none:!!A.none, at:new Date().toISOString()};
   try { await Store.saveAvail(doc); A.had = true; renderAvailView(); toast("avToast", `Thanks, ${p.name.split(" ")[0]}. Saved. Open this link again any time to change it.`); }
   catch(e){ toast("avToast", saveError(e)); }
 }
@@ -3722,7 +3761,7 @@ document.addEventListener("change", e => {
 });
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-act]");
-  if (!t){ ["modDlg","diagDlg","admDlg","wmDlg","bldDlg","ckDlg"].forEach(id => { if (e.target.id === id) $(id).close(); }); return; }
+  if (!t){ ["modDlg","diagDlg","admDlg","wmDlg","bldDlg","ckDlg","schDlg"].forEach(id => { if (e.target.id === id) $(id).close(); }); return; }
   const a = t.dataset.act;
   if (ADMIN_ACT.test(a) && !isAdmin()){ openAdm(); return; }
   if (a === "tab"){ showTab(t.dataset.tab); window.scrollTo({top:0}); return; }
@@ -3849,7 +3888,11 @@ document.addEventListener("click", e => {
   if (a === "buyAll"){ UI.buyAll = t.dataset.v === "1"; renderBuyList(UI.T); return; }
   if (a === "buyReset"){ const o = buyOrder(); Object.keys(o.qty).forEach(id => { if (!o.st[id]) delete o.qty[id]; }); markDirty(); renderBuyList(UI.T); toast("buyToast", "Quantities set back to the suggested amounts."); return; }
   if (a === "availCopy"){ copyAvail(t.dataset.w); return; }
-  if (a === "avTog"){ const s = UI.av.sel[t.dataset.d]; if (s){ s[+t.dataset.i] = !s[+t.dataset.i]; renderAvailView(); } return; }
+  if (a === "avTog"){ const d = t.dataset.d, i = +t.dataset.i, s = UI.av.sel[d]; if (!s) return;
+    s[i] = s[i] ? false : shiftFull(UI.av.wk || nextAvailWeek(), d, i, shiftsOf(d)[i], UI.av.pid) ? "bk" : true; renderAvailView(); return; }
+  if (a === "schView"){ openSchedule(); return; }
+  if (a === "schCopy"){ copySchedule(); return; }
+  if (a === "schClose"){ $("schDlg").close(); return; }
   if (a === "avSave"){ saveAvail(); return; }
   if (a === "dpClose"){ closeDay(); return; }
   if (a === "dpShow"){ openDay(t.dataset.d); return; }
