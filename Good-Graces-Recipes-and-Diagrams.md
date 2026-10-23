@@ -12,7 +12,7 @@ Recipes come from the bar sheets (iced, hot, batch prep and cup codes). Costs co
 
 ### How every drink is built
 
-Every drink is a base build with one or two slots swapped. A specialty drink keeps the structure of its base and changes an ingredient: the Banana Bread Latte is an iced latte with house syrup in the syrup slot, the Strawberry Matcha is an iced matcha with purée under the ice. Because the structure stays the same, a new specialty drink only needs its swapped ingredient costed.
+Every drink is a base build with one or two slots swapped. A specialty drink keeps the structure of its base and changes an ingredient: the Banana Bread Latte is an iced latte with house syrup in the syrup slot and a drizzle on top, the Strawberry Matcha is an iced matcha with purée under the ice. Because the structure stays the same, a new specialty drink only needs its swapped ingredient costed.
 
 | Base build | Order, bottom of the cup to the top |
 |:--|:--|
@@ -91,16 +91,14 @@ $5.00 · cost $1.34 · margin 73.3%
 
 #### Banana Bread Latte (BBL)
 
-In the shaker:
-1. 20 g banana bread syrup
-2. Espresso shot over the syrup, stir to dissolve
-3. 250 mL milk
-4. Pour into the cup
+Built like every specialty latte, in the cup, never in the shaker:
+1. 2 pumps (20 g) banana bread syrup
+2. Espresso shot over the syrup, stir
+3. 2 scoops ice
+4. Milk to the line
+5. Drizzle banana bread syrup on top
 
-Then:
-5. Add ice last
-
-The syrup is thick, so stir before adding milk. $5.00 · cost $1.09 · margin 78.1%
+The syrup is thick: stir until it's mixed into the shot. $5.00. Cost and margin are in the portal.
 
 #### Iced Chai
 
@@ -362,9 +360,12 @@ const DIAGRAMS = {
       {h:108, c:DC.bsoe, ice:true, group:"IN THE SHAKER", steps:[[1,"2 pumps brown sugar syrup"],[2,"Espresso shot over the syrup"],[3,"2.5 scoops ice + 1 shake cinnamon"],[4,"Shake until foamy, pour ALL in"]]},
       {h:30, c:DC.oat, steps:[[5,"Top with oat milk to the line"]]}]}}},
   bananabreadlatte: {name:"Banana Bread Latte", aliases:["BBL"], builds:{
-    iced:{price:5.00, cost:1.094, top:8, line:true, note:"The syrup is thick: stir before adding milk.", layers:[
-      {h:104, c:DC.banana, group:"IN THE SHAKER", steps:[[1,"20 g banana bread syrup"],[2,"Espresso shot over the syrup, stir to dissolve"],[3,"250 mL milk"],[4,"Pour into the cup"]]},
-      {h:34, c:DC.banana, ice:true, steps:[[5,"Add ice last"]]}]}}},
+    iced:{price:5.00, top:8, line:true, note:"The syrup is thick: stir until it's mixed into the shot.", layers:[
+      {h:30, c:DC.banana, steps:[[1,"2 pumps (20 g) banana bread syrup"]]},
+      {h:30, c:DC.espresso, steps:[[2,"Espresso shot over the syrup, stir"]]},
+      {h:38, c:DC.milk, ice:true, steps:[[3,"2 scoops ice"]]},
+      {h:30, c:DC.milk, steps:[[4,"Milk to the line"]]},
+      {h:10, c:DC.banana, splash:true, steps:[[5,"Drizzle banana bread syrup on top"]]}]}}},
   chailatte: {name:"Chai Latte", aliases:["Chai"], builds:{
     iced:{price:4.50, cost:1.312, top:10, line:true, layers:[
       {h:44, c:DC.chaiIced, ice:true, steps:[[1,"2 scoops ice in the cup first"]]},
