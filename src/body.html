@@ -1,0 +1,300 @@
+<header class="mast">
+  <div class="mast-top">
+    <div class="brand">
+      <h1><svg class="logo" viewBox="0 0 1296 905.5" role="img" aria-label="Good Grace's Cafe Management Portal"><use href="#gg-logo"/></svg></h1>
+      <p class="portal">Management portal</p>
+    </div>
+    <div class="mast-r"><p class="save" id="saveState"></p><button class="btn ghost sm" id="admBtn" data-act="admOpen">Admin</button></div>
+  </div>
+</header>
+
+<nav class="steps"><div class="steps-in">
+  <button class="step on" data-act="tab" data-tab="home">Home</button>
+  <button class="step" data-act="tab" data-tab="log">Log sales</button>
+  <button class="step" data-act="tab" data-tab="shifts">Weeks and shifts</button>
+  <button class="step" data-act="tab" data-tab="inventory">Inventory</button>
+  <button class="step" data-act="tab" data-tab="menu">Menu and recipes</button>
+  <button class="step adm" data-act="tab" data-tab="bank">Drink bank</button>
+  <button class="step adm" data-act="tab" data-tab="analytics">Analytics</button>
+</div></nav>
+
+<main>
+
+<!-- ============ HOME ============ -->
+<section class="pane on" id="pane-home">
+  <div class="hstatus" id="homeStatus"></div>
+  <div id="homeLists"></div>
+  <div class="sec" id="homeAttn" hidden style="margin-top:14px">
+    <h2>Needs attention</h2>
+    <div id="homeAttnList"></div>
+  </div>
+  <div class="sec" id="homeToday" hidden style="margin-top:14px">
+    <h2>Today so far</h2>
+    <div id="homeTodayBody"></div>
+  </div>
+  <div class="cols c-even" style="margin-top:14px">
+    <div><div class="sec">
+      <div class="tile-h"><h2 id="homeShiftTitle">Shifts</h2></div>
+      <div id="homeShifts" style="margin-top:8px"></div>
+    </div></div>
+    <div><div class="sec">
+      <div class="tile-h"><h2>On the menu this week</h2><button class="btn ghost sm adm" data-act="wmOpen">Change</button></div>
+      <p class="note-sm" id="homeMenuSub" style="margin:2px 0 8px"></p>
+      <div id="homeMenu"></div>
+    </div></div>
+  </div>
+  <div class="hsecs" id="homeDiag" style="margin-top:18px"></div>
+</section>
+
+<!-- ============ LOG SALES ============ -->
+<section class="pane" id="pane-log">
+  <div class="sec">
+    <div class="tile-h"><h2>Log sales</h2><button class="gearbtn adm" data-act="gearOpen" aria-label="Menu settings: prices, specialty drinks, add-ons"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button></div>
+    <p class="hint" style="margin-top:4px">Tap a drink, pick the changes, then Add. Submit when the order is done.</p>
+    <div class="dgrid" id="drinkGrid"></div>
+    <div class="ticket">
+      <div class="ticket-h"><b>This order</b><span id="ticketCount"></span></div>
+      <div id="ticketLines"></div>
+      <div class="ticket-f"><span>Total</span><b id="ticketTotal">$0.00</b></div>
+      <div class="tbar"><div class="ticket-actions"><button class="btn ghost" data-act="clearTicket">Clear</button><button class="btn big" data-act="submitTicket" id="submitBtn">Submit sale</button></div></div>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+    <div class="logmore">
+      <details class="fold2" id="whenBox"><summary>Logging a past sale?</summary>
+        <div class="when" style="margin-top:8px">
+          <label class="swrow"><span>Use the current time</span><input type="checkbox" class="switch" id="useNow" checked></label>
+          <input class="in txt" type="date" id="logDate" aria-label="Sale date" disabled>
+          <input class="in txt" type="time" id="logTime" aria-label="Sale time" disabled>
+        </div>
+      </details>
+      <details class="fold2 adm"><summary>Upload sales in bulk</summary>
+        <p class="note-sm" style="margin:8px 0">For a whole weekend at once, drinks per day or every order: download the guide, give it to Claude with the sales data, then import the file it writes under Analytics, Import sales.</p>
+        <div class="lnk"><button class="btn sm" data-act="impGuide">Download the import guide (.md)</button><button class="btn ghost sm" data-act="tab" data-tab="analytics">Go to Import sales</button></div>
+      </details>
+      <details class="fold2"><summary>Recent entries</summary>
+        <table class="t"><tbody id="recentBody"></tbody></table>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WEEKS AND SHIFTS ============ -->
+<section class="pane" id="pane-shifts">
+  <div class="sec adm">
+    <div class="tile-h"><h2><span class="ic" style="--c:#5856D6" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Cafe hours</h2>
+    </div>
+    <p class="hint" style="margin-top:4px">Drag across a day to draw a shift, or down several days to draw the same shift on each. Drag a shift's end to resize it. Tap a shift to set how many people it needs or delete it, then save.</p>
+    <div class="wkg" id="wkGrid"></div>
+    <div class="wksum" id="wkSum"></div>
+    <div class="wksave">
+      <label class="tw">Starting <input class="in txt" type="date" id="wkFrom"></label>
+      <label class="tw">Until <input class="in txt" type="date" id="wkUntil" aria-label="Until, leave empty for no end date"></label>
+      <button class="btn" data-act="wkSave">Save as rule</button>
+      <span class="lnk"><button class="linkbtn" data-act="wkReset">Back to saved hours</button><button class="linkbtn" data-act="wkClear">Clear</button></span>
+    </div>
+    <p class="toast" id="calToast" role="status"></p>
+    <div class="tile-h" style="margin-top:22px"><h3 style="margin:0">Open days</h3>
+      <div class="lnk"><button class="x" data-act="calMove" data-v="-1" aria-label="Earlier months">‹</button><span class="tw" id="calRange"></span><button class="x" data-act="calMove" data-v="1" aria-label="Later months">›</button></div></div>
+    <p class="note-sm" style="margin:6px 0 8px">Blue days are open. Pick Open or Closed, then tap or drag across days to set them; right-click or right-drag also closes. Tap an open day to see and fill its shifts. Saving weekly hours above opens those weekdays for you.</p>
+    <div class="calbar"><div class="segc" id="calBrush"></div>
+      <span class="legend" style="margin:0"><span><i style="background:var(--tint)"></i>Open</span><span><i style="background:var(--fill2)"></i>Closed</span></span></div>
+    <div class="calgrid" id="calGrid"></div>
+    <details class="fold2"><summary>Saved weekly hours and wage</summary>
+      <div id="ruleList" style="margin-top:10px"></div>
+      <div class="fields" style="max-width:460px;margin-top:12px"><label>Barista wage<small>Per hour</small></label><input class="in" type="number" min="0" step="0.01" data-bind="exp.wage" data-type="num" aria-label="Barista wage"></div>
+    </details>
+  </div>
+  <div class="sec" style="margin-top:18px">
+    <div class="tile-h"><div class="wknav"><button class="x" data-act="mxWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="mxTitle">Staffing</h2><button class="x" data-act="mxWk" data-v="1" aria-label="Next week">›</button></div><span class="lnk"><button class="btn ghost sm" data-act="mxWk" data-v="0">This week</button><button class="btn sm" data-act="schView">View full schedule</button></span></div>
+    <div id="availBox"></div>
+    <p class="note-sm adm" style="margin:0 0 10px">Green is available, from what each person put in that week's availability form. B is a backup (the shift was full when they signed up), – means they said no, ? means they haven't answered yet. Tap a cell to put someone on a shift and tap again to take them off. Bold names have finished barista training.</p>
+    <p class="note-sm staff" style="margin:0 0 10px">✓ marks who is on each shift. Use the link above to tell us when you can work.</p>
+    <div id="mxGrid"></div>
+    <p class="toast" id="staffToast" role="status"></p>
+    <div class="adm">
+    <h3>Team</h3>
+    <div class="row2" id="teamAddRow" style="margin-bottom:10px;max-width:460px"><input class="in txt" id="teamName" placeholder="Add a person" aria-label="Name to add"><button class="btn sm" data-act="teamAdd">Add</button></div>
+    <div class="ptiles" id="teamList"></div>
+    <details class="imp" id="teamImport"><summary>Import staff from a list</summary>
+      <p class="note-sm">Paste one person per line: name, email, class year, role, <i>Trained</i> if they finished barista training, then availability like <i>Saturday: 10:00 AM - 1:00 PM, Sunday: 1:00 PM - 4:00 PM</i>. People already on the team (same email or name) are updated.</p>
+      <textarea class="in txt" id="impText" rows="6" aria-label="Staff list to import"></textarea>
+      <div style="margin-top:8px"><button class="btn sm" data-act="teamImport">Import</button></div>
+    </details>
+    </div>
+    <datalist id="peopleList"></datalist>
+  </div>
+</section>
+
+<!-- ============ INVENTORY ============ -->
+<section class="pane" id="pane-inventory">
+  <div class="banner" id="inv-banner"></div>
+  <div class="sec">
+    <div class="tile-h"><h2><span class="ic" style="--c:#34C759" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></svg></span>In reserve</h2><span class="lnk"><span class="note-sm" id="resSum"></span><button class="btn ghost sm adm" id="cntEditBtn" data-act="cntEdit">Edit items</button></span></div>
+    <p class="hint" style="margin-top:4px">Closing count: count what's left in reserve in the packaging on the shelf (bags, jugs, bottles, sleeves) and type it next to each item, then save. Half a jug is 0.5. Leave a line blank to skip it.</p>
+    <div id="cntList"></div>
+    <div class="cntbar"><label class="tw">Counted on <input class="in txt" type="date" id="cntDate"></label><button class="btn" id="cntSave" data-act="cntSave">Save closing count</button><span class="toast" id="cntToast" role="status"></span></div>
+    <details class="fold2"><summary>Add an item to inventory</summary>
+      <div class="nbase" style="margin-top:8px">
+        <label class="wide">Item<input class="in txt" id="niName" placeholder="Oat milk, 16 oz lids, napkins"></label>
+        <label>Counted in<input class="in txt" id="niCu" placeholder="bag, jug, bottle, sleeve"></label>
+        <label>One holds<input class="in" type="number" min="0" step="any" id="niSize" placeholder="64"></label>
+        <label>Unit<select class="in txt" id="niUnit"><option>each</option><option>oz</option><option>g</option></select></label>
+        <label>How many come in what you buy<input class="in" type="number" min="1" step="1" id="niPer" placeholder="1"></label>
+        <label>Pack price<input class="in" type="number" min="0" step="0.01" id="niPrice" placeholder="4.99"></label>
+        <label>Store<select class="in txt" id="niStore"><option value="">Pick one</option><option>BJ's</option><option>WebstaurantStore</option><option>Amazon</option></select></label>
+        <label class="wide">Category<select class="in txt" id="niCat"><option value="milk">Milk and dairy</option><option value="alt">Alt milk</option><option value="fresh">Fresh and perishable</option><option value="coffee">Coffee and espresso</option><option value="tea">Tea and matcha</option><option value="mixin">Syrups, sauces and spices</option><option value="other" selected>Other</option></select></label>
+        <label class="wide">Buy link<input class="in txt" id="niUrl" placeholder="Optional"></label>
+        <div class="wide" style="grid-column:1/-1"><button class="btn sm" data-act="niAdd">Add to inventory</button> <span class="toast" id="niToast" role="status"></span></div>
+      </div>
+    </details>
+    <details class="fold2"><summary>Recent counts and deliveries</summary>
+      <table class="t"><tbody id="stkLog"></tbody></table>
+    </details>
+  </div>
+  <div class="sec" style="margin-top:18px">
+    <div class="tile-h"><h2><span class="ic" style="--c:#007AFF" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 4h2.5l2.2 11.2h10.6L20.5 8H7"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/></svg></span>This week's order</h2><span class="segc sm" id="buyShow"></span></div>
+    <p class="hint" id="orderHint"></p>
+    <div class="calbar" style="margin:6px 0 4px"><button class="btn ghost sm" data-act="buyReset">Back to suggested</button></div>
+    <p class="toast" id="buyToast" role="status" style="margin:0 0 6px"></p>
+    <div id="orderList"></div>
+    <details class="fold2"><summary>Got a WebstaurantStore order? Import the invoice</summary>
+      <p class="hint" style="margin-top:8px">Drop in the invoice PDF. Each line is matched to an item, the price and pack size update, and the delivery goes into stock.</p>
+      <label class="dz">Choose one or more invoice PDFs<input type="file" id="invIn" accept=".pdf,application/pdf" multiple aria-label="Invoice PDFs"></label>
+      <div id="invResult" style="margin-top:12px"></div>
+    </details>
+    <details class="fold2 adm"><summary>Buffer and planning number</summary><div id="trackSliders" style="margin-top:8px"></div></details>
+  </div>
+  <div class="sec" style="margin-top:18px">
+    <details class="fold2 full" id="fullList"><summary>Full ordering list: stores, prices and buy links</summary>
+      <p class="hint" style="margin-top:8px">Set each item's store once. Invoice imports keep prices current<span class="adm">, and recipes cost out from them</span>.</p>
+      <div class="scroll"><table class="t">
+        <thead><tr><th class="l">Item</th><th>Pack price</th><th>Pack size</th><th class="l">Unit</th><th class="adm">Cost per unit</th><th class="l">Store</th><th class="l">Buy link</th><th class="adm"></th></tr></thead>
+        <tbody id="ingBody"></tbody>
+      </table></div>
+      <div class="adm"><button class="add" data-act="addIng">Add an ingredient</button> <button class="add" data-act="addPkg" style="margin-left:14px">Add packaging</button></div>
+      <div class="toast" id="ingToast" role="status"></div>
+    </details>
+  </div>
+</section>
+
+<!-- ============ MENU AND RECIPES ============ -->
+<section class="pane" id="pane-menu">
+  <div class="sec">
+    <div class="tile-h"><h2>Menu and recipes</h2><span class="lnk adm"><button class="btn sm" data-act="wmOpen">This week's menu</button><button class="btn ghost sm" data-act="gearOpen">Prices and specialty drinks</button></span></div>
+    <p class="hint" style="margin-top:4px">Tap a drink to see how it's built. Recipes are fixed<span class="adm">; costs follow the latest ingredient prices</span>.</p>
+    <div class="scroll"><table class="t">
+      <thead><tr><th class="l">Drink</th><th class="l">Serve</th><th>Price</th><th class="adm">Cost</th><th class="adm">Margin</th></tr></thead>
+      <tbody id="menuBody"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ============ DRINK BANK ============ -->
+<section class="pane" id="pane-bank">
+  <div class="sec">
+    <div class="tile-h"><h2><span class="ic" style="--c:#AF52DE" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7L12 3Z"/></svg></span>Drink bank</h2><button class="btn sm" data-act="bldOpen">New drink</button></div>
+    <p class="toast" id="bankToast" role="status" style="margin:4px 0 0"></p>
+    <p class="hint" id="bankHint" style="margin-top:4px"></p>
+    <div class="bkbar"><input class="in txt" type="search" id="bankQ" placeholder="Search drinks, syrups, seasons" aria-label="Search the drink bank"><span class="segc sm" id="bankView"></span><span class="segc sm" id="bankSort"></span></div>
+    <div id="bankBody"></div>
+  </div>
+</section>
+
+<!-- ============ ANALYTICS ============ -->
+<section class="pane" id="pane-analytics">
+  <div class="anbar"><span class="segc sm" id="anRange"></span><label class="tw">From <input class="in txt" type="date" id="anFrom"></label><label class="tw">to <input class="in txt" type="date" id="anTo"></label>
+    <label class="chk tw"><input type="checkbox" id="anCmp" checked> <span id="anCmpLbl">Compare with the period before</span></label></div>
+  <div class="banner" id="t-banner"></div>
+  <div class="akpis" id="anKpis"></div>
+
+  <div class="sec">
+    <h2><span class="ic" style="--c:#34C759" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></span>Cost recuperation</h2>
+    <p class="hint" style="margin-top:4px">Each week since the start: green is what came in after fees and charity, red is what went out. The line is the running total; above zero, everything spent has been earned back.</p>
+    <svg class="chart" id="anRecoup" viewBox="0 0 640 260"></svg>
+    <p class="note-sm" id="anRecoupNote" style="margin:6px 0 0"></p>
+    <details class="fold2"><summary>Money spent: equipment and anything off the order list</summary>
+      <p class="note-sm" style="margin:8px 0 6px">Deliveries ticked Received or imported from an invoice count on their own.</p>
+      <div class="scroll"><table class="t"><tbody id="chargeBody"></tbody></table></div>
+      <button class="add" data-act="addCharge">Add spending</button>
+    </details>
+  </div>
+
+  <div class="cols c-even" style="margin-top:18px">
+    <div><div class="sec">
+      <div class="tile-h"><h2><span class="ic" style="--c:#007AFF" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 5-7 4 4M3 21h18"/></svg></span>Demand through the day</h2><span class="segc sm" id="anCurveMode"></span></div>
+      <svg class="chart" id="anCurve" viewBox="0 0 640 230"></svg>
+      <p class="note-sm" id="anCurveNote" style="margin:4px 0 0"></p>
+    </div></div>
+    <div><div class="sec">
+      <h2><span class="ic" style="--c:#AF52DE" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7L12 3Z"/></svg></span>Top drinks</h2>
+      <div id="anTop10"></div>
+    </div></div>
+  </div>
+
+  <div class="sec" style="margin-top:18px">
+    <h2><span class="ic" style="--c:#5856D6" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM4 9h16M9 3v4M15 3v4"/></svg></span>Profit by month</h2>
+    <p class="note-sm" style="margin:-4px 0 8px">All time. Profit is sales minus cost of goods, fees and charity; net takes off one-off spending.</p>
+    <div class="scroll"><table class="t" id="anMonths"></table></div>
+  </div>
+  <div class="sec" style="margin-top:18px">
+    <h2><span class="ic" style="--c:#FF9500" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3h8l-1 5H9zM7 8h10l-1 13H8z"/></svg></span>What sold</h2>
+    <div class="mlist" id="anHabits" style="margin:0 0 12px"></div>
+    <div class="scroll tcap"><table class="t" id="anItems"></table></div>
+  </div>
+  <div class="sec details" style="margin-top:18px">
+    <h2><span class="ic" style="--c:#8E8E93" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Details</h2>
+    <details class="fold2"><summary>How profit is worked out, for this range</summary><table class="t" id="anMoney" style="margin-top:6px"></table>
+      <h3>Fees and charity</h3>
+      <div class="fields" style="margin-top:6px;max-width:520px">
+        <label>Card processing, %</label><input class="in" type="number" min="0" step="0.1" data-bind="fees.cardPct" data-type="num" aria-label="Card processing percent">
+        <label>Card fee per swipe</label><input class="in" type="number" min="0" step="0.01" data-bind="fees.cardFix" data-type="num" aria-label="Card fee per swipe">
+        <label>Additional fees, % of sales</label><input class="in" type="number" min="0" step="1" data-bind="fees.feePct" data-type="num" aria-label="Additional fees percent">
+        <label>Charity, % of sales</label><input class="in" type="number" min="0" step="1" data-bind="fees.charityPct" data-type="num" aria-label="Charity percent">
+      </div></details>
+    <details class="fold2" open><summary>Perishables by week</summary>
+      <div class="scroll" style="margin-top:6px"><table class="t" id="anPerish"></table></div>
+      <p class="note-sm" style="margin:6px 0 0">The forecast is the drinks per open day over the two weeks before, times that week's open days. Thrown out is counted at the last close of the week; over 15% shows red.</p></details>
+    <details class="fold2"><summary>Cost of goods by week</summary>
+      <div class="scroll" style="margin-top:6px"><table class="t" id="anCogs"></table></div>
+      <p class="note-sm" id="anCogsNote" style="margin:6px 0 0"></p></details>
+    <details class="fold2"><summary>Days</summary>
+      <div class="scroll" style="margin-top:6px"><table class="t"><thead><tr><th class="l">Day</th><th>Orders</th><th>Drinks</th><th>Sales</th><th class="l">Top drink</th></tr></thead><tbody id="dayBody"></tbody></table></div>
+      <h3>Clover days</h3>
+      <div class="scroll"><table class="t"><thead><tr><th class="l">Day</th><th>Orders</th><th>Sales</th><th>Avg order</th><th>Busiest 30 min</th><th>Before labor</th></tr></thead><tbody id="anCloverDays"></tbody></table></div>
+      <h3>Order size</h3>
+      <table class="t rank" id="anOrderSize"></table></details>
+    <details class="fold2"><summary>Syrups added</summary><table class="t" id="anSyr" style="margin-top:6px"></table></details>
+    <details class="fold2"><summary>Clover item report</summary>
+      <p class="note-sm" id="anTopLabel" style="margin:8px 0 6px"></p>
+      <div class="scroll"><table class="t rank" id="anTop"></table></div>
+      <div class="mlist" id="anMods"></div></details>
+  </div>
+
+  <div class="sec" style="margin-top:24px">
+    <h2><span class="ic" style="--c:#8E8E93" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg></span>Import sales</h2>
+    <p class="hint">Sales come in two ways. <b>With Claude:</b> download the import guide, give it to Claude with the weekend's sales in whatever form they're in (Clover or Square exports, a sheet, a tally, photos), and import the JSON file Claude writes. It can hold each order and its drinks, or just the drinks sold per day. <b>Directly:</b> drop in Clover transactions, the Clover item sales report, or a sheet with one drink per row. Either way you check the preview before anything is saved.</p>
+    <p style="margin:0 0 10px"><button class="btn sm" data-act="impGuide">Download the import guide (.md)</button></p>
+    <label class="dz">Choose files<input type="file" id="impIn" accept=".csv,.xlsx,.xls,.json" multiple aria-label="Sales files"></label>
+    <div id="impResult" style="margin-top:10px"></div>
+  </div>
+</section>
+
+</main>
+
+<section id="availView" hidden></section>
+
+<dialog class="mdlg" id="modDlg" aria-labelledby="modTitle"><div class="mbody" id="modBody"></div></dialog>
+<dialog class="diag-dlg" id="diagDlg" aria-label="Drink diagram"><div id="diagBody"></div></dialog>
+<dialog class="mdlg" id="admDlg" aria-labelledby="admTitle"><div class="mbody" id="admBody"></div></dialog>
+<dialog class="mdlg wmdlg" id="wmDlg" aria-labelledby="wmTitle"><div class="mbody" id="wmBody"></div></dialog>
+<dialog class="mdlg bdlg" id="bldDlg" aria-labelledby="bldTitle"><div class="mbody" id="bldBody"></div></dialog>
+<dialog class="mdlg" id="ckDlg" aria-labelledby="ckTitle"><div class="mbody" id="ckBody"></div></dialog>
+<dialog class="mdlg" id="schDlg" aria-labelledby="schTitle"><div class="mbody" id="schBody"></div></dialog>
+<div class="sheet-bg" id="gearPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="gearTitle"><div id="gearBody"></div></div></div>
+<div class="sheet-bg" id="pfPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pfTitle"><div id="pfBody"></div></div></div>
+<div class="sheet-bg" id="dayPanel" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dpTitle"><div id="dpBody"></div></div></div>
+
+<footer class="foot">
+  <svg class="logo" viewBox="0 0 1296 905.5" role="img" aria-label="Good Grace's Cafe"><use href="#gg-logo"/></svg>
+  <p>A student-run cafe in Grace Hopper College, Yale</p>
+</footer>

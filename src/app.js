@@ -1,0 +1,3025 @@
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const HMIN = 7, HN = 15;          // hourly slots 7 am through 9 pm
+
+/* ------------------------------------------------------------------ state
+   Everything here saves to the shared settings (config/main). Recipes are NOT here: they are fixed in MENU below.
+   specials: drinks built in the gear from a base, a syrup and cold foam. bases: one-ingredient bases added in the gear (cider, hot chocolate). */
+const S = {
+  v: 5,
+  ingredients: [], packaging: [],
+  prices: {},       // fixed-menu drink id -> price, when changed from the default
+  off: [],          // fixed-menu drink ids taken off the menu
+  specials: [],     // {id, name, aliases, base, syrup: ingredient id or "", pumps, foam, serve: "iced"|"hot"|"both", price, on, sec, season}
+  assign: {},       // fixed signature/specialty drink id -> {sec, season}, when changed in the drink bank
+  dayMenu: {},      // date -> signature and specialty drink ids running that day, set in This week's menu
+  lists: {},        // prep / open / close -> [{id, t}], the checklists on Home
+  checks: {},       // date -> list -> {d:{item id:{by, at}}, skip:{by, at, why}}
+  bases: [],        // {id, name, ing: ingredient id, oz per drink}
+  addons: {altCharge:0.50, almCharge:0.50, syrupCharge:0.25, foamCharge:0.50, wholePct:85},
+  pastry: {price:3.00, cost:1.25},
+  syrHide: [],      // syrup ingredient ids hidden on the log
+  fees:   {cardPct:2.7, cardFix:0.10, feePct:30, charityPct:10},
+  charges: [ {name:"Reusable bar tools and cooler", amount:363.75} ],
+  invoices: [],     // imported invoice numbers {order, date, at}
+  cal:    {rules:[], open:[], closed:[]},
+  pattern:{}, orders:{}, team:[], days:{},
+  track:  {dates:[], cover:2, buffer:25, perDay:60},
+  exp:    {wage:16.94},
+  clover: {orders:{}, items:[], cogsRate:0.232, card:{pct:0.023, fixed:0.10}}   // Clover days and item reports, from Import sales
+};
+const UI = {};
+/* Cafe data exported Sep 27, 2026 (same as seed-config.json): ingredient and packaging prices, team and calendar to start from. Settings saved in Firebase replace it on load. */
+const CAFE_DATA = {"v":4,"ingredients":[{"id":"beans","name":"Espresso beans, Lavazza","price":178.99,"size":5987,"unit":"g","vendor":"WebstaurantStore","vol":0.1111111111111111,"url":"https://www.webstaurantstore.com/lavazza-gran-espresso-whole-bean-espresso-2-2-lb-case/110LVEGRANWKT.html","kind":"core","cat":"coffee"},{"id":"milk","name":"2% milk","price":3.25,"size":128,"unit":"oz","vendor":"BJs","vol":1,"url":"https://www.bjs.com/product/wellsley-farms-2-reduced-fat-milk-1-gal/3000000000000139573","kind":"core","cat":"milk"},{"id":"wholemilk","name":"Whole milk","price":3.45,"size":128,"unit":"oz","vendor":"BJs","vol":1,"url":"https://www.bjs.com/product/wellsley-farms-whole-milk-1-gal/3000000000000139571/","kind":"core","cat":"milk"},{"id":"oat","name":"Oat milk, Califia","price":14.99,"size":192,"unit":"oz","vendor":"Costco","vol":1,"kind":"core","url":"https://www.costco.com/p/-/califia-farms-cafe-oat-milk-32-fl-oz-6-count/100710341?langId=-1","cat":"milk"},{"id":"almond","name":"Almond milk, Califia","price":17.99,"size":192,"unit":"oz","vendor":"Costco","vol":1,"kind":"core","url":"https://www.costco.com/p/-/califia-farms-cafe-almond-milk-32-oz-6-count/100577527?langId=-1","cat":"milk"},{"id":"cream","name":"Heavy Cream","price":4.29,"size":32,"unit":"oz","vendor":"BJs","vol":1,"kind":"core","url":"https://www.bjs.com/product/wellsley-farms-heavy-whipping-cream-32-oz/3000000000002440779/","cat":"milk"},{"id":"matcha","name":"Barista Grade Matcha","price":33.99,"size":100,"unit":"g","vendor":"Naoki","vol":0,"url":"https://naokimatcha.com/products/barista-blend-matcha?variant=51639660151087","kind":"core","cat":"tea"},{"id":"chai","name":"Chai concentrate, Tazo","price":35.49,"size":192,"unit":"oz","vendor":"WebstaurantStore","vol":1,"url":"https://www.webstaurantstore.com/tazo-32-fl-oz-chai-tea-latte-1-1-concentrate-case/711TAZ1733CS.html?utm_source=google&utm_medium=cpc&gbraid=0AAAAAD_Dx-vZeJstYol8q90q7fkXEdMl9&gclid=Cj0KCQjwlNPVBhCMARIsAPZ5RqiiAjSdgA_opLIo2nmE3oXQYfAD6HnobHuSoU1X7IQmwSPVzDY00sIaAmv8EALw_wcB","kind":"core","cat":"tea"},{"id":"tea","name":"Earl Grey tea bags","price":24.49,"size":96,"unit":"bag","vendor":"WebstaurantStore","vol":0,"url":"https://www.webstaurantstore.com/tazo-organic-earl-grey-tea-bags-case/110TAZTBEARCS.html","kind":"core","cat":"tea"},{"id":"cider","name":"Apple cider","price":4.99,"size":128,"unit":"oz","vendor":"BJs","vol":1,"url":"https://www.bjs.com/product/wellsley-farms-apple-cider-1-gal/3000000000000162429/","kind":"specialty","cat":"mixin"},{"id":"strawberry","name":"Frozen Strawberries","price":13.99,"size":64,"unit":"oz","vendor":"BJs","vol":1,"url":"https://www.bjs.com/product/wymans-frozen-sliced-strawberries-4-lbs/3000000000004795249/","kind":"core","cat":"mixin"},{"id":"c1790286298153","kind":"core","name":"Monin Vanilla Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/vanilla-syrup?variant=48173907771712","vol":1,"custom":true,"cat":"mixin"},{"id":"c1790286443536","kind":"core","name":"Monin Caramel Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/caramel-syrup","vol":1,"custom":true,"cat":"mixin"},{"id":"c1790286602131","kind":"core","name":"Monin Brown Sugar Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/spiced-brown-sugar-syrup?variant=48173915472192","vol":1,"custom":true,"cat":"mixin"},{"id":"c1790286655331","kind":"core","name":"Monin Pumpkin Spice Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/pumpkin-spice-syrup?variant=48173896794432","vol":1,"custom":true,"cat":"mixin"},{"id":"lavender","kind":"specialty","cat":"mixin","name":"Monin Lavender Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/lavender-syrup","vol":1,"custom":true},{"id":"honey","kind":"specialty","cat":"mixin","name":"Monin Honey Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/products/honey-syrup","vol":1,"custom":true},{"id":"cinnamonsyr","kind":"specialty","cat":"mixin","name":"Monin Cinnamon Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://webstaurantstore.com/monin-1-liter-premium-cinnamon-flavoring-syrup/544SYPFR012F.html","vol":1,"custom":true},{"id":"peppermint","kind":"specialty","cat":"mixin","name":"Monin Peppermint Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/collections/all-syrups-1-liter-plastic-bottle","vol":1,"custom":true},{"id":"gingerbread","kind":"specialty","cat":"mixin","name":"Monin Gingerbread Syrup (1L)","price":14,"size":33.8,"unit":"oz","vendor":"Monin","url":"https://monin.us/collections/all-syrups-1-liter-plastic-bottle","vol":1,"custom":true},{"id":"mocha","kind":"specialty","cat":"mixin","name":"Ghirardelli Chocolate Sauce (64 oz)","price":22,"size":64,"unit":"oz","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/ghirardelli-64-fl-oz-sweet-ground-chocolate-cocoa-flavoring-sauce/40862052.html","vol":1,"custom":true},{"id":"whitemocha","kind":"specialty","cat":"mixin","name":"Ghirardelli White Chocolate Sauce (64 oz)","price":24,"size":64,"unit":"oz","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/ghirardelli-64-fl-oz-white-chocolate-flavoring-sauce/40862051.html","vol":1,"custom":true},{"id":"cinnamon","kind":"specialty","cat":"mixin","name":"Ground cinnamon (16 oz)","price":6,"size":16,"unit":"oz","vendor":"BJs","url":"https://www.bjs.com/product/wellsley-farms-ground-cinnamon-16-oz/3000000000003894251/","vol":0,"custom":true}],"packaging":[{"id":"cup_cold","name":"16 oz Iced Drink Cup","price":66.49,"size":1000,"kit":"iced","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/cup-16-oz-heavy-weight-clear-1m-case/500CC16HW.html"},{"id":"lid_cold","name":"Flat Lid, No Straw","price":36.99,"size":1000,"kit":"iced","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/choice-9-12-16-20-and-24-oz-clear-sip-through-lid-with-extra-wide-opening-case/500LSTRWLW.html"},{"id":"cup_hot","name":"12 oz hot cup","price":50.99,"size":500,"kit":"hot","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/choice-12-oz-white-smooth-double-walled-paper-hot-cup-case/50012DWALLW.html"},{"id":"lid_hot","name":"12 oz Hot Cup Lid","price":30.49,"size":1000,"kit":"hot","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/choice-8-oz-squat-to-24-oz-white-hot-paper-cup-travel-lid-case/500L1020W.html"},{"id":"sleeve","name":"Kraft Coffee Cup Sleeve","price":39.49,"size":1200,"kit":"hot","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/ecochoice-8-oz-kraft-coffee-cup-sleeve-jacket-clutch-case/500COLLAR8BR.html"},{"id":"napkin","name":"Napkin","price":24.99,"size":8000,"kit":"both","vendor":"WebstaurantStore","url":"https://www.webstaurantstore.com/choice-kraft-natural-tall-fold-dispenser-napkin-case/966TALLFLDN.html"}],"drinks":[{"name":"Latte","sec":"core","price":4.5,"sold":24,"iced":60,"recipe":[["milk",7],["beans",18]]},{"name":"Cappuccino","sec":"core","price":4,"sold":5,"iced":0,"recipe":[["milk",4],["beans",18]]},{"name":"Americano","sec":"core","price":3.5,"sold":9,"iced":60,"recipe":[["beans",18]]},{"name":"Chai Latte","sec":"core","price":5,"sold":11,"iced":60,"recipe":[["milk",4.5],["chai",4.5]]},{"name":"Matcha Latte","sec":"core","price":5,"sold":7,"iced":60,"recipe":[["milk",7],["matcha",3]]},{"name":"London Fog","sec":"core","price":3.5,"sold":4,"iced":30,"recipe":[["milk",5],["tea",1],["c1790286298153",0.25,false,"both"]]},{"name":"Banana Bread Latte","sec":"specialty","price":4.5,"sold":10,"iced":100,"recipe":[["milk",6],["beans",18]],"budgetHot":0,"budgetIced":4.81,"addin":"0.75 oz banana bread syrup"},{"name":"Caramel Apple Spice Cider","sec":"specialty","price":4,"sold":9,"iced":0,"recipe":[["cider",10,true]],"budgetHot":7.99,"budgetIced":0,"addin":"Cider, 2 pumps caramel and cinnamon"},{"name":"Brown Sugar Shaken Espresso","sec":"signature","price":4.5,"sold":18,"iced":100,"recipe":[["milk",6],["beans",18],["c1790286602131",0.75,true]],"budgetHot":0,"budgetIced":3.41,"addin":"3 pumps brown sugar syrup"},{"name":"Strawberry Matcha Latte","sec":"signature","price":5,"sold":3,"iced":100,"recipe":[["milk",6,false,"both"],["beans",18,false,"both"],["strawberry",2,true]],"budgetHot":0,"budgetIced":3.78,"addin":"2 oz strawberry puree blended in house"}],"drafts":[{"name":"Banana Bread Latte","sec":"specialty","price":4.5,"iced":100,"sold":6,"recipe":[["milk",6],["beans",18],["banana",0.75,true]],"addin":"0.75 oz banana bread syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall"},{"name":"Caramel Apple Spice Cider","sec":"specialty","price":4,"iced":0,"sold":5,"recipe":[["cider",10,true],["syrup",0.5,true],["cinnamon",0.02,true]],"addin":"Cider, 2 pumps caramel and cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall"},{"name":"Lavender London Fog","sec":"specialty","price":4.25,"iced":30,"sold":5,"recipe":[["milk",5,false],["tea",1,false],["lavender",0.5,true]],"addin":"0.5 oz lavender syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Swap vanilla for lavender in the fog"},{"name":"Hot Apple Cider with Brown Sugar","sec":"specialty","price":4,"iced":0,"sold":5,"recipe":[["cider",10,true],["c1790286602131",0.5,true],["cinnamon",0.02,true]],"addin":"10 oz apple cider, 0.5 oz brown sugar syrup, 0.02 oz ground cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"Simpler version of the caramel apple cider"},{"name":"Vanilla Sweet Cream Americano","sec":"specialty","price":4.5,"iced":100,"sold":5,"recipe":[["beans",18,false],["cream",1,false],["milk",0.5,false],["c1790286298153",0.5,true]],"addin":"0.5 oz vanilla syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Uses the cold foam build on an americano"},{"name":"Salted Caramel Cream Americano","sec":"specialty","price":4.75,"iced":100,"sold":5,"recipe":[["beans",18,false],["cream",1.5,false],["milk",0.5,false],["c1790286443536",0.5,true]],"addin":"0.5 oz caramel syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Cheapest build with a premium feel"},{"name":"White Chocolate Mocha","sec":"specialty","price":5.25,"iced":50,"sold":5,"recipe":[["milk",6,false],["beans",18,false],["whitemocha",1,true]],"addin":"1 oz ghirardelli white chocolate sauce","aliases":[],"budgetHot":0,"budgetIced":0,"season":"winter","note":"Needs white chocolate sauce"},{"name":"Lavender Latte","sec":"specialty","price":5,"iced":60,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["lavender",0.75,true]],"addin":"0.75 oz lavender syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Needs Monin lavender"},{"name":"Mocha","sec":"specialty","price":5,"iced":60,"sold":5,"recipe":[["milk",6,false],["beans",18,false],["mocha",1,true]],"addin":"1 oz ghirardelli chocolate sauce","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Needs chocolate sauce. Unlocks hot chocolate too"},{"name":"Gingerbread Latte","sec":"specialty","price":5,"iced":40,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["gingerbread",0.75,true]],"addin":"0.75 oz gingerbread syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"winter","note":"Holiday option with one new bottle"},{"name":"Pumpkin Spice Latte","sec":"specialty","price":5,"iced":50,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["c1790286655331",0.75,true],["cinnamon",0.02,true]],"addin":"0.75 oz pumpkin spice syrup, 0.02 oz ground cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"Fall anchor. You already stock the syrup"},{"name":"Cinnamon Dolce Latte","sec":"specialty","price":5,"iced":50,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["cinnamonsyr",0.5,true],["c1790286602131",0.25,true],["cinnamon",0.02,true]],"addin":"0.5 oz cinnamon syrup, 0.25 oz brown sugar syrup, 0.02 oz ground cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"Needs Monin cinnamon"},{"name":"Pumpkin Chai","sec":"specialty","price":5.25,"iced":50,"sold":5,"recipe":[["milk",4.5,false],["chai",4.5,false],["c1790286655331",0.5,true]],"addin":"0.5 oz pumpkin spice syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"Coffee-free fall option"},{"name":"Vanilla Latte","sec":"specialty","price":4.75,"iced":60,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["c1790286298153",0.75,true]],"addin":"0.75 oz vanilla syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Top seller everywhere. Uses what you stock"},{"name":"Peppermint Mocha","sec":"specialty","price":5.5,"iced":40,"sold":5,"recipe":[["milk",6,false],["beans",18,false],["mocha",1,true],["peppermint",0.5,true]],"addin":"1 oz ghirardelli chocolate sauce, 0.5 oz peppermint syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"winter","note":"Holiday anchor"},{"name":"Caramel Macchiato","sec":"signature","price":5,"iced":70,"sold":5,"recipe":[["milk",7,false],["beans",18,false],["c1790286298153",0.5,true],["c1790286443536",0.5,true]],"addin":"0.5 oz vanilla syrup, 0.5 oz caramel syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Layered, vanilla base with caramel on top"},{"name":"Hot Chocolate","sec":"specialty","price":3.5,"iced":0,"sold":5,"recipe":[["milk",8,false],["mocha",1.5,true]],"addin":"1.5 oz ghirardelli chocolate sauce","aliases":[],"budgetHot":0,"budgetIced":0,"season":"fall","note":"No espresso, so it's fast on the bar"},{"name":"Honey Oat Latte","sec":"specialty","price":5.25,"iced":60,"sold":5,"recipe":[["oat",7,false],["beans",18,false],["honey",0.5,true]],"addin":"0.5 oz honey syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Oat built in. Price includes the oat upcharge"},{"name":"Strawberry Vanilla Latte","sec":"specialty","price":5.25,"iced":100,"sold":5,"recipe":[["milk",6,false],["beans",18,false],["strawberry",2,true],["c1790286298153",0.5,true]],"addin":"2 oz frozen strawberries, 0.5 oz vanilla syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Reuses the strawberry puree from the matcha"},{"name":"Brown Sugar Oat Shaken Espresso","sec":"signature","price":5,"iced":100,"sold":5,"recipe":[["oat",6,false],["beans",18,false],["c1790286602131",0.75,true],["cinnamon",0.02,true]],"addin":"0.75 oz brown sugar syrup, 0.02 oz ground cinnamon","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Oat version of your best signature. Price includes the oat upcharge"},{"name":"Vanilla Matcha Latte","sec":"specialty","price":5.25,"iced":70,"sold":5,"recipe":[["milk",7,false],["matcha",3,false],["c1790286298153",0.5,true]],"addin":"0.5 oz vanilla syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Sweetened matcha. Matcha drives the cost"},{"name":"Dirty Chai","sec":"specialty","price":5.5,"iced":60,"sold":5,"recipe":[["milk",4.5,false],["chai",4.5,false],["beans",18,false]],"addin":"","aliases":[],"budgetHot":0,"budgetIced":0,"season":"any","note":"Chai latte plus a double shot"},{"name":"Honey Lavender Matcha","sec":"signature","price":5.5,"iced":70,"sold":5,"recipe":[["milk",7,false],["matcha",3,false],["lavender",0.5,true],["honey",0.25,true]],"addin":"0.5 oz lavender syrup, 0.25 oz honey syrup","aliases":[],"budgetHot":0,"budgetIced":0,"season":"spring","note":"Needs lavender and honey"}],"retired":[],"archive":[{"week":"2026-09-21","at":"2026-09-26T18:12:49.528Z","name":"Banana Bread Latte","sec":"specialty","price":4.5,"iced":100,"cogs":0.805,"margin":0.821,"addin":0,"recipe":"2% milk 6 oz, Espresso beans, Lavazza 18 g","lines":[{"id":"milk","q":6,"addin":false,"serve":"both"},{"id":"beans","q":18,"addin":false,"serve":"both"}],"retired":false},{"week":"2026-09-21","at":"2026-09-26T18:12:49.528Z","name":"Caramel Apple Spice Cider","sec":"specialty","price":4,"iced":0,"cogs":0.558,"margin":0.86,"addin":0.39,"recipe":"Apple cider 10 oz","lines":[{"id":"cider","q":10,"addin":true,"serve":"both"}],"retired":false}],"addons":{"altCharge":0.5,"syrupAttach":14,"syrupCharge":0.25,"syrupOz":0.75,"foamAttach":4,"foamCharge":0.5,"shotCharge":1,"oatPct":20,"almPct":8,"almCharge":0.5,"wholePct":85},"fees":{"cardPct":2.7,"cardFix":0.1,"txn":1,"feePct":30,"charityPct":10},"pilot":{"weekends":4,"sponsor":250,"perMonth":4,"perTerm":13,"cap":0.5,"pool":20,"curve":{"sat":[{"d":2,"peak":"","note":""},{"d":8,"peak":"","note":""},{"d":14,"peak":"","note":""},{"d":16,"peak":"","note":""},{"d":14,"peak":"","note":""},{"d":10,"peak":"","note":""},{"d":7,"peak":"","note":""},{"d":5,"peak":"","note":""},{"d":4,"peak":"","note":""},{"d":3,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""}],"sun":[{"d":0,"peak":"","note":""},{"d":4,"peak":"","note":""},{"d":6,"peak":"","note":""},{"d":8,"peak":"","note":""},{"d":10,"peak":"","note":""},{"d":11,"peak":"","note":""},{"d":12,"peak":"","note":""},{"d":12,"peak":"","note":""},{"d":11,"peak":"","note":""},{"d":10,"peak":"","note":""},{"d":8,"peak":"","note":""},{"d":6,"peak":"","note":""},{"d":4,"peak":"","note":""},{"d":0,"peak":"","note":""},{"d":0,"peak":"","note":""}]}},"buy":[{"v":"Costco","item":"Califia Farms Cafe Oat, barista","pack":"6 x 32 oz","qty":2,"price":14.99,"on":true,"st":[["oat",192]]},{"v":"Costco","item":"Califia Farms Cafe Almond, barista","pack":"6 x 32 oz","qty":1,"price":17.99,"on":true,"st":[["almond",192]]},{"v":"Costco","item":"Kirkland Signature 2% milk","pack":"1 gallon","qty":1,"price":3.91,"on":true,"st":[["milk",128]]},{"v":"Costco","item":"Kirkland Signature whole milk","pack":"1 gallon","qty":5,"price":3.99,"on":true,"st":[["wholemilk",128]]},{"v":"Costco","item":"Land O'Lakes heavy whipping cream","pack":"32 oz","qty":2,"price":4.13,"on":true,"st":[["cream",32]]},{"v":"Costco","item":"Kirkland organic strawberries, frozen","pack":"4 lb bag","qty":1,"price":11.67,"on":true,"st":[["strawberry",61]]},{"v":"Costco","item":"Kirkland Signature apple cider","pack":"2 x 1 gallon","qty":1,"price":9.99,"on":true,"st":[["cider",256]]},{"v":"Amazon","item":"Ice scoop","pack":"","qty":1,"price":6.59,"on":true},{"v":"Amazon","item":"Swing top bottle","pack":"","qty":1,"price":12.99,"on":true},{"v":"Amazon","item":"Bottle funnels","pack":"","qty":1,"price":5.99,"on":true},{"v":"Amazon","item":"Espresso knock box","pack":"","qty":1,"price":29.98,"on":true},{"v":"Amazon","item":"WDT espresso leveler","pack":"","qty":1,"price":19.99,"on":true},{"v":"Amazon","item":"Spring loaded espresso tamper","pack":"","qty":1,"price":29.99,"on":true},{"v":"Amazon","item":"Espresso and matcha scale","pack":"","qty":1,"price":30.39,"on":true},{"v":"Amazon","item":"Espresso shot cups","pack":"","qty":1,"price":15.99,"on":true},{"v":"Amazon","item":"Milk frothing pitchers","pack":"","qty":1,"price":23.99,"on":true},{"v":"Amazon","item":"12 oz plastic squeeze bottles","pack":"6 pack","qty":1,"price":9.85,"on":true},{"v":"Amazon","item":"Mesh strainer, 7 inch","pack":"","qty":1,"price":12.63,"on":true},{"v":"Amazon","item":"Handheld milk frother, drink whisk","pack":"","qty":1,"price":23.39,"on":true},{"v":"Amazon","item":"Clear drink shakers, measuring shots","pack":"2 pack","qty":1,"price":16.99,"on":true},{"v":"Amazon","item":"Rolling cooler (if Hopper has none)","pack":"","qty":1,"price":124.99,"on":true},{"v":"Amazon","item":"Hot cups, lids, sleeves, stirrers, 12 oz","pack":"100 ct","qty":1,"price":19.99,"on":true,"st":[["cup_hot",100],["lid_hot",100],["sleeve",100]]},{"v":"Amazon","item":"Iced cups and lids, 16 oz","pack":"200 ct","qty":1,"price":29.95,"on":true,"st":[["cup_cold",200],["lid_cold",200]]},{"v":"Amazon","item":"Tazo chai concentrate, 32 oz","pack":"4 pack","qty":1,"price":23.52,"on":true,"st":[["chai",128]]},{"v":"Amazon","item":"Lavazza Gran Espresso, whole bean 2.2 lb","pack":"2 pack","qty":1,"price":65.99,"on":true,"st":[["beans",1996]]},{"v":"Amazon","item":"Matcha ceremonial blend, 100 g","pack":"2 pack","qty":1,"price":79.98,"on":true,"st":[["matcha",200]]},{"v":"Monin","item":"Five syrups plus pumps","pack":"5 x 750 ml","qty":1,"price":78.75,"on":true,"st":[["syrup",126.8]]}],"charges":[{"name":"Reusable bar tools and cooler","amount":363.75}],"ops":{"open":8,"close":17,"shiftN":2},"cal":{"rules":[],"open":["2026-10-03","2026-10-10","2026-10-11","2026-10-17","2026-10-18","2026-10-31","2026-11-01"],"closed":[]},"pattern":{"0":[{"start":10,"end":13,"seats":2},{"start":13,"end":15,"seats":2},{"start":15,"end":18,"seats":2}],"5":[{"start":8,"end":12.5,"seats":2},{"start":12.5,"end":17,"seats":2}],"6":[{"start":10,"end":13,"seats":2},{"start":13,"end":15,"seats":2},{"start":15,"end":18,"seats":2}]},"orders":{"2026-09-28":{"qty":{"milk":2,"cider":2,"wholemilk":4,"c1790286443536":1,"c1790286655331":1,"matcha":2,"oat":2},"notes":{"BJs":""}}},"team":[{"name":"Rishit Shaquib","email":"","phone":"","year":"","role":"","trained":false,"rule":{},"off":[]},{"name":"Karen Mei","email":"","phone":"","year":"","role":"","trained":false,"rule":{},"off":[]},{"name":"Hanah Park","email":"hanah.park@yale.edu","phone":"","year":"2030","role":"Barista","trained":true,"rule":{"0":[{"s":10,"e":13}],"6":[{"s":10,"e":13}]},"off":[]},{"name":"Alejandro Quintero Cashore","email":"alejandro.quinterocashore@yale.edu","phone":"","year":"2030","role":"Barista","trained":true,"rule":{"6":[{"s":10,"e":13}]},"off":[]},{"name":"Audrey Bae","email":"audrey.bae@yale.edu","phone":"","year":"2028","role":"Barista","trained":false,"rule":{"0":[{"s":13,"e":16}],"6":[{"s":10,"e":13},{"s":13,"e":16}]},"off":[]},{"name":"Ted Clarke","email":"edward.clarke@yale.edu","phone":"","year":"2028","role":"Barista, Support","trained":false,"rule":{"0":[{"s":10,"e":13}],"6":[{"s":10,"e":13},{"s":13,"e":16},{"s":16,"e":19}]},"off":[]},{"name":"Ayna Sibtain","email":"ayna.sibtain@yale.edu","phone":"","year":"2028","role":"Barista, Support","trained":false,"rule":{"0":[{"s":13,"e":16},{"s":16,"e":19}],"6":[{"s":10,"e":13}]},"off":[]},{"name":"Hanah Barnes","email":"hanah.barnes@yale.edu","phone":"","year":"2030","role":"Barista","trained":true,"rule":{"0":[{"s":10,"e":13},{"s":13,"e":16}],"6":[{"s":10,"e":13},{"s":13,"e":16}]},"off":[]},{"name":"Hazel Dye","email":"hazel.dye@yale.edu","phone":"","year":"2029","role":"Barista","trained":true,"rule":{"6":[{"s":10,"e":13},{"s":13,"e":16},{"s":16,"e":19}]},"off":[]},{"name":"Hailey Talbert","email":"hailey.talbert@yale.edu","phone":"","year":"2027","role":"Barista, Support","trained":false,"rule":{"0":[{"s":10,"e":13},{"s":13,"e":16},{"s":16,"e":19}],"6":[{"s":10,"e":13},{"s":13,"e":16},{"s":16,"e":19}]},"off":[]},{"name":"Kalina Brookfield","email":"kalina.brookfield@yale.edu","phone":"","year":"2028","role":"Barista, Support, Marketing","trained":true,"rule":{"0":[{"s":10,"e":13},{"s":13,"e":16},{"s":16,"e":19}],"6":[{"s":13,"e":16},{"s":16,"e":19}]},"off":[]},{"name":"Michelle Cheon","email":"michelle.cheon@yale.edu","phone":"","year":"2028","role":"Barista, Marketing","trained":false,"rule":{"0":[{"s":16,"e":19}],"6":[{"s":16,"e":19}]},"off":[]},{"name":"Sophia Le","email":"sophia.le@yale.edu","phone":"","year":"2029","role":"Barista","trained":true,"rule":{"0":[{"s":13,"e":16},{"s":16,"e":19}],"6":[{"s":13,"e":16},{"s":16,"e":19}]},"off":[]},{"name":"Rachel Mak","email":"rachel.mak@yale.edu","phone":"","year":"2028","role":"Barista, Marketing","trained":false,"rule":{"0":[{"s":13,"e":16}],"6":[{"s":10,"e":13}]},"off":[]}],"days":{"2026-10-03":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","","","",""]},"2026-10-04":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-10":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-11":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-17":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-18":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-24":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-25":{"kind":"pilot","open":10,"close":18,"n":3,"names":["","",""]},"2026-10-06":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-07":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-08":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-09":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-12":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-13":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-14":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-15":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-16":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-19":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-20":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-21":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-22":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-10-23":{"kind":"ops","open":8,"close":17,"n":2,"names":["",""]},"2026-09-24":{"kind":"pilot","open":8,"close":17,"n":2,"names":["",""]},"2026-10-31":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-01":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-09-26":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-09-27":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-07":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-08":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-14":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-15":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-21":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-22":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-28":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-11-29":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-12-05":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-12-06":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-12-12":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18},"2026-12-13":{"kind":"pilot","names":["","",""],"n":3,"open":10,"close":18}},"weeks":{},"batch":{"target":50,"budget":60,"drinks":{"bananabreadlatte":{"on":true,"n":null},"caramelapplespicecider":{"on":true,"n":null},"brownsugarshakenespresso":{"on":false,"n":null},"strawberrymatchalatte":{"on":true,"n":null}}},"track":{"dates":["2026-10-03","2026-10-10","2026-10-11","2026-10-17","2026-10-18","2026-10-31","2026-11-01"],"cover":1,"buffer":25,"useSales":false},"exp":{"wdOpen":9,"wdClose":17,"wkOpen":10,"wkClose":19,"wdDays":5,"wkDays":2,"shiftN":4,"staff":{"wd":[1,1,1,1,1,1],"wk":[1,1,1,1,1,1]},"tput":15,"wage":17,"mgrRate":18,"mgrHrs":5,"load":0,"budget":6000,"curve":{"wd":[0,0,0,17.1,19.9,17.1,19.9,17.1,14.1,11.4,8.5,0,0,0,0,0],"wk":[0,0,2,5.5,10.1,12.7,14.5,15.2,13.9,12,9.5,8.3,3.9,2,0,0]}}};
+
+/* ------------------------------------------------------------------ fixed recipes
+   From Good-Graces-Recipes-and-Diagrams.md (bar sheets, Oct 22 2026). A build is a list of [ingredient id, amount]:
+   "milk" is 2% unless the customer swaps it, ["syrup", pumps, flavor] costs at the standard pump price, ["foam", oz] is the
+   cold foam batch. Matcha mix is 50 g matcha in 700 mL, so a 50 g pour holds about 3.6 g of matcha. Strawberry purée is
+   300 g berries and 200 g sugar, so 30 g holds 18 g (0.63 oz) of berries. Specialty lattes are built like an iced latte, never
+   in the shaker: 2 pumps (20 g) of syrup, the shot over the syrup and stir, ice, then milk to the line. To change a recipe, change it here. */
+const MENU = [
+  {id:"latte", name:"Latte", code:"LAT", sec:"core", price:4.50, serve:"both", milk:true, base:true,
+   iced:[["beans",18],["milk",10]], hot:[["beans",18],["milk",8]]},
+  {id:"cappuccino", name:"Cappuccino", code:"CAP", sec:"core", price:4.00, serve:"hot", milk:true, hot:[["beans",18],["milk",6]]},
+  {id:"americano", name:"Americano", code:"AME", sec:"core", price:3.50, serve:"both", base:true, iced:[["beans",18]], hot:[["beans",18]]},
+  {id:"chai", name:"Chai Latte", aliases:["Chai","CHAI"], code:"CHAI", sec:"core", price:4.50, serve:"both", milk:true, base:true,
+   iced:[["chai",5.1],["milk",3.4]], hot:[["chai",6],["milk",6]]},
+  {id:"matcha", name:"Matcha Latte", aliases:["Matcha","MAT"], code:"MAT", sec:"core", price:5.00, serve:"both", milk:true, base:true,
+   iced:[["milk",10],["matcha",3.6]], hot:[["matcha",3.6],["milk",8]]},
+  {id:"londonfog", name:"London Fog", code:"FOG", sec:"core", price:3.50, serve:"hot", milk:true, hot:[["syrup",1,"vanilla"],["tea",1],["milk",6]]},
+  {id:"espresso", name:"Espresso", aliases:["Espresso Shot"], code:"ESP", sec:"core", price:1.00, serve:"hot", hot:[["beans",18]]},
+  {id:"bsoe", name:"Brown Sugar Oat Shaken Espresso", aliases:["Brown Sugar Shaken Espresso","Brown Sugar Oatmilk Shaken Espresso","BSOE"], code:"BSOE", sec:"signature", season:"", price:5.00, serve:"iced",
+   iced:[["syrup",2,"brown sugar"],["beans",18],["cinnamon",0.02],["oat",6]]},
+  {id:"smat", name:"Strawberry Matcha Latte", aliases:["Strawberry Matcha","SMAT"], code:"SMAT", sec:"signature", season:"spring", price:5.50, serve:"iced", milk:true,
+   iced:[["strawberry",0.63],["milk",9],["matcha",3.6]]},
+  {id:"bbl", name:"Banana Bread Latte", aliases:["BBL"], code:"BBL", sec:"specialty", season:"fall", price:5.00, serve:"iced", milk:true,
+   iced:[["syrup",2,"banana"],["beans",18],["milk",10],["syrup",0.5,"banana"]]},   // the drizzle on top counts as half a pump
+  {id:"cider", name:"Caramel Apple Spice Cider", aliases:["Caramel Apple Cider","CID"], code:"CID", sec:"specialty", season:"fall", price:4.50, serve:"hot",
+   hot:[["syrup",1,"cinnamon"],["cider",8],["foam",1.69],["syrup",1,"caramel"]]}   // 50 mL cold foam
+];
+const FOAM = {cream:500 / 875, milk:325 / 875, vanilla:50 / 875};   // cold foam batch: 500 mL cream, 325 mL 2% milk, 50 mL vanilla
+const PUMP_OZ = 0.25, FOAM_OZ = 50 / 29.5735;   // a pump is 1/4 oz; cold foam is always 50 mL
+const SECS = [["core","Core menu"],["signature","Signature drinks"],["specialty","Specialty drinks"]];
+const SERVE_TAG = {hot:"Hot", iced:"Iced", both:"Hot or iced"};
+const BUILDER_BASES = ["latte","matcha","chai","americano"];
+const SEASONS = [["fall","Fall"],["winter","Winter"],["spring","Spring"],["summer","Summer"],["","Any season"]];
+const seasonName = v => (SEASONS.find(x => x[0] === (v || "")) || SEASONS[4])[1];
+/* a first guess from the name, for drinks made before seasons existed; set it in the drink bank */
+function guessSeason(n){ n = String(n || "").toLowerCase();
+  if (/pumpkin|apple|cider|maple|pecan|harvest|spice|banana bread|cinnamon|caramel/.test(n)) return "fall";
+  if (/peppermint|gingerbread|eggnog|mocha|hot chocolate|holiday|toffee|candy cane|snow/.test(n)) return "winter";
+  if (/lavender|rose|honey|cherry|blossom|floral|strawberry/.test(n)) return "spring";
+  if (/coconut|mango|peach|lemon|raspberry|blueberry|watermelon|tropical/.test(n)) return "summer";
+  return ""; }
+
+/* every drink, fixed and built, as one shape: {id, name, aliases, sec, price, serve, milk, iced, hot, sp?} */
+const menuPrice = d => S.prices[d.id] != null && isFinite(+S.prices[d.id]) ? +S.prices[d.id] : d.price;
+function baseDef(id){
+  const m = MENU.find(x => x.id === id && x.base); if (m) return m;
+  const b = (S.bases || []).find(x => x.id === id); if (!b) return null;
+  const L = [[b.ing, +b.oz || 8]];
+  return {id:b.id, name:b.name, milk:false, iced:L, hot:L, custom:true};
+}
+/* a built drink's syrups, [{id, pumps}]; older drinks have one syrup in sp.syrup and sp.pumps */
+const syrupsOf = sp => Array.isArray(sp.syrups) && sp.syrups.length ? sp.syrups : sp.syrup ? [{id:sp.syrup, pumps:+sp.pumps || 2}] : [];
+const pumpsText = sys => sys.map(x => `${+x.pumps === 1 ? "1 pump" : "2 pumps"} ${flavorName(x.id).toLowerCase()}`).join(" and ");
+/* a built drink's price from its recipe: the base drink's price (the higher one in a 50/50), one syrup charge per 2 pumps,
+   cold foam (a pump frothed in is included), the alt milk charge when the standard milk isn't 2% (cider counts as alt), an extra shot */
+const recipeHasMilk = r => ["iced","hot"].some(sv => recipeSteps(r, sv).some(s => s.lines.some(l => l[0] === (milkOf(r) || "milk"))));
+function priceParts(r){
+  const A = S.addons, base = r.bases.map(id => MENU.find(x => x.id === id && x.base)).map(m => m || MENU[0]).sort((a, b) => menuPrice(b) - menuPrice(a))[0] || MENU[0];
+  const pumps = r.syrups.reduce((s, x) => s + (+x.pumps || 2), 0), mk = milkOf(r), shots = (r.extras || []).filter(x => x.t === "shot").length, esp = MENU.find(x => x.id === "espresso");
+  return [[base.name, menuPrice(base)], pumps ? [`syrup, ${pumps} ${pumps === 1 ? "pump" : "pumps"}`, Math.ceil(pumps / 2) * (+A.syrupCharge || 0)] : null, r.foam ? ["cold foam", +A.foamCharge || 0] : null,
+    mk && recipeHasMilk(r) ? [milkName(mk), mk === "almond" ? +(A.almCharge ?? A.altCharge) || 0 : +A.altCharge || 0] : null, shots ? [shots === 1 ? "extra shot" : `${shots} extra shots`, shots * menuPrice(esp)] : null].filter(Boolean);
+}
+const autoPrice = r => Math.round(priceParts(r).reduce((s, [, v]) => s + v, 0) * 100) / 100;
+const priceText = r => priceParts(r).map(([l, v], i) => `${i ? l : l.replace(/ Latte$/, "")} ${F.usd2(v)}`).join(" + ") + ` = ${F.usd2(autoPrice(r))}`;
+function specialDef(sp){
+  const r = recipeOf(sp), serve = ["iced","hot","both"].includes(sp.serve) ? sp.serve : "both", lines = sv => recipeSteps(r, sv).flatMap(st => st.lines);
+  const iced = serve === "hot" ? null : lines("iced"), hot = serve === "iced" ? null : lines("hot");
+  return {id:sp.id, name:sp.name, aliases:sp.aliases || [], sec: sp.sec === "signature" ? "signature" : "specialty", season: sp.season != null ? sp.season : guessSeason(sp.name),
+          price: sp.ownPrice === false ? autoPrice(r) : +sp.price || 0, serve, milk:[].concat(iced || [], hot || []).some(l => l[0] === "milk"), sp, iced, hot};
+}
+const fixedDef = m => { const a = m.sec !== "core" && S.assign[m.id] || {};
+  return Object.assign({}, m, {price:menuPrice(m)}, m.sec === "core" ? {} : {sec: a.sec || m.sec, season: a.season != null ? a.season : m.season || ""}); };
+/* signature or specialty, and the season, live on the special itself or in S.assign for a fixed drink */
+function setMeta(d, k, v){ if (d.sp) d.sp[k] = v; else (S.assign[d.id] || (S.assign[d.id] = {}))[k] = v; }
+function setOn(d, on){ if (d.sp) d.sp.on = on; else S.off = on ? S.off.filter(id => id !== d.id) : [...new Set(S.off.concat(d.id))]; }
+const syrupOf = d => { const L = (d.iced || d.hot || []).find(x => x[0] === "syrup"); return L ? flavorName(L[2]) : ""; };
+const allDrinks = () => MENU.map(fixedDef).concat((S.specials || []).map(specialDef));
+const isOn = d => d.sp ? d.sp.on !== false : !(S.off || []).includes(d.id);
+const liveDrinks = () => allDrinks().filter(isOn);
+/* one day's menu: core drinks as usual, plus the signature and specialty drinks set for that date in This week's menu, or the
+   usual ones (on in the drink bank) for a day nobody changed */
+const dayList = date => Array.isArray(S.dayMenu[date]) ? S.dayMenu[date] : null;
+const menuFor = date => { const L = dayList(date); return allDrinks().filter(d => d.sec === "core" ? isOn(d) : L ? L.includes(d.id) : isOn(d)); };
+const logDay = () => UI.opt && !UI.opt.now && $("logDate").value ? $("logDate").value : ymd(new Date());
+const drinkById = id => allDrinks().find(d => d.id === id) || null;
+function findDrink(name, id){
+  if (id){ const d = drinkById(id); if (d) return d; }
+  const n = norm(name); if (!n) return null;
+  return allDrinks().find(d => [d.name].concat(d.aliases || [], d.code ? [d.code] : []).map(norm).includes(n)) || null;   // the register code (LAT) counts too
+}
+const servesOf = d => d.serve === "both" ? ["iced","hot"] : [d.serve];
+
+/* ------------------------------------------------------------------ costs */
+const ingOf = id => S.ingredients.find(g => g.id === id) || S.packaging.find(p => p.id === id);
+const perUnit = id => { const g = ingOf(id); return g && +g.size > 0 ? (+g.price || 0) / +g.size : 0; };
+const wholeF = () => Math.min(100, Math.max(0, +S.addons.wholePct || 0)) / 100;   // dairy is mostly whole milk
+const syrupItems = () => S.ingredients.filter(i => /syrup|sauce/i.test(i.name || ""));
+const syrupShort = i => (String(i.name || "").replace(/\(.*?\)/g, "").replace(/\b(monin|torani|davinci|ghirardelli|premium|flavoring|syrup)\b/gi, "").replace(/,/g, " ").replace(/\s+/g, " ").trim()) || i.name;
+/* the standard pump: average cost per oz of the pumped syrups (Monin 1 L bottles, priced from the invoice), times 0.25 oz */
+function stdPump(){
+  const xs = syrupItems().filter(i => /syrup/i.test(i.name) && +i.price > 0 && +i.size > 0 && /^(fl )?oz$/i.test(i.unit || "oz"));
+  return xs.length ? xs.reduce((s,i) => s + i.price / i.size, 0) / xs.length * PUMP_OZ : 0.07;
+}
+const flavorId = f => { if (!f) return ""; const L = syrupItems(); if (L.some(i => i.id === f)) return f;
+  const k = norm(f); const m = L.find(i => norm(i.name).includes(k)); return m ? m.id : ""; };
+const flavorName = f => { const g = S.ingredients.find(i => i.id === flavorId(f)); return g ? syrupShort(g) : String(f || "syrup"); };
+/* one build, expanded to stock lines [{id, q, cost}] for one cup with the customer's milk */
+function expand(lines, milk){
+  const out = [], wf = wholeF(), sp = stdPump();
+  const push = (id, q, cost) => { if (q > 0) out.push({id, q, cost: cost != null ? cost : q * perUnit(id)}); };
+  const dairy = q => { if (milk === "oat") push("oat", q); else if (milk === "almond") push("almond", q); else { push("wholemilk", q * wf); push("milk", q * (1 - wf)); } };
+  (lines || []).forEach(([id, q, x]) => {
+    q = +q || 0;
+    if (id === "milk") dairy(q);
+    else if (id === "syrup") push(flavorId(x), q * PUMP_OZ, q * sp);
+    else if (id === "foam"){ push("cream", q * FOAM.cream); push("wholemilk", q * FOAM.milk * wf); push("milk", q * FOAM.milk * (1 - wf)); push(flavorId("vanilla"), q * FOAM.vanilla, q * FOAM.vanilla / PUMP_OZ * sp); }
+    else push(id, q);
+  });
+  return out;
+}
+const kitOf = serve => S.packaging.filter(p => p.kit === serve || p.kit === "both");
+const kitCost = serve => kitOf(serve).reduce((s,p) => s + perUnit(p.id), 0);
+const buildOf = (d, serve) => d[serve] ? serve : d.iced ? "iced" : "hot";
+function costOf(d, serve, milk){ const s = buildOf(d, serve); return expand(d[s], milk).reduce((t,l) => t + l.cost, 0) + kitCost(s); }
+const foamCost = () => expand([["foam", FOAM_OZ]]).reduce((s,l) => s + l.cost, 0);
+const marginOf = (price, cost) => price > 0 ? (price - cost) / price : 0;
+const mCls = v => "m" + (v < 0 ? " neg" : v < 0.65 ? " low" : "");
+
+/* ---------------------------------------------------------------- helpers */
+const getPath = (o,p) => p.split(".").reduce((a,k) => a == null ? undefined : a[k], o);
+const setPath = (o,p,v) => { const ks = p.split("."); const last = ks.pop(); const t = ks.reduce((a,k) => a[k], o); t[last] = v; };
+const esc = s => String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+const fin = n => (isFinite(n) ? n : 0);
+const F = {
+  usd0: n => fin(n).toLocaleString("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}),
+  usd2: n => fin(n).toLocaleString("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}),
+  usd3: n => (fin(n) < 0 ? "-$" : "$") + Math.abs(fin(n)).toFixed(3),
+  usd4: n => "$" + fin(n).toFixed(4),
+  int:  n => Math.round(fin(n)).toLocaleString("en-US"),
+  n1:   n => fin(n).toFixed(1),
+  n2:   n => fin(n).toFixed(2),
+  pct:  n => fin(n).toFixed(0) + "%",
+  pct1: n => fin(n).toFixed(1) + "%",
+  frac: n => (fin(n) * 100).toFixed(0) + "%",
+  frac1:n => (fin(n) * 100).toFixed(1) + "%",
+  swipe:n => fin(n).toFixed(2) + " per drink",
+  hrs:  n => fin(n).toFixed(0) + " hrs",
+  x:    n => fin(n).toFixed(0) + "%",
+  days: n => fin(n).toFixed(0) + (Math.round(fin(n)) === 1 ? " service day" : " service days")
+};
+const set = (id, t) => { const el = $(id); if (el) el.textContent = t; };
+const tfmt = x => { let h = Math.floor(x + 1e-9), m = Math.round((x - h) * 60); if (m === 60) { h++; m = 0; }
+  const ap = (h % 24) < 12 ? "am" : "pm"; const h12 = ((h + 11) % 12) + 1; return h12 + (m ? ":" + String(m).padStart(2,"0") : "") + ap; };
+const hl = h => (((h + 11) % 12) + 1) + (h < 12 ? " am" : " pm");
+const pad2 = n => String(n).padStart(2, "0");
+const ymd = dt => `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+const hm = dt => `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+const toDate = s => { const [y,m,d] = String(s).split("-").map(Number); return new Date(y, (m || 1) - 1, d || 1); };
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmtD = s => { if (!s) return ""; const d = toDate(s); return `${DOW[d.getDay()]} ${MON[d.getMonth()]} ${d.getDate()}`; };
+const fmtT = s => { const [h,m] = String(s).split(":").map(Number); return tfmt((h || 0) + (m || 0) / 60); };
+const norm = s => String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9]/g, "");
+const fmtQty = (v, unit) => { const a = Math.abs(v); const n = a >= 100 ? Math.round(v).toLocaleString("en-US") : (Math.round(v * 10) / 10).toString(); return `${n} ${unit}`; };
+const weekOf = s => { const d = toDate(s), dow = (d.getDay() + 6) % 7; return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow)); };
+const addDays = (s, k) => { const d = toDate(s); return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() + k)); };
+function toast(id, msg, undo){ const el = $(id); if (!el) return; el.innerHTML = esc(msg) + (undo ? ` <button data-act="undo">Undo</button>` : ""); }
+function saveError(e){ const c = e && e.code; return (c === "quota_exceeded" || c === "resource-exhausted") ? "Storage is full. Delete old entries or upload sales in bigger batches." : (c === "invalid_argument" || c === "permission-denied") ? "You can view this page but not change its data." : c === "invalid-argument" ? "That entry is too large or has invalid data." : "Could not save. Check your connection and try again."; }
+function syncChecks(){ document.querySelectorAll("input[type=checkbox][data-bind]").forEach(el => { const v = getPath(S, el.dataset.bind); if (typeof v === "boolean" || v == null) el.checked = v == null ? el.checked : !!v; }); }
+function ensureDates(){
+  const t = S.track;
+  if (!Array.isArray(t.dates)) t.dates = [];
+}
+function ruleDates(rl){
+  const out = [], end = rl.until || addDays(rl.from, 7 * 26);
+  for (let d = rl.from; d <= end && out.length < 500; d = addDays(d, 1)) if ((rl.dows || []).includes(toDate(d).getDay())) out.push(d);
+  return out;
+}
+function ruleFor(d){ return (S.cal.rules || []).slice().reverse().find(rl => d >= rl.from && (!rl.until || d <= rl.until) && (rl.dows || []).includes(toDate(d).getDay())); }
+function calDates(){
+  const set_ = new Set(S.cal.open); S.cal.rules.forEach(rl => ruleDates(rl).forEach(d => set_.add(d)));
+  S.cal.closed.forEach(d => set_.delete(d));
+  return [...set_].sort();
+}
+function setDates(list){
+  const want = new Set(list.filter(Boolean)), cur = new Set(calDates()), ruled = new Set(S.cal.rules.flatMap(ruleDates));
+  want.forEach(d => { if (cur.has(d)) return; S.cal.closed = S.cal.closed.filter(x => x !== d); if (!ruled.has(d) && !S.cal.open.includes(d)) S.cal.open.push(d); });
+  cur.forEach(d => { if (want.has(d)) return; S.cal.open = S.cal.open.filter(x => x !== d); if (ruled.has(d) && !S.cal.closed.includes(d)) S.cal.closed.push(d); });
+  syncCalDates();
+}
+function syncCalDates(){
+  S.track.dates = calDates();
+  S.track.dates.forEach(ensureDay);
+  markDirty(); syncFields(); recalc();
+}
+
+/* ------------------------------------------------------------------ sales lines
+   A sales document {kind:"tap"|"upload", at, lines}. A line is one drink or food item:
+   {d:"YYYY-MM-DD", tm:"HH:MM", k:name, id, q, ice, milk:"dairy|oat|almond", sy:syrup ingredient id or false, pumps, fo, p:unit revenue}
+   Food lines carry food:"pastry". Older lines may have sy:true (house syrup) and no id. */
+const isFood = l => !!(l && l.food);
+const lineDrink = l => isFood(l) ? null : findDrink(l.k, l.id);
+const syOf = l => !l || !l.sy ? "" : l.sy === true ? flavorId("vanilla") : String(l.sy);
+const serveOfLine = (l, d) => d.serve === "both" ? (l.ice ? "iced" : "hot") : d.serve;
+function lineRevenue(l, d){
+  if (isFood(l)) return +S.pastry.price || 0;
+  const A = S.addons, milkSwap = d.milk && (l.milk === "oat" || l.milk === "almond");
+  return d.price + (milkSwap ? (l.milk === "oat" ? +A.altCharge : +(A.almCharge ?? A.altCharge)) || 0 : 0) + (l.sy ? +A.syrupCharge || 0 : 0) + (l.fo ? +A.foamCharge || 0 : 0);
+}
+/* stock used by q of this line: the build, the customer's milk, added syrup and foam, and the cup kit */
+function lineUsage(l, d, q, add){
+  const sv = serveOfLine(l, d), milk = d.milk ? l.milk : "dairy";
+  expand(d[buildOf(d, sv)], milk).forEach(x => add(x.id, x.q * q));
+  if (l.sy) add(syOf(l), (+l.pumps || 2) * PUMP_OZ * q);
+  if (l.fo) expand([["foam", FOAM_OZ]]).forEach(x => add(x.id, x.q * q));
+  kitOf(buildOf(d, sv)).forEach(p => add(p.id, q));
+}
+function lineCost(l, d){
+  if (isFood(l)) return +S.pastry.cost || 0;
+  const sv = serveOfLine(l, d);
+  return costOf(d, sv, d.milk ? l.milk : "dairy") + (l.sy ? (+l.pumps || 2) * stdPump() : 0) + (l.fo ? foamCost() : 0);
+}
+const lineDesc = l => isFood(l) ? esc(l.k || "Pastry") : `${esc(l.k)}${l.ice ? ", iced" : ""}${l.milk && l.milk !== "dairy" ? ", " + l.milk : ""}${l.sy ? `, ${+l.pumps === 1 ? "1 pump" : (+l.pumps || 2) + " pumps"} ${esc(flavorName(syOf(l)).toLowerCase())}` : ""}${l.fo ? ", cold foam" : ""}`;
+const allLines = () => { const out = []; Store.sales.forEach(doc => (doc.lines || []).forEach(l => { if (+l.q > 0) out.push({l, doc}); })); return out; };
+
+/* ------------------------------------------------------------------ log sales */
+const DRINK_ICON = {cup:"<path d=\"M5 8h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5V8Z\"/><path d=\"M16 9h1.5a2.5 2.5 0 0 1 0 5H16\"/><path d=\"M8 3v2M11 3v2\"/>",
+  glass:"<path d=\"M6 3h12l-1.5 17a1.5 1.5 0 0 1-1.5 1.4H9a1.5 1.5 0 0 1-1.5-1.4L6 3Z\"/><path d=\"M7 9h10\"/>",
+  food:"<path d=\"M4 15c0-4.4 3.6-8 8-8s8 3.6 8 8\"/><path d=\"M3 15h18v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2Z\"/><path d=\"M9 7.5 8 5M15 7.5l1-2.5\"/>"};
+function renderDrinkGrid(){
+  const L = menuFor(logDay());
+  const btn = d => `<button class="dbtn s-${d.sec}" data-act="pick" data-id="${esc(d.id)}"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${d.serve === "iced" ? DRINK_ICON.glass : DRINK_ICON.cup}</svg></span><b>${esc(d.name)}</b><span class="p">${F.usd2(d.price)}, ${SERVE_TAG[d.serve].toLowerCase()}</span></button>`;
+  const group = (label, xs) => xs.length ? `<div class="ghead">${label}</div>` + xs.map(btn).join("") : "";
+  $("drinkGrid").innerHTML = group("Core menu", L.filter(d => d.sec === "core"))
+    + group("Signature drinks", L.filter(d => d.sec === "signature"))
+    + group("Specialty drinks", L.filter(d => d.sec === "specialty"))
+    + `<div class="ghead">Food</div><button class="dbtn food" data-act="pastry"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${DRINK_ICON.food}</svg></span><b>Pastry</b><span class="p">${F.usd2(+S.pastry.price || 0)}</span></button>`;
+}
+/* the modifier sheet: one drink, its options, then Add */
+function openMod(id){
+  const d = drinkById(id); if (!d) return;
+  UI.mod = {id, ice: d.serve !== "hot", milk:"dairy", sy:"", pumps:2, fo:false, q:1};
+  renderMod(); const dl = $("modDlg"); if (!dl.open) dl.showModal();
+}
+function renderMod(){
+  const m = UI.mod, d = m && drinkById(m.id); if (!d) return;
+  const line = {k:d.name, id:d.id, ice:m.ice, milk:m.milk, sy:m.sy || false, pumps:m.pumps, fo:m.fo};
+  const each = lineRevenue(line, d), hidden = new Set(S.syrHide || []);
+  const seg = (act, opts, cur) => `<div class="segc">${opts.map(([l,v]) => `<button class="${cur === v ? "on" : ""}" data-act="${act}" data-v="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
+  $("modBody").innerHTML = `<div class="mh"><div><h2 id="modTitle">${esc(d.name)}</h2><div class="p">${F.usd2(d.price)}${d.sp ? "" : d.code ? ` · ${esc(d.code)}` : ""}</div></div><button class="x" data-act="modClose" aria-label="Close">✕</button></div>`
+    + (d.serve === "both" ? `<div class="mrow"><span class="ol">Serve</span>${seg("mIce", [["Iced","1"],["Hot","0"]], m.ice ? "1" : "0")}</div>` : "")
+    + (d.milk ? `<div class="mrow"><span class="ol">Milk</span>${seg("mMilk", [["2%","dairy"],[`Oat +${F.usd2(S.addons.altCharge)}`,"oat"],[`Almond +${F.usd2(S.addons.almCharge ?? S.addons.altCharge)}`,"almond"]], m.milk)}</div>` : "")
+    + `<div class="mrow"><span class="ol">Add syrup, +${F.usd2(S.addons.syrupCharge)}</span><div class="spsy"><button class="tog${m.sy ? "" : " on"}" data-act="mSy" data-v="">None</button>${syrupItems().filter(i => !hidden.has(i.id) || i.id === m.sy).map(i => `<button class="tog${m.sy === i.id ? " on" : ""}" data-act="mSy" data-v="${esc(i.id)}" title="${esc(i.name)}">${esc(syrupShort(i))}</button>`).join("")}</div>
+        ${m.sy ? `<div style="margin-top:8px">${seg("mPumps", [["1 pump","1"],["2 pumps","2"]], String(m.pumps))}</div>` : ""}</div>`
+    + `<div class="mrow inl"><span class="ol">Cold foam, +${F.usd2(S.addons.foamCharge)}<br><span class="note-sm">Contains dairy</span></span><input type="checkbox" class="switch" id="mFoam"${m.fo ? " checked" : ""} aria-label="Cold foam"></div>`
+    + `<div class="mrow inl"><span class="ol">Quantity</span><div class="stepper"><button data-act="mQ" data-d="-1" aria-label="Fewer">−</button><span>${m.q}</span><button data-act="mQ" data-d="1" aria-label="More">+</button></div></div>`
+    + `<button class="btn big madd" data-act="mAdd">Add ${m.q > 1 ? m.q + " · " : ""}${F.usd2(each * m.q)}</button>`;
+}
+function addLine(line, d){
+  line.p = Math.round(lineRevenue(line, d) * 100) / 100;
+  const key = x => [x.id, x.ice, x.milk, x.sy, x.pumps, x.fo, x.food].join("|");
+  const same = UI.ticket.find(x => key(x) === key(line));
+  if (same) same.q += line.q; else UI.ticket.push(line);
+  renderTicket(); set("toast", "");
+}
+function addFromMod(){
+  const m = UI.mod, d = m && drinkById(m.id); if (!d) return;
+  const line = {k:d.name, id:d.id, q:m.q, ice: d.serve === "both" ? m.ice : d.serve === "iced", milk: d.milk ? m.milk : "dairy", sy:m.sy || false, fo:m.fo};
+  if (m.sy) line.pumps = m.pumps;
+  addLine(line, d);
+  $("modDlg").close(); UI.mod = null;
+  const b = document.querySelector(`[data-act=pick][data-id="${CSS.escape(d.id)}"]`); if (b){ b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 300); }
+}
+function addPastry(){
+  addLine({k:"Pastry", id:"pastry", food:"pastry", q:1}, null);
+  const b = document.querySelector("[data-act=pastry]"); if (b){ b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 300); }
+}
+UI.ticket = [];
+function renderTicket(){
+  const T = UI.ticket, n = T.reduce((s,l) => s + l.q, 0), tot = T.reduce((s,l) => s + l.q * l.p, 0);
+  $("ticketLines").innerHTML = T.length ? T.map((l,i) => `<div class="tline"><div>${lineDesc(l)}<small>${F.usd2(l.p)} each</small></div>
+      <div class="stepper"><button data-act="tq" data-i="${i}" data-d="-1" aria-label="One fewer">−</button><span>${l.q}</span><button data-act="tq" data-i="${i}" data-d="1" aria-label="One more">+</button></div>
+      <b>${F.usd2(l.q * l.p)}</b><button class="x" data-act="tdel" data-i="${i}" aria-label="Remove from order">✕</button></div>`).join("")
+    : `<div class="tempty">Nothing yet. Tap a drink or pastry above.</div>`;
+  set("ticketCount", n ? `${n} ${n === 1 ? "item" : "items"}` : "");
+  set("ticketTotal", F.usd2(tot));
+  $("submitBtn").disabled = !T.length;
+  $("submitBtn").textContent = T.length ? `Submit sale, ${F.usd2(tot)}` : "Submit sale";
+}
+UI.opt = {now:true};
+function renderWhen(){
+  const o = UI.opt; $("useNow").checked = o.now; $("logDate").disabled = o.now; $("logTime").disabled = o.now;
+  if (o.now){ const n = new Date(); $("logDate").value = ymd(n); $("logTime").value = hm(n); }
+}
+async function submitTicket(){
+  if (!UI.ticket.length) return;
+  const o = UI.opt, now = new Date();
+  const date = o.now ? ymd(now) : ($("logDate").value || ymd(now));
+  const time = o.now ? hm(now) : ($("logTime").value || hm(now));
+  const lines = UI.ticket.map(l => ({d:date, tm:time, ...l}));
+  const n = lines.reduce((s,l) => s + l.q, 0), tot = lines.reduce((s,l) => s + l.q * l.p, 0);
+  $("submitBtn").disabled = true;
+  try {
+    UI.lastSale = await Store.addSale({kind:"tap", at:new Date().toISOString(), lines});
+    UI.ticket = []; renderTicket();
+    toast("toast", `Submitted ${n} ${n === 1 ? "item" : "items"}, ${F.usd2(tot)}, at ${fmtT(time)}.`, true);
+  } catch(e){ toast("toast", saveError(e)); renderTicket(); }
+}
+function renderRecent(){
+  const docs = Store.sales.slice().sort((a,b) => String(b.at).localeCompare(String(a.at))).slice(0, 12);
+  $("recentBody").innerHTML = docs.length ? docs.map(doc => {
+    const ls = doc.lines || []; let txt;
+    if (doc.kind === "upload"){ const ds = [...new Set(ls.map(l => l.d))].sort(); txt = `Upload, ${esc(doc.file || "file")}: ${F.int(ls.reduce((s,l) => s + (+l.q || 0), 0))} items, ${fmtD(ds[0])}${ds.length > 1 ? " to " + fmtD(ds[ds.length - 1]) : ""}`; }
+    else { const l = ls[0] || {}; txt = ls.map(x => `${x.q > 1 ? x.q + " × " : ""}${lineDesc(x)}`).join("; ") + `, ${fmtD(l.d)} ${fmtT(l.tm)}`; }
+    return `<tr><td class="l">${txt}</td><td style="width:40px"><button class="x" data-act="delSale" data-id="${esc(doc.id)}" title="Delete entry" aria-label="Delete entry">✕</button></td></tr>`;
+  }).join("") : `<tr><td class="l empty">Entries appear here as you log them.</td></tr>`;
+}
+
+/* ------------------------------------------------------------------ built drinks: recipes, steps and diagrams
+   A built drink's recipe: one base, or two mixed 50/50 (each base's liquid halved; an espresso shot is never split); syrups at
+   1 or 2 pumps; cold foam (always 50 mL, optionally frothed with 1 pump of syrup in a pitcher); extras (drizzle, purée, topping,
+   a second shot); shaken or built in the cup; and an optional build order. The steps, the cost and the diagram all come from the
+   recipe, so they can't disagree. Specialty lattes follow the house build: syrup in the cup, the shot over the syrup and stir,
+   ice, then milk to the line, toppings last. Fixed recipes from the recipes file keep their own drawings. */
+const SYRUP_COLORS = [[/white chocolate/,"#EFE4CF"],[/vanilla/,"#E3C48A"],[/caramel|toffee|butterscotch/,"#C8843B"],[/brown sugar/,"#9C6A3E"],[/pumpkin/,"#E07B39"],
+  [/hazelnut/,"#A0703F"],[/lavender/,"#B49AD8"],[/peppermint|mint/,"#7FC8A9"],[/banana/,"#E6C25A"],[/maple/,"#B5651D"],[/cinnamon|spice|chai/,"#A0522D"],
+  [/pistachio/,"#A8C47A"],[/honey/,"#E8B04B"],[/chocolate|mocha|cocoa/,"#5B3A29"],[/strawberr|raspberr|cherry/,"#E48A90"],[/coconut/,"#F2EDE4"],[/rose/,"#E7A1B0"]];
+const syrupColor = id => { const n = String(flavorName(id)).toLowerCase(), m = SYRUP_COLORS.find(([re]) => re.test(n)); return m ? m[1] : DC.syrup; };
+const ingColor = id => ({milk:DC.milk, wholemilk:DC.milk, oat:DC.oat, almond:DC.oat, matcha:DC.matcha, chai:DC.chaiIced, cream:"#FFF8EC", cider:"#C47A3A"})[id]
+  || (/chocolate|cocoa/i.test((ingOf(id) || {}).name || "") ? "#6B4A3A" : DC.cider);
+const blendHex = parts => { const t = parts.reduce((s, [, w]) => s + w, 0) || 1, ch = i => Math.round(parts.reduce((s, [c, w]) => s + parseInt(c.slice(1 + 2 * i, 3 + 2 * i), 16) * w, 0) / t);
+  return "#" + [0, 1, 2].map(i => ch(i).toString(16).padStart(2, "0")).join(""); };
+/* each base's liquid, iced and hot. flex: poured "to the line", so it gives way to whatever else is in the cup */
+function baseTemplate(id){
+  const T = {
+    latte:{shot:true, liq:{iced:[{type:"milk", text:"Milk to the line", lines:[["milk",10]], flex:true}], hot:[{type:"milk", text:"Steam 8 oz cold milk, pour over the shot", lines:[["milk",8]], deco:true}]}},
+    americano:{shot:true, liq:{iced:[{type:"water", text:"Water to the line", lines:[], flex:true, c:DC.water, v:8}], hot:[{type:"water", text:"Hot water from the kettle", lines:[], c:DC.water, v:8}]}},
+    matcha:{liq:{iced:[{type:"milk", text:"Milk to a little under the line", lines:[["milk",10]], flex:true}, {type:"flavor", text:"Zero the scale, add 50 g matcha mix", lines:[["matcha",3.6]], c:DC.matcha, v:1.7}],
+                 hot:[{type:"flavor", text:"50 g matcha mix in the cup", lines:[["matcha",3.6]], c:DC.matcha, v:1.7}, {type:"milk", text:"Steam 8 oz milk, pour over the matcha", lines:[["milk",8]], c:DC.matchaMilk, deco:true}]}},
+    chai:{liq:{iced:[{type:"flavor", text:"150 mL chai concentrate", lines:[["chai",5.1]], c:DC.chaiIced}, {type:"milk", text:"100 mL milk, stir", lines:[["milk",3.4]]}],
+               hot:[{type:"flavor", text:"6 oz chai concentrate", lines:[["chai",6]], c:DC.chaiHot}, {type:"milk", text:"Steam 6 oz milk, pour over the chai", lines:[["milk",6]], deco:true}]}}};
+  const m = MENU.find(x => x.id === id);
+  if (T[id] && m) return {id, name:m.name, price:menuPrice(m), ...T[id]};
+  const b = (S.bases || []).find(x => x.id === id); if (!b) return null;
+  const oz = +b.oz || 8, L = [[b.ing, oz]], c = ingColor(b.ing);
+  return {id, name:b.name, price:4.50, custom:true, liq:{iced:[{type:"flavor", text:`${b.name} to the line, ${F.n1(oz).replace(/\.0$/, "")} oz`, lines:L, c}], hot:[{type:"flavor", text:`Steam ${F.n1(oz).replace(/\.0$/, "")} oz ${b.name.toLowerCase()}, pour in`, lines:L, c, deco:true}]}};
+}
+const liqLabel = (id, q) => id === "matcha" ? `${F.int(q / 3.6 * 50)} g matcha mix` : `${F.n1(q).replace(/\.0$/, "")} oz ${id === "chai" ? "chai concentrate" : id === "milk" ? "milk" : ((ingOf(id) || {}).name || id).toLowerCase()}`;
+function liquidSteps(bases, sv){
+  const T = bases.map(baseTemplate).filter(Boolean), pick = t => t.liq[sv] || t.liq.iced || t.liq.hot;
+  if (T.length < 2) return T[0] ? pick(T[0]).map((s, i) => ({...s, k:"liq" + i})) : [];
+  const tot = {}; let water = 0;
+  T.forEach(t => pick(t).forEach(s => { s.lines.forEach(([id, q]) => tot[id] = (tot[id] || 0) + q / 2); if (s.type === "water") water += (s.v || 8) / 2; }));
+  const lines = Object.entries(tot), names = T.map(t => t.name.toLowerCase()), parts = lines.map(([id, q]) => liqLabel(id, q)).concat(water ? [`${F.n1(water).replace(/\.0$/, "")} oz water`] : []);
+  const c = blendHex(lines.map(([id, q]) => [ingColor(id), id === "matcha" ? q * 3 : q]).concat(water ? [[DC.water, water]] : []));
+  return [{k:"liq0", type:"mix", text: sv === "hot" ? `Half ${names[0]}, half ${names[1]}: steam ${parts.join(", ")} together, pour in` : `Half ${names[0]}, half ${names[1]}: ${parts.join(", ")}, stir`,
+    lines, c, v:lines.reduce((s, [id, q]) => s + (id === "matcha" ? 1 : q), 0) + water, fv:lines.reduce((s, [id, q]) => s + (id === "milk" ? 0 : id === "matcha" ? 1 : q), 0), deco: sv === "hot"}];   // fv: the milk in a mix gives way, like milk to the line
+}
+const blankRecipe = base => ({bases:[base || "latte"], syrups:[], foam:null, extras:[], shaken:false, order:null});
+/* the recipe's standard milk: 2% unless it says oat, almond, or something poured like milk (cider makes a chai a chaider) */
+const milkOf = r => r && r.milk && r.milk !== "milk" ? r.milk : "";
+const milkName = id => id === "oat" ? "oat milk" : id === "almond" ? "almond milk" : String((ingOf(id) || {name:id}).name).toLowerCase().replace(/\s*\(.*?\)/g, "").replace(/,.*$/, "").trim();
+const milkChoices = () => [["milk","2%"],["oat","Oat"],["almond","Almond"]].concat(S.ingredients.filter(g => (S.bases || []).some(b => b.ing === g.id) || /cider/i.test(g.name)).map(g => [g.id, g.name.replace(/\s*\(.*?\)/g, "").replace(/,.*$/, "")]));
+/* older built drinks kept base, syrup(s) and foam on the drink itself */
+const recipeOf = sp => sp.recipe || {bases:[sp.base || "latte"], syrups:syrupsOf(sp).map(x => ({...x})), foam: sp.foam ? {syrup:""} : null, extras:[], shaken:false, order:null};
+const EXTRA_LBL = {drizzle:"Drizzle", puree:"Purée", topping:"Topping", shot:"Extra shot"};
+const extraItems = t => t === "drizzle" ? syrupItems() : t === "puree" ? S.ingredients.filter(g => ingCat(g) === "fresh" && !/cider|milk|cream/i.test(g.name)) : t === "topping" ? S.ingredients.filter(g => ingCat(g) === "mixin" && !/syrup|sauce/i.test(g.name)) : [];
+function recipeSteps(r, sv){
+  const T = r.bases.map(baseTemplate).filter(Boolean), st = [], ex = t => (r.extras || []).filter(x => x.t === t);
+  r.syrups.forEach((x, i) => st.push({k:"sy" + i, type:"syrup", text:`${+x.pumps === 1 ? "1 pump (10 g)" : "2 pumps (20 g)"} ${flavorName(x.id).toLowerCase()} syrup`, lines:[["syrup", +x.pumps || 2, x.id]], c:syrupColor(x.id), v:.25 * (+x.pumps || 2)}));
+  ex("puree").forEach((x, i) => { const g = ingOf(x.ing); st.push({k:"pu" + i, type:"puree", text:`30 g ${g ? g.name.toLowerCase().replace(/^frozen /, "") : "fruit"} purée in the cup`, lines: x.ing ? [[x.ing, g && g.unit === "g" ? 18 : .63]] : [], c:DC.puree, v:1}); });
+  if (T.some(t => t.shot)) st.push({k:"shot", type:"shot", lines:[["beans",18]], c:DC.espresso, v:1.5});
+  ex("shot").slice(0, 1).forEach(() => st.push({k:"shot2", type:"shot", text:"Second espresso shot", lines:[["beans",18]], c:DC.espresso, v:1.5}));
+  if (sv === "iced") st.push({k:"ice", type:"ice", text:"2 scoops ice", lines:[], v:3});
+  liquidSteps(r.bases, sv).forEach(s => st.push({...s, v: s.v != null ? s.v : s.lines.reduce((a, [, q]) => a + q, 0) || 6}));
+  // build order: the keys named in r.order take the places those keys had, in r.order's order; anything new keeps its default place
+  const ord = Array.isArray(r.order) ? r.order.filter(k => st.some(s => s.k === k)) : [];
+  if (ord.length > 1){ const slots = st.map((s, i) => ord.includes(s.k) ? i : -1).filter(i => i >= 0), moved = ord.map(k => st.find(s => s.k === k)); slots.forEach((p, i) => st[p] = moved[i]); }
+  const shot = st.find(s => s.k === "shot"); if (shot) shot.text = st.indexOf(shot) > 0 && ["syrup","puree"].includes(st[st.indexOf(shot) - 1].type) ? "Espresso shot over the syrup, stir" : "Espresso shot";
+  if (r.shaken && sv === "iced"){   // the shaker takes everything but the milk or water; shake, pour it all in, then top up
+    st.forEach(s => { if (!["milk","water"].includes(s.type)){ s.shaker = true; s.text = s.text.replace(/, stir$/, "").replace(" over the syrup, stir", " over the syrup"); } });
+    const lastIn = st.map(s => !!s.shaker).lastIndexOf(true); st.splice(lastIn + 1, 0, {k:"shake", type:"step", text:"Shake until foamy, pour it all in", lines:[], shaker:true, v:0});
+    st.forEach(s => { if (s.type === "milk" && s.flex) s.text = "Top with milk to the line"; }); }
+  if (r.foam){ const fs = r.foam.syrup; st.push({k:"foam", type:"foam", top:true, text: fs ? `Froth 50 mL cold foam with 1 pump ${flavorName(fs).toLowerCase()} syrup in a pitcher, spoon on top` : "50 mL cold foam on top",
+    lines:[["foam", FOAM_OZ]].concat(fs ? [["syrup", 1, fs]] : []), c:"#FFFFFF", foam:true}); }
+  ex("drizzle").forEach((x, i) => st.push({k:"dr" + i, type:"drizzle", top:true, text:`Drizzle ${x.ing ? flavorName(x.ing).toLowerCase() : "syrup"} on top`, lines: x.ing ? [["syrup", .5, x.ing]] : [], c: x.ing ? syrupColor(x.ing) : DC.syrup, splash:true}));
+  const mk = milkOf(r);
+  if (mk){ const nm = milkName(mk); st.forEach(s => { if (!s.lines.some(l => l[0] === "milk")) return;
+    s.lines = s.lines.map(l => l[0] === "milk" ? [mk].concat(l.slice(1)) : l); s.text = s.text.replace(/\b([Mm])ilk\b/g, (m, c) => c === "M" ? nm[0].toUpperCase() + nm.slice(1) : nm);
+    if (s.type === "milk") s.c = ingColor(mk) || s.c; }); }
+  ex("topping").forEach((x, i) => { const g = ingOf(x.ing); st.push({k:"tp" + i, type:"topping", top:true, text:`Dust ${g ? g.name.toLowerCase().replace(/^ground /, "").replace(/\s*\(.*\)/, "") : "a topping"} on top`, lines: x.ing ? [[x.ing, g && g.unit === "g" ? .5 : .02]] : [], c:"#A0522D", splash:true}); });
+  return st;
+}
+/* the cup diagram for one serve, drawn from the steps: layers bottom to top in pour order, heights by volume (with a minimum so a
+   pump of syrup still shows), ice drawn in the liquid that follows it, shaker steps as one bracketed layer, toppings on top */
+function recipeDiagram(r, sv){
+  const st = recipeSteps(r, sv), hot = sv === "hot", H = hot ? 198 : 146, top = hot ? 12 : 10, L = [];
+  st.forEach(s => { const last = L[L.length - 1];
+    if (s.shaker){ if (last && last.group){ last.steps.push(s); last.v += s.v || 0; if (s.c) last.cs.push([s.c, s.v || .2]); return; } L.push({group:"IN THE SHAKER", steps:[s], v:s.v || 0, cs: s.c ? [[s.c, s.v || .2]] : [], ice:true}); return; }
+    if (s.type === "syrup" && last && last.kind === "syrup"){ last.steps.push(s); last.v += s.v; last.cs.push([s.c, s.v]); return; }
+    L.push({kind:s.type, steps:[s], v:s.v || 0, c:s.c, cs: s.c ? [[s.c, s.v || 1]] : [], ice:s.type === "ice", foam:s.foam, splash:s.splash, fixed: s.foam ? 26 : s.splash ? 10 : 0, deco:s.deco}); });
+  L.forEach((l, i) => { if (l.cs && l.cs.length > 1) l.c = blendHex(l.cs); else if (l.cs && l.cs.length) l.c = l.cs[0][0];
+    if (l.group) l.c = blendHex(l.cs.length ? l.cs : [[DC.espresso, 1]]);
+    if (l.kind === "ice"){ const nx = L.slice(i + 1).find(x => !x.fixed && x.kind !== "ice"); l.c = nx ? nx.c || DC.milk : DC.milk; } });
+  if (hot && !L.some(l => l.foam)){ const b = L.filter(l => !l.fixed).pop(); if (b && b.deco) L.push({steps:[], fixed:10, c:DC.foam, foam:true}); }
+  const fixedH = L.reduce((s, l) => s + (l.fixed || 0), 0), flexL = L.filter(l => !l.fixed), tv = flexL.reduce((s, l) => s + Math.max(.01, l.v), 0) || 1, room = H - top - fixedH, MIN = 18;
+  let hs = flexL.map(l => Math.max(MIN, Math.max(.01, l.v) / tv * room)); const over = hs.reduce((a, b) => a + b, 0) - room;
+  if (over > 0){ const big = hs.reduce((s, h) => s + (h > MIN ? h - MIN : 0), 0) || 1; hs = hs.map(h => h > MIN ? h - (h - MIN) / big * over : h); }
+  flexL.forEach((l, i) => l.h = Math.round(hs[i]));
+  let n = 0;
+  return {top, line:!hot, note: r.foam ? "Cold foam contains dairy." : "", layers: L.map(l => ({h: l.fixed || l.h, c:l.c || DC.milk, ice:l.ice, foam:l.foam, splash:l.splash, group:l.group, steps: l.steps.length ? l.steps.map(s => [++n, s.text]) : undefined}))};
+}
+/* checks before saving: two shots at most, three syrups, everything (bar milk or water to the line) fits the cup */
+function recipeErrors(r, serve){
+  const e = [], T = r.bases.map(baseTemplate);
+  if (!r.bases.length || T.some(t => !t)) e.push("Pick a base.");
+  if (r.bases.length === 2 && r.bases[0] === r.bases[1]) e.push("Pick two different bases to mix.");
+  if (r.syrups.length > 3) e.push("Three syrups at most.");
+  if ((T.some(t => t && t.shot) ? 1 : 0) + (r.extras || []).filter(x => x.t === "shot").length > 2) e.push("Two espresso shots at most.");
+  if ((r.extras || []).some(x => x.t !== "shot" && !x.ing)) e.push("Pick what each extra is.");
+  (serve === "both" ? ["iced","hot"] : [serve]).forEach(sv => { const cup = sv === "iced" ? 16 : 12, st = recipeSteps(r, sv);
+    const fixed = st.reduce((s, x) => s + (x.flex || x.type === "ice" || x.top ? 0 : x.fv != null ? x.fv : x.v || 0), 0) + (sv === "iced" ? 4 : 0) + (r.foam ? FOAM_OZ : 0);
+    if (fixed > cup + .3) e.push(`The ${sv} build is ${F.n1(fixed)} oz before any milk, more than the ${cup} oz cup holds.`); });
+  return e;
+}
+const recipeSummary = (r, serve) => [r.bases.map(id => (baseTemplate(id) || {name:id}).name).join(" and ") + (r.bases.length > 1 ? ", 50/50" : ""), milkOf(r) && recipeHasMilk(r) ? `${milkName(milkOf(r))} instead of milk` : "", pumpsText(r.syrups),
+  r.foam ? (r.foam.syrup ? `${flavorName(r.foam.syrup).toLowerCase()} cold foam` : "cold foam") : "", ...(r.extras || []).map(x => x.t === "shot" ? "extra shot" : `${EXTRA_LBL[x.t].toLowerCase()}${x.ing ? " (" + (x.t === "drizzle" ? flavorName(x.ing) : ((ingOf(x.ing) || {}).name || "")).toLowerCase() + ")" : ""}`),
+  r.shaken ? "shaken" : "", SERVE_TAG[serve || "both"].toLowerCase()].filter(Boolean).join(", ");
+
+/* ------------------------------------------------------------------ new drink and edit recipe: one small window, admin only
+   Form on the left, the live cup diagram and cost on the right. Saving an edit keeps the old version (last 10) to go back to. */
+UI.bld = {edit:"", r:blankRecipe(), serve:"iced", season:"", name:"", price:"", pv:"iced"};
+const bldSuggest = () => { const b = UI.bld, r = b.r, T = r.bases.map(baseTemplate).filter(Boolean), fs = r.foam && r.foam.syrup;
+  return {name:[r.syrups.map(x => flavorName(x.id)).join(" "), fs ? `${flavorName(fs)} Cream` : "", T.map(t => t.name.replace(/ Latte$/, r.bases.length > 1 ? "" : " Latte")).join(" "), r.foam && !fs ? "with Cold Foam" : ""].filter(Boolean).join(" ").replace(/\s+/g, " ").trim() || "New drink",
+          price: autoPrice(r)}; };
+const bldDraft = () => { const b = UI.bld, sg = bldSuggest();
+  return {id:b.edit || "draft", name:b.name.trim() || sg.name, recipe:b.r, serve:b.serve, price:b.price === "" ? sg.price : +b.price, on:true, sec:"specialty", season:b.season}; };
+const nameTaken = (n, exceptId) => allDrinks().some(d => d.id !== exceptId && [d.name].concat(d.aliases || []).map(norm).includes(norm(n)));
+function openBuilder(editId){
+  const sp = editId && S.specials.find(x => x.id === editId);
+  UI.bld = sp ? {edit:sp.id, r:JSON.parse(JSON.stringify(recipeOf(sp))), serve:sp.serve || "both", season:sp.season || "", name:sp.name, price: sp.ownPrice === false ? "" : String(sp.price), pv: sp.serve === "hot" ? "hot" : "iced"}
+              : {edit:"", r:blankRecipe(UI.bld.r.bases[0]), serve:UI.bld.serve || "iced", season:UI.bld.season || "", name:"", price:"", pv: UI.bld.serve === "hot" ? "hot" : "iced"};
+  UI.nb = null; UI.ns = null; const dl = $("bldDlg"); if (!dl.open) dl.showModal(); renderBuilder();
+}
+function renderBuilder(){
+  const box = $("bldBody"); if (!box || !$("bldDlg").open) return;
+  const b = UI.bld, r = b.r, sg = bldSuggest(), nb = UI.nb, ns = UI.ns, sp = b.edit && S.specials.find(x => x.id === b.edit);
+  const chip = (act, v, label, on, extra) => `<button class="pc${on ? " on" : ""}" data-act="${act}" data-v="${esc(v)}" aria-pressed="${!!on}"${extra || ""}>${esc(label)}</button>`;
+  const seg = (act, opts, cur, extra) => `<div class="segc sm">${opts.map(([l,v]) => `<button class="${String(cur) === String(v) ? "on" : ""}" data-act="${act}" data-v="${v}"${extra || ""}>${l}</button>`).join("")}</div>`;
+  const bases = BUILDER_BASES.map(id => [id, MENU.find(m => m.id === id).name]).concat((S.bases || []).map(x => [x.id, x.name]));
+  if (b.serve !== "both") b.pv = b.serve;
+  const pvSteps = recipeSteps(r, b.pv), body = pvSteps.filter(s => !s.top && s.type !== "step");
+  const sel = (i, x) => `<select class="in txt" data-exing="${i}" aria-label="${EXTRA_LBL[x.t]}"><option value="">Pick one</option>${extraItems(x.t).map(g => `<option value="${esc(g.id)}"${x.ing === g.id ? " selected" : ""}>${esc(x.t === "drizzle" ? syrupShort(g) : g.name)}</option>`).join("")}</select>`;
+  box.innerHTML = `<div class="mh"><div><h2 id="bldTitle">${sp ? `Edit ${esc(sp.name)}` : "New drink"}</h2><div class="p">${sp ? "Saving keeps the old version, so you can go back." : "Goes on the log and the menu as a specialty drink."}</div></div><button class="x" data-act="bldClose" aria-label="Close">✕</button></div>
+  <div class="bgrid"><div class="bld">
+    <div><div class="lbl">Base, a fixed recipe</div><div class="pchips">${bases.map(([id, nm]) => chip("bBase", id, nm, r.bases[0] === id)).join("")}${chip("bNewBase", "", "+ New base", !!nb)}</div>
+      <label class="swrow" style="margin:8px 0 0"><span>Mix two bases, 50/50</span><input type="checkbox" class="switch" id="bMix"${r.bases.length > 1 ? " checked" : ""}></label>
+      ${r.bases.length > 1 ? `<div class="pchips" style="margin-top:8px">${bases.filter(([id]) => id !== r.bases[0]).map(([id, nm]) => chip("bBase2", id, nm, r.bases[1] === id)).join("")}</div>` : ""}</div>
+    ${recipeHasMilk(Object.assign({}, r, {milk:""})) ? `<div><div class="lbl">Milk in the standard recipe</div><div class="pchips">${milkChoices().map(([id, nm]) => chip("bMilk", id, nm, (milkOf(r) || "milk") === id)).join("")}</div>
+      ${milkOf(r) ? `<div class="note-sm" style="margin-top:6px">Customers can't swap the milk on this drink, and it isn't charged again.</div>` : ""}</div>` : ""}
+    ${nb ? `<div class="nbase">
+      <label class="wide">Base name<input class="in txt" data-nb="name" value="${esc(nb.name)}" placeholder="Hot chocolate, apple cider"></label>
+      <label>Pack price<input class="in" type="number" min="0" step="0.01" data-nb="price" value="${esc(nb.price)}" placeholder="4.99"></label>
+      <label>Pack size<input class="in" type="number" min="0" step="0.1" data-nb="size" value="${esc(nb.size)}" placeholder="128"></label>
+      <label>Unit<select class="in txt" data-nb="unit">${["oz","g"].map(u => `<option${nb.unit === u ? " selected" : ""}>${u}</option>`).join("")}</select></label>
+      <label>Per drink<input class="in" type="number" min="0" step="0.5" data-nb="oz" value="${esc(nb.oz)}" placeholder="8"></label>
+      <div class="wide" style="grid-column:1/-1;display:flex;gap:8px"><button class="btn sm" data-act="nbSave">Save base</button><button class="btn ghost sm" data-act="nbCancel">Cancel</button></div></div>` : ""}
+    <div><div class="lbl">Syrups in the cup</div><div class="pchips">${syrupItems().map(i => chip("bSy", i.id, syrupShort(i), r.syrups.some(x => x.id === i.id))).join("")}${chip("bNewSy", "", "+ New syrup", !!ns)}</div>
+      ${r.syrups.length ? `<div class="bsy">${r.syrups.map(x => `<div><span>${esc(flavorName(x.id))}</span>${seg("bPumps", [["1 pump",1],["2 pumps",2]], x.pumps, ` data-id="${esc(x.id)}"`)}</div>`).join("")}</div>` : ""}</div>
+    ${ns ? `<div class="nbase">
+      <label class="wide">Syrup flavor<input class="in txt" data-ns="name" value="${esc(ns.name)}" placeholder="Lavender, maple, pistachio"></label>
+      <label>Bottle price<input class="in" type="number" min="0" step="0.01" data-ns="price" value="${esc(ns.price)}" placeholder="9.99"></label>
+      <label>Bottle size, oz<input class="in" type="number" min="0" step="0.1" data-ns="size" value="${esc(ns.size)}" placeholder="33.8"></label>
+      <div class="wide" style="grid-column:1/-1;display:flex;gap:8px"><button class="btn sm" data-act="nsSave">Add syrup</button><button class="btn ghost sm" data-act="nsCancel">Cancel</button></div></div>` : ""}
+    <div><label class="swrow" style="margin:0"><span>Cold foam on top, 50 mL</span><input type="checkbox" class="switch" id="bFoam"${r.foam ? " checked" : ""}></label>
+      ${r.foam ? `<div class="lbl" style="margin-top:8px">Froth 1 pump into the foam (pumpkin cream, vanilla sweet cream)</div><div class="pchips">${chip("bFoamSy", "", "None", !r.foam.syrup)}${syrupItems().map(i => chip("bFoamSy", i.id, syrupShort(i), r.foam.syrup === i.id)).join("")}</div>` : ""}</div>
+    <div><div class="lbl">Extras</div><div class="pchips">${Object.entries(EXTRA_LBL).filter(([t]) => t !== "shot" || r.bases.some(id => (baseTemplate(id) || {}).shot)).map(([t, l]) => `<button class="pc" data-act="bExtra" data-v="${t}">+ ${l}</button>`).join("")}</div>
+      ${(r.extras || []).length ? `<div class="bsy">${r.extras.map((x, i) => `<div><span>${EXTRA_LBL[x.t]}</span>${x.t === "shot" ? "<span></span>" : sel(i, x)}<button class="x" data-act="bExDel" data-i="${i}" aria-label="Remove">✕</button></div>`).join("")}</div>` : ""}</div>
+    <div class="two2"><div><div class="lbl">Serve</div>${seg("bServe", [["Iced","iced"],["Hot","hot"],["Both","both"]], b.serve)}</div>
+      <div><div class="lbl">Season</div><select class="in txt" id="bSeason" aria-label="Season">${SEASONS.map(([v,l]) => `<option value="${v}"${b.season === v ? " selected" : ""}>${l}</option>`).join("")}</select></div></div>
+    ${b.serve !== "hot" ? `<label class="swrow" style="margin:0"><span>Shaken${b.serve === "both" ? " (the iced one)" : ""}</span><input type="checkbox" class="switch" id="bShaken"${r.shaken ? " checked" : ""}></label>` : ""}
+    <div><div class="lbl">Build order${b.serve === "both" ? `, ${b.pv}` : ""}</div><ol class="bord">${pvSteps.map(s => { const i = body.indexOf(s);
+      return `<li class="${s.shaker ? "shk" : ""}"><span>${esc(s.text)}${s.shaker && s.type !== "step" ? ` <small>in the shaker</small>` : ""}</span>${s.top || s.type === "step" ? `<span class="muted">${s.top ? "last" : ""}</span>` : `<span class="ordb"><button class="x" data-act="bOrd" data-k="${s.k}" data-v="-1" aria-label="Move up"${i <= 0 ? " disabled" : ""}>↑</button><button class="x" data-act="bOrd" data-k="${s.k}" data-v="1" aria-label="Move down"${i >= body.length - 1 ? " disabled" : ""}>↓</button></span>`}</li>`; }).join("")}</ol></div>
+    <div class="two"><input class="in txt" id="bName" value="${esc(b.name)}" placeholder="${esc(sg.name)}" aria-label="Drink name"><input class="in" id="bPrice" type="number" min="0" step="0.05" value="${esc(b.price)}" placeholder="${sg.price.toFixed(2)}" aria-label="Price, blank prices it from the recipe"></div>
+    <div class="note-sm" id="bPriceNote"></div>
+    <div class="berr" id="bErr" role="alert"></div>
+    <p class="toast" id="bldToast" role="status" style="margin:0"></p>
+    <button class="btn big madd" data-act="bAdd" id="bAddBtn">${sp ? "Save changes" : "Add the drink"}</button>
+    ${sp && (sp.versions || []).length ? `<details class="fold2"><summary>Earlier versions, ${sp.versions.length}</summary>${sp.versions.map((v, i) => `<div class="bver"><span>${esc(v.name)}, ${F.usd2(v.price)}<small>${esc(recipeSummary(v.recipe, v.serve))}. Saved over ${new Date(v.at).toLocaleDateString("en-US", {month:"short", day:"numeric"})} by ${esc(v.by)}</small></span><button class="btn ghost sm" data-act="bVer" data-i="${i}">Use this</button></div>`).join("")}</details>` : ""}
+  </div>
+  <div class="bprev">${b.serve === "both" ? seg("bPrev", [["Iced","iced"],["Hot","hot"]], b.pv) : ""}<div id="bPrevBody"></div><div class="sum" id="bSum"></div></div></div>`;
+  bldSum();
+}
+/* cost, margin, checks and the diagram, without redrawing the form (so typing a price keeps focus) */
+function bldSum(){
+  const el = $("bSum"); if (!el) return; const d = bldDraft(), dd = specialDef(Object.assign({}, d, {recipe:d.recipe})), errs = recipeErrors(d.recipe, d.serve);
+  el.innerHTML = servesOf(dd).map(sv => { const c = costOf(dd, sv, "dairy"), mg = marginOf(d.price, c); return `${sv === "iced" ? "Iced" : "Hot"} costs <b>${F.usd2(c)}</b>, margin <b class="${mCls(mg)}">${F.frac(mg)}</b>`; }).join("<br>");
+  $("bErr").innerHTML = errs.map(x => `<div>${esc(x)}</div>`).join(""); $("bAddBtn").disabled = !!errs.length;
+  $("bPriceNote").textContent = UI.bld.price === "" ? `Priced from the recipe: ${priceText(d.recipe)}. Type a price to set your own.` : `Your own price. Clear it to price from the recipe (${F.usd2(autoPrice(d.recipe))}).`;
+  $("bPrevBody").innerHTML = cupSVG(recipeDiagram(d.recipe, UI.bld.pv), UI.bld.pv);
+}
+function saveRecipe(){
+  const d = bldDraft(), errs = recipeErrors(d.recipe, d.serve), b = UI.bld;
+  if (errs.length){ toast("bldToast", errs[0]); return; }
+  if (!(d.price > 0)){ toast("bldToast", "Set a price."); return; }
+  if (nameTaken(d.name, b.edit)){ toast("bldToast", `${d.name} is already a drink. Pick another name.`); return; }
+  const r = JSON.parse(JSON.stringify(d.recipe)), legacy = {base:r.bases[0], syrups:r.syrups, syrup:(r.syrups[0] || {}).id || "", pumps:(r.syrups[0] || {}).pumps || 0, foam:!!r.foam};
+  const price = Math.round(d.price * 100) / 100;
+  let sp = b.edit && S.specials.find(x => x.id === b.edit);
+  if (sp){ sp.versions = [{at:new Date().toISOString(), by:UI.me || "Admin", name:sp.name, price:sp.price, serve:sp.serve, recipe:recipeOf(sp)}].concat(sp.versions || []).slice(0, 10);
+    if (d.name !== sp.name) sp.aliases = [...new Set((sp.aliases || []).concat(sp.name))];   // the old name still matches past sales
+    Object.assign(sp, legacy, {recipe:r, name:d.name, price, ownPrice: b.price !== "", serve:d.serve, season:b.season || ""}); }
+  else { sp = Object.assign({id:"sp" + Date.now().toString(36), name:d.name, aliases:[], price, ownPrice: b.price !== "", serve:d.serve, on:true, sec:"specialty", season:b.season || "", recipe:r}, legacy); S.specials.push(sp);
+    if ($("wmDlg").open){ const days = weekDays(UI.wm.wk); (UI.wm.day === "all" ? days : [UI.wm.day]).forEach(x => { const cur = wmIds(x); if (!cur.includes(sp.id)) S.dayMenu[x] = cur.concat(sp.id); }); } }
+  const was = b.edit; UI.bld = {edit:"", r:blankRecipe(r.bases[0]), serve:d.serve, season:b.season, name:"", price:"", pv:"iced"};
+  markDirty(); $("bldDlg").close(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); renderWeekMenu(); if (!$("gearPanel").hidden) renderGear();
+  toast("bankToast", was ? `Saved ${sp.name}.` : `${sp.name} is on the log and the menu as a specialty drink.`);
+}
+function saveNewBase(){
+  const nb = UI.nb, name = String(nb.name || "").trim(), price = +nb.price, size = +nb.size, oz = +nb.oz || 8;
+  if (!name || !(price > 0) || !(size > 0)){ toast("bldToast", "Give the base a name, a pack price and a pack size."); return; }
+  const ingId = "c" + Date.now().toString(36);
+  S.ingredients.push({id:ingId, kind:"specialty", cat:guessCat({name}), name, price, size, unit:nb.unit || "oz", vendor:"", url:"", vol:1, custom:true, track:true});
+  const id = "b" + Date.now().toString(36);
+  S.bases.push({id, name, ing:ingId, oz});
+  UI.nb = null; UI.bld.r.bases[0] = id; if (UI.bld.r.bases[1] === id) UI.bld.r.bases.pop();
+  markDirty(); renderBuilder(); renderIngredients(); recalc();
+}
+/* a syrup flavor that isn't stocked yet: added to the ingredients (so it's costed, counted and ordered) and picked */
+function saveNewSyrup(){
+  const ns = UI.ns, flavor = String(ns.name || "").trim().replace(/\s*syrup$/i, ""), price = +ns.price, size = +ns.size || 33.8;
+  if (!flavor || !(price > 0)){ toast("bldToast", "Give the syrup a flavor and a bottle price."); return; }
+  if (syrupItems().some(i => norm(syrupShort(i)) === norm(flavor))){ toast("bldToast", `There's already a ${flavor} syrup.`); return; }
+  const id = "c" + Date.now().toString(36);
+  S.ingredients.push({id, kind:"core", cat:"mixin", name:`${flavor} syrup`, price, size, unit:"oz", vendor:"", url:"", vol:1, custom:true, track:true});
+  UI.ns = null; UI.bld.r.syrups.push({id, pumps:2}); markDirty(); renderBuilder(); renderIngredients(); recalc();
+}
+
+/* ------------------------------------------------------------------ menu settings (the gear): names, prices, add-ons, syrups on the log */
+function openGear(){ renderGear(); openSheet("gearPanel"); }
+function renderGear(){
+  const box = $("gearBody"); if (!box) return;
+  let h = `<div class="tile-h"><h2 id="gearTitle">Menu settings</h2><span class="lnk"><button class="btn sm" data-act="bldOpen">New drink</button><button class="x" data-act="gearClose" aria-label="Close">✕</button></span></div>
+    <p class="toast" id="gearToast" role="status" style="margin:6px 0 0"></p>`;
+  const row = d => { const sp = d.sp, on = isOn(d);
+    return `<div class="grow"><div class="nm">${sp ? `<input class="in txt" data-gname="${esc(d.id)}" value="${esc(d.name)}" aria-label="Name">` : esc(d.name)}<small>${sp ? esc(specialSummary(sp)) : esc(SECS.find(s => s[0] === d.sec)[1])}</small>${sp ? (sp.ownPrice === false ? `<small class="status-ok">Priced from the recipe: ${esc(priceText(recipeOf(sp)))}</small>` : `<small>Your own price. <button class="linkbtn" data-act="gAuto" data-id="${esc(d.id)}">Price from the recipe, ${F.usd2(autoPrice(recipeOf(sp)))}</button></small>`) : ""}</div>
+      <input class="in" type="number" min="0" step="0.05" data-gprice="${esc(d.id)}" value="${d.price.toFixed(2)}" aria-label="${esc(d.name)} price">
+      <span style="display:flex;gap:4px;align-items:center;justify-content:flex-end"><input type="checkbox" class="switch" data-gon="${esc(d.id)}"${on ? " checked" : ""} aria-label="${esc(d.name)} on the menu"></span></div>`; };
+  const A = allDrinks(), onL = A.filter(isOn), offL = A.filter(d => !isOn(d));
+  h += `<div class="gsec"><h3>On the menu</h3><p class="note-sm" style="margin:-4px 0 6px">Prices and names save as you type. Switch a drink off to take it off the log and the menu; its sales stay counted.</p>${onL.map(row).join("")}
+    ${offL.length ? `<details class="fold2"><summary>Off the menu, ${offL.length}</summary>${offL.map(row).join("")}</details>` : ""}</div>`;
+  const num = (path, label) => `<div class="grow"><div class="nm">${label}</div><input class="in" type="number" min="0" step="0.05" data-bind="${path}" data-type="num" value="${(+getPath(S, path) || 0).toFixed(2)}" aria-label="${esc(label)}"><span></span></div>`;
+  h += `<div class="gsec"><h3>Add-ons and pastry</h3>${num("addons.altCharge", "Oat milk")}${num("addons.almCharge", "Almond milk")}${num("addons.syrupCharge", "Added syrup")}${num("addons.foamCharge", "Cold foam")}${num("pastry.price", "Pastry price")}${num("pastry.cost", "Pastry cost to us")}</div>`;
+  const hid = new Set(S.syrHide || []);
+  h += `<div class="gsec"><h3>Syrups on the log</h3><p class="note-sm" style="margin:-4px 0 8px">Untick the flavors you're out of.</p><div class="pchips">${syrupItems().map(i => `<label class="chk" style="font-size:14px;margin-right:10px"><input type="checkbox" data-syshow="${esc(i.id)}"${hid.has(i.id) ? "" : " checked"}> ${esc(syrupShort(i))}</label>`).join("")}</div></div>`;
+  box.innerHTML = h;
+}
+const specialSummary = sp => recipeSummary(recipeOf(sp), sp.serve);
+
+/* ------------------------------------------------------------------ menu tab */
+function renderMenu(){
+  const box = $("menuBody"); if (!box) return;
+  const A = allDrinks();
+  const costCell = d => servesOf(d).map(sv => `<div>${servesOf(d).length > 1 ? `<span class="muted">${sv === "iced" ? "Iced" : "Hot"}</span> ` : ""}${F.usd2(costOf(d, sv, "dairy"))}</div>`).join("");
+  const mgCell = d => servesOf(d).map(sv => { const m = marginOf(d.price, costOf(d, sv, "dairy")); return `<div><span class="${mCls(m)}">${F.frac(m)}</span></div>`; }).join("");
+  const row = d => `<tr><td class="l"><button class="drink" data-act="diagram" data-id="${esc(d.id)}">${esc(d.name)}</button>${d.sp ? `<div class="note-sm">${esc(specialSummary(d.sp))}</div>` : ""}</td><td class="l">${SERVE_TAG[d.serve]}</td><td>${F.usd2(d.price)}</td><td class="adm">${costCell(d)}</td><td class="adm">${mgCell(d)}</td></tr>`;
+  let h = "";
+  const wkIds = new Set(weekMenuDrinks().map(d => d.id));   // everything running on any day this cafe week
+  SECS.forEach(([s, label]) => { const xs = A.filter(d => d.sec === s && wkIds.has(d.id)); if (xs.length) h += `<tr class="band"><td colspan="5">${label}</td></tr>` + xs.map(row).join(""); });
+  const dairy8 = expand([["milk", 8]], "dairy").reduce((s,l) => s + l.cost, 0), alt8 = m => expand([["milk", 8]], m).reduce((s,l) => s + l.cost, 0) - dairy8;
+  const addon = (name, charge, cost, note) => `<tr><td class="l">${name}<div class="note-sm adm">${note}</div></td><td class="l"></td><td>${F.usd2(charge)}</td><td class="adm">${F.usd2(cost)}</td><td class="adm"><span class="${mCls(marginOf(charge, cost))}">${F.frac(marginOf(charge, cost))}</span></td></tr>`;
+  h += `<tr class="band"><td colspan="5">Add-ons and food</td></tr>`
+    + addon("Oat milk", +S.addons.altCharge, alt8("oat"), "8 oz instead of 2%, cost over dairy")
+    + addon("Almond milk", +(S.addons.almCharge ?? S.addons.altCharge), alt8("almond"), "8 oz instead of 2%, cost over dairy")
+    + addon("Added syrup", +S.addons.syrupCharge, 2 * stdPump(), `2 pumps at the standard ${F.usd2(stdPump())} a pump`)
+    + addon("Cold foam", +S.addons.foamCharge, foamCost(), "50 mL from the batch. Contains dairy")
+    + addon("Pastry", +S.pastry.price, +S.pastry.cost, "Price and cost set in the gear");
+  box.innerHTML = h;
+}
+
+/* ------------------------------------------------------------------ drink bank
+   Every signature and specialty drink ever made, on the menu or not. Sales likelihood is the share of signature and specialty
+   drinks sold that were this one (Clover item report plus sales logged after it), so all of them add up to 1.
+   ponytail: a plain share, so a drink that was on the menu for one weekend competes with one that ran all term. */
+UI.bank = {q:"", sort:"pop", view:"season"};
+const curSeason = () => { const m = new Date().getMonth(); return m >= 2 && m <= 4 ? "spring" : m >= 5 && m <= 7 ? "summer" : m >= 8 && m <= 10 ? "fall" : "winter"; };
+const secSeg = d => { const st = isOn(d) ? d.sec : "off";
+  return `<div class="segc sm" role="group" aria-label="${esc(d.name)} on the menu">${[["off","Off"],["specialty","Specialty"],["signature","Signature"]].map(([v,l]) => `<button class="${st === v ? "on" : ""}" data-act="bkSet" data-id="${esc(d.id)}" data-v="${v}" aria-pressed="${st === v}">${l}</button>`).join("")}</div>`; };
+function drinkCounts(){
+  const n = {}, inRep = d => S.clover.items.some(r => r.from && d >= r.from && d <= r.to);   // dates a Clover item report covers count from the report
+  allLines().forEach(({l}) => { if (isFood(l) || inRep(l.d)) return; const d = lineDrink(l); if (d) n[d.id] = (n[d.id] || 0) + +l.q; });
+  cloverRows().forEach(({r, d}) => n[d.id] = (n[d.id] || 0) + r.units);
+  return n;
+}
+function renderBank(){
+  const box = $("bankBody"); if (!box) return;
+  const B = UI.bank, cnt = drinkCounts();
+  const xs = allDrinks().filter(d => d.sec !== "core").map(d => ({d, n:cnt[d.id] || 0, sy:syrupOf(d)}));
+  const tot = xs.reduce((s,x) => s + x.n, 0), sold = xs.filter(x => x.n).length;
+  xs.forEach(x => x.p = tot ? x.n / tot : 0);
+  xs.slice().sort((a,b) => b.n - a.n).forEach((x,i) => x.rank = x.n ? i + 1 : 0);
+  const mx = Math.max(0.01, ...xs.map(x => x.p)), q = B.q.trim().toLowerCase(), SO = SEASONS.map(x => x[0]);
+  const sumOf = d => d.sp ? specialSummary(d.sp) : `Fixed recipe, ${SERVE_TAG[d.serve].toLowerCase()}`;
+  const cs = curSeason(), inSeason = x => !x.d.season || x.d.season === cs;
+  const vis = xs.filter(x => (B.view === "all" || inSeason(x)) && (!q || [x.d.name].concat(x.d.aliases || [], x.sy, seasonName(x.d.season), sumOf(x.d)).join(" ").toLowerCase().includes(q)));
+  const by = {pop:(a,b) => b.n - a.n || a.d.name.localeCompare(b.d.name), season:(a,b) => SO.indexOf(a.d.season || "") - SO.indexOf(b.d.season || "") || b.n - a.n,
+    syrup:(a,b) => (a.sy || "~").localeCompare(b.sy || "~") || b.n - a.n, name:(a,b) => a.d.name.localeCompare(b.d.name)};
+  vis.sort(by[B.sort] || by.pop);
+  $("bankSort").innerHTML = [["pop","Most popular"],["season","Season"],["syrup","Syrup"],["name","A to Z"]].map(([v,l]) => `<button class="${B.sort === v ? "on" : ""}" data-act="bankSort" data-v="${v}">${l}</button>`).join("");
+  $("bankView").innerHTML = [["season", `${seasonName(cs)} drinks`],["all","All seasons"]].map(([v,l]) => `<button class="${(B.view || "season") === v ? "on" : ""}" data-act="bankView" data-v="${v}">${l}</button>`).join("");
+  const onM = xs.filter(x => isOn(x.d));
+  $("bankHint").innerHTML = `<b>${onM.length} on the usual menu</b>: ${onM.filter(x => x.d.sec === "signature").length} signature, ${onM.filter(x => x.d.sec === "specialty").length} specialty. ${xs.filter(inSeason).length} ${seasonName(cs).toLowerCase()} and any-season drinks of ${xs.length}.
+    <span class="note-sm" style="display:block;margin-top:4px">Likelihood is out of 1: the share of the ${F.int(tot)} signature and specialty drinks sold that were this one.</span>`;
+  const grp = B.sort === "season" ? x => seasonName(x.d.season) : B.sort === "syrup" ? x => x.sy || "No syrup" : null;
+  let h = "", last = null;
+  vis.forEach(x => {
+    if (grp && grp(x) !== last){ last = grp(x); h += `<div class="ghead">${esc(last)}</div>`; }
+    h += `<div class="bk${isOn(x.d) ? "" : " off"}">
+      <div class="bk-n"><button class="drink" data-act="diagram" data-id="${esc(x.d.id)}">${esc(x.d.name)}</button><div class="note-sm">${esc(sumOf(x.d))}, ${F.usd2(x.d.price)}</div></div>
+      <div class="bk-l" title="${F.int(x.n)} sold"><div class="rb"><i style="width:${x.p / mx * 100}%"></i></div><span><b>${x.n ? x.p.toFixed(2) : "0"}</b> ${x.rank ? `#${x.rank} of ${sold}` : "no sales yet"}</span></div>
+      <select class="in txt" data-bkseason="${esc(x.d.id)}" aria-label="${esc(x.d.name)} season">${SEASONS.map(([v,l]) => `<option value="${v}"${(x.d.season || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
+      <div class="bk-a">${x.d.sp ? `<button class="btn ghost sm" data-act="bkEdit" data-id="${esc(x.d.id)}">Edit recipe</button>` : ""}${secSeg(x.d)}${x.d.sp && !x.n && !isOn(x.d) ? `<button class="x" data-act="bkDel" data-id="${esc(x.d.id)}" title="Delete ${esc(x.d.name)}" aria-label="Delete ${esc(x.d.name)}">✕</button>` : ""}</div>
+    </div>`; });
+  box.innerHTML = h || `<p class="empty">${B.q ? `No drink matches "${esc(B.q)}".` : `No ${seasonName(cs).toLowerCase()} drinks yet. Switch to All seasons, or build one with New drink.`}</p>`;
+}
+
+/* ---------- drink diagrams (from the recipes file)
+   Each build lists its layers from the bottom of the cup to the top. h: layer height (iced cup 146 px, hot 198 px); c: fill;
+   ice/foam/splash draw cubes, bubbles or a striped splash; steps: [[n, text]] landing in the layer; opt dims a step skipped on the
+   plain drink; group: caption for steps done in the shaker; top: empty space above; line: the iced fill line. */
+const DC = {espresso:"#4A2C17", syrup:"#D99B4E", milk:"#F1E8D6", foam:"#FFFFFF", water:"#D6E8F3",
+  matcha:"#8FAE5A", matchaMilk:"#E4E9CF", chaiIced:"#D6A577", chaiHot:"#C88B57", bsoe:"#9C6A3E", oat:"#EDE3CF",
+  banana:"#D2AE84", puree:"#E48A90", tea:"#B88F5E", fogMilk:"#EDE4D6", vanilla:"#E3C48A", cider:"#C9853F"};
+const DIAGRAMS = {
+  latte: {builds:{
+    iced:{top:10, line:true, note:"Plain latte: skip step 1 and the stir.", layers:[
+      {h:30, c:DC.syrup, steps:[[1,"2 pumps (20 g) syrup, flavored only"]], opt:true, slot:"syrup"},
+      {h:32, c:DC.espresso, steps:[[2,"Espresso shot over the syrup, stir"]]},
+      {h:38, c:DC.milk, ice:true, steps:[[3,"2 scoops ice"]]},
+      {h:36, c:DC.milk, steps:[[4,"Milk to the line"]]}]},
+    hot:{top:12, note:"Plain latte: skip step 1 and the stir.", layers:[
+      {h:46, c:DC.syrup, steps:[[1,"2 pumps (20 g) syrup, flavored only"]], opt:true, slot:"syrup"},
+      {h:50, c:DC.espresso, steps:[[2,"Espresso shot over the syrup, stir"]]},
+      {h:80, c:DC.milk, steps:[[3,"Steam 8 oz cold milk, pour over the shot"]]},
+      {h:10, c:DC.foam, foam:true}]}}},
+  cappuccino: {builds:{
+    hot:{top:10, layers:[
+      {h:52, c:DC.espresso, steps:[[1,"Espresso shot"]]},
+      {h:72, c:DC.milk, steps:[[2,"Steam 6 oz milk, it foams up to fill the cup"]]},
+      {h:64, c:DC.foam, foam:true, steps:[[3,"Pour the milk and foam over the shot"]]}]}}},
+  americano: {builds:{
+    iced:{top:0, line:true, note:"Leave room above the line for milk.", layers:[
+      {h:44, c:DC.espresso, steps:[[1,"Espresso shot"]]},
+      {h:40, c:DC.water, ice:true, steps:[[2,"2 scoops ice"]]},
+      {h:50, c:DC.water, steps:[[3,"Water to the line"]]},
+      {h:12, c:DC.milk, splash:true, steps:[[4,"Splash of milk if requested"]]}]},
+    hot:{top:10, layers:[
+      {h:56, c:DC.espresso, steps:[[1,"Espresso shot"]]},
+      {h:114, c:DC.water, steps:[[2,"Hot water, heated in kettle"]]},
+      {h:18, c:DC.milk, splash:true, steps:[[3,"Splash of milk if requested"]]}]}}},
+  bsoe: {builds:{
+    iced:{top:8, line:true, layers:[
+      {h:108, c:DC.bsoe, ice:true, group:"IN THE SHAKER", steps:[[1,"2 pumps brown sugar syrup"],[2,"Espresso shot over the syrup"],[3,"2.5 scoops ice + 1 shake cinnamon"],[4,"Shake until foamy, pour ALL in"]]},
+      {h:30, c:DC.oat, steps:[[5,"Top with oat milk to the line"]]}]}}},
+  bbl: {builds:{
+    iced:{top:8, line:true, note:"The syrup is thick: stir until it's mixed into the shot.", layers:[
+      {h:30, c:DC.banana, steps:[[1,"2 pumps (20 g) banana bread syrup"]]},
+      {h:30, c:DC.espresso, steps:[[2,"Espresso shot over the syrup, stir"]]},
+      {h:38, c:DC.milk, ice:true, steps:[[3,"2 scoops ice"]]},
+      {h:30, c:DC.milk, steps:[[4,"Milk to the line"]]},
+      {h:10, c:DC.banana, splash:true, steps:[[5,"Drizzle banana bread syrup on top"]]}]}}},
+  chai: {builds:{
+    iced:{top:10, line:true, layers:[
+      {h:44, c:DC.chaiIced, ice:true, steps:[[1,"2 scoops ice in the cup first"]]},
+      {h:92, c:DC.chaiIced, group:"IN THE SHAKER", steps:[[2,"150 mL chai concentrate"],[3,"100 mL milk"],[4,"Mix, then pour over the ice"]]}]},
+    hot:{top:14, layers:[
+      {h:98, c:DC.chaiHot, steps:[[1,"6 oz chai concentrate (room temp)"]]},
+      {h:86, c:DC.milk, steps:[[2,"Steam 6 oz milk (extra hot)"],[3,"Pour the milk over the chai"]]}]}}},
+  matcha: {builds:{
+    iced:{top:10, line:true, note:"Zero the scale after the milk, then weigh in the matcha.", layers:[
+      {h:42, c:DC.milk, ice:true, steps:[[1,"2 scoops ice first"]]},
+      {h:64, c:DC.milk, steps:[[2,"Milk to a little under the line"]]},
+      {h:30, c:DC.matcha, steps:[[3,"Zero the scale, add 50 g matcha mix"]]}]},
+    hot:{top:12, layers:[
+      {h:66, c:DC.matcha, steps:[[1,"50 g matcha mix in the cup"]]},
+      {h:110, c:DC.matchaMilk, steps:[[2,"Steam 8 oz milk until hot"],[3,"Pour the steamed milk over the matcha"]]},
+      {h:10, c:DC.foam, foam:true}]}}},
+  smat: {builds:{
+    iced:{top:10, line:true, note:"Zero the scale after the milk, then weigh in the matcha.", layers:[
+      {h:26, c:DC.puree, steps:[[1,"30 g strawberry purée"]]},
+      {h:30, c:DC.milk, ice:true, steps:[[2,"2 scoops ice"]]},
+      {h:54, c:DC.milk, steps:[[3,"Milk to a little under the line"]]},
+      {h:26, c:DC.matcha, steps:[[4,"Zero the scale, add 50 g matcha mix"]]}]}}},
+  londonfog: {builds:{
+    hot:{top:12, teabag:true, note:"Tea: Earl Grey.", layers:[
+      {h:30, c:DC.vanilla, steps:[[1,"1 pump vanilla"]]},
+      {h:76, c:DC.tea, steps:[[2,"3 oz hot water"],[3,"Add the Earl Grey tea bag, let it steep"]]},
+      {h:70, c:DC.fogMilk, steps:[[4,"Foam 6 oz milk while it steeps"]]},
+      {h:10, c:DC.foam, foam:true, steps:[[5,"Add the foamed milk"]]}]}}},
+  cider: {builds:{
+    hot:{top:12, note:"Cold foam contains dairy.", layers:[
+      {h:24, c:DC.syrup, steps:[[1,"1 pump cinnamon syrup"]]},
+      {h:120, c:DC.cider, steps:[[2,"Steam 8 oz apple cider, pour in"]]},
+      {h:30, c:DC.foam, foam:true, steps:[[3,"50 mL cold foam"]]},
+      {h:12, c:DC.syrup, splash:true, steps:[[4,"Caramel drizzle"]]}]}}}
+};
+/* a built drink's diagram, drawn from its recipe's steps (see recipeDiagram) */
+function specialDiagram(d){ const r = recipeOf(d.sp), out = {builds:{}}; servesOf(d).forEach(sv => out.builds[sv] = recipeDiagram(r, sv)); return out; }
+const diagramFor = d => d.sp ? specialDiagram(d) : DIAGRAMS[d.id] || null;
+/* one build as an inline SVG: cup on the left, numbered steps on the right, arrows to the layer they land in */
+function cupSVG(b, temp){
+  const hot = temp === "hot", H = hot ? 198 : 146, W = hot ? 96 : 76, inset = hot ? .10 : .14;
+  const x0 = 14, y0 = hot ? 24 : 12, lx = x0 + W + 34, VW = 340;
+  const xl = y => x0 + W * inset * ((y - y0) / H), xr = y => x0 + W - W * inset * ((y - y0) / H);
+  const cup = `M${x0} ${y0} L${x0 + W} ${y0} L${xr(y0 + H)} ${y0 + H} L${xl(y0 + H)} ${y0 + H} Z`;
+  const id = "c" + Math.random().toString(36).slice(2, 8);
+  let fills = "", deco = "", y = y0 + H;
+  const marks = [];
+  b.layers.forEach(L => {
+    const top = y - L.h;
+    if (L.splash){
+      fills += `<pattern id="${id}s${marks.length}" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#fff"/><rect width="5" height="10" fill="${L.c}"/></pattern><rect x="${x0 - 2}" y="${top}" width="${W + 4}" height="${L.h}" fill="url(#${id}s${marks.length})"/>`;
+    } else fills += `<rect x="${x0 - 2}" y="${top}" width="${W + 4}" height="${L.h}" fill="${L.c}"/>`;
+    if (L.ice){ const n = Math.max(2, Math.round(L.h / 14));
+      for (let i = 0; i < n; i++){ const cx = x0 + W * (.25 + .5 * ((i * .618 + .1) % 1)), cy = top + 8 + (L.h - 16) * ((i + .5) / n);
+        deco += `<rect x="${(cx - 6).toFixed(1)}" y="${(cy - 6).toFixed(1)}" width="12" height="12" rx="2" fill="rgba(255,255,255,.55)" stroke="currentColor" stroke-width="1.6" transform="rotate(${(i % 2 ? -1 : 1) * (12 + i * 5)} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`; } }
+    if (L.foam && L.h >= 20){ const n = Math.round(L.h / 9);
+      for (let i = 0; i < n; i++){ const cx = x0 + W * (.2 + .6 * ((i * .618 + .3) % 1)), cy = top + 6 + (L.h - 12) * ((i + .5) / n);
+        deco += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${3 + (i % 3)}" fill="#fff" stroke="currentColor" stroke-width="1.2"/>`; } }
+    if (!L.foam && !L.splash) fills += `<line x1="${x0}" x2="${x0 + W}" y1="${top}" y2="${top}" stroke="rgba(0,0,0,.12)"/>`;
+    if (L.steps) marks.push({L, mid: top + L.h / 2, top, bot: y});
+    y = top;
+  });
+  if (b.line) deco += `<line x1="${x0 - 7}" x2="${x0 + W + 7}" y1="${y0 + b.top}" y2="${y0 + b.top}" stroke="currentColor" stroke-width="2" stroke-dasharray="5 4"/>`;
+  if (b.teabag) deco += `<path d="M${x0 + W * .5} ${y0 + H * .55} C${x0 + W * .4} ${y0 + H * .3} ${x0 + W * .25} ${y0 + 6} ${x0 + 4} ${y0 - 10}" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="${x0 - 8}" y="${y0 - 22}" width="14" height="16" rx="2" fill="#fff" stroke="currentColor" stroke-width="2"/><rect x="${x0 + W * .32}" y="${y0 + H * .55}" width="30" height="36" rx="3" fill="#fff" stroke="currentColor" stroke-width="2"/><rect x="${x0 + W * .32}" y="${y0 + H * .55 + 18}" width="30" height="18" rx="2" fill="currentColor"/>`;
+  const lid = hot ? `<rect x="${x0 - 5}" y="${y0 - 11}" width="${W + 10}" height="10" rx="3" fill="currentColor"/><rect x="${x0 + 10}" y="${y0 - 17}" width="${W - 20}" height="8" rx="4" fill="currentColor"/>` : "";
+  const wrap = (t, n = 34) => t.split(" ").reduce((ls, w) => { const l = ls[ls.length - 1]; if (l && (l + " " + w).length <= n) ls[ls.length - 1] = l + " " + w; else ls.push(w); return ls; }, [""]).filter(Boolean);
+  const LH = 15, blocks = marks.slice().reverse().map(m => ({m, lines: m.L.steps.reduce((s, [, t]) => s + wrap(t).length, 0) + (m.L.group ? 1 : 0)}));
+  let cursor = 4;
+  blocks.forEach(bk => { const h = bk.lines * LH; bk.y = Math.max(cursor, bk.m.mid - h / 2); cursor = bk.y + h + 2 * bk.m.L.steps.length + 6; });
+  const VH = Math.max(y0 + H + 10, cursor + 4) + (b.note ? 22 : 0);
+  let labels = "";
+  blocks.forEach(bk => {
+    const {m} = bk; let ty = bk.y;
+    const ay = Math.min(Math.max(m.mid, bk.y + 8), bk.y + bk.lines * LH - 8);
+    labels += `<path d="M${lx - 4} ${ay} L${xr(m.mid) + 6} ${m.mid}" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M${xr(m.mid) + 12} ${m.mid - 4} L${xr(m.mid) + 6} ${m.mid} L${xr(m.mid) + 12} ${m.mid + 4}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>`;
+    if (m.L.group){
+      labels += `<text x="${lx + 10}" y="${ty + 12}" font-size="10" font-weight="700" letter-spacing="1.2" fill="currentColor">${esc(m.L.group)}</text>`;
+      labels += `<path d="M${lx + 4} ${ty + 4} h-4 v${bk.lines * LH - 8} h4" fill="none" stroke="currentColor" stroke-width="1.6"/>`;
+      ty += LH;
+    }
+    m.L.steps.forEach(([n, t]) => {
+      const dim = m.L.opt ? ` opacity=".75"` : "", ls = wrap(t);
+      labels += `<g${dim}><circle cx="${lx + 19}" cy="${ty + 8}" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="${lx + 19}" y="${ty + 12}" font-size="11" font-weight="700" text-anchor="middle" fill="currentColor">${n}</text><text x="${lx + 32}" y="${ty + 12}" font-size="12.5" fill="currentColor">${ls.map((l, i) => `<tspan x="${lx + 32}" dy="${i ? LH : 0}">${esc(l)}</tspan>`).join("")}</text></g>`;
+      ty += LH * ls.length + 2;
+    });
+  });
+  const note = b.note ? `<text x="${x0}" y="${VH - 6}" font-size="12" font-style="italic" fill="currentColor">${esc(b.note)}</text>` : "";
+  return `<svg class="cupsvg" viewBox="0 0 ${VW + 60} ${VH}" role="img" aria-label="${esc(temp)} build diagram">
+    <defs><clipPath id="${id}"><path d="${cup}"/></clipPath></defs>
+    ${lid}<g clip-path="url(#${id})">${fills}${deco}</g>
+    <path d="${cup}" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>${labels}${note}</svg>`;
+}
+function diagramHTML(d){
+  const g = diagramFor(d);
+  const builds = g ? Object.entries(g.builds).filter(([t]) => servesOf(d).includes(t)).sort(([a]) => a === "iced" ? -1 : 1) : [];
+  return builds.length ? `<div class="diag-builds">${builds.map(([t, b]) => { const c = costOf(d, t, "dairy");
+      return `<section class="diag-b"><h3>${t === "hot" ? "Hot, 12 oz cup" : "Iced, 16 oz cup"}</h3>${cupSVG(b, t)}
+      <div class="diag-m"><span>Price ${F.usd2(d.price)}</span><span class="adm">Cost ${F.usd2(c)}</span><span class="adm">Margin ${F.frac(marginOf(d.price, c))}</span></div></section>`; }).join("")}</div>`
+    : `<p class="empty">No diagram for this drink. ${esc(d.name)}: ${esc(SERVE_TAG[d.serve])}, ${F.usd2(d.price)}.</p>`;
+}
+function openDiagram(id){
+  const d = drinkById(id), dlg = $("diagDlg"); if (!d || !dlg) return;
+  $("diagBody").innerHTML = `<div class="diag-h"><h2>${esc(d.name)}</h2><button class="btn ghost sm" data-act="diagClose">Close</button></div>` + diagramHTML(d);
+  dlg.showModal();
+}
+
+/* ------------------------------------------------------------------ ingredients and packaging */
+/* item categories, in the order the closing count and the ordering list show them. Packaging items always sit in "pkg".
+   Perishable is its own flag (milk can be perishable without leaving Milk and dairy); it's set per item under Edit categories. */
+const ING_CATS = [["milk","Milk and dairy"],["alt","Alt milk"],["fresh","Fresh and perishable"],["coffee","Coffee and espresso"],["tea","Tea and matcha"],["mixin","Syrups, sauces and spices"],["other","Other"]];
+const ING_CAT_SHORT = Object.fromEntries(ING_CATS);
+function ingCat(g){ if (!g) return "other"; if (g.cat && ING_CAT_SHORT[g.cat]) return g.cat; return guessCat(g); }
+function guessCat(g){ const n = g.name || "", id = g.id || "";
+  if (id === "beans" || /espresso|coffee|cold brew/i.test(n)) return "coffee";
+  if (["matcha","chai","tea"].includes(id) || /matcha|chai|\btea\b/i.test(n)) return "tea";
+  if (["oat","almond"].includes(id) || /\b(oat|almond|soy|coconut|pea)\b.*milk|milk.*\b(oat|almond|soy)\b/i.test(n)) return "alt";
+  if (["milk","wholemilk","cream"].includes(id) || /milk|cream|half and half|creamer/i.test(n)) return "milk";
+  if (/strawberr|fruit|berry|banana|puree|purée|apple|cider|pastr|donut|cake|produce|lemon|orange/i.test(n)) return "fresh";
+  if (/syrup|sauce|cinnamon|spice|honey|cocoa|chocolate|caramel|vanilla|sugar/i.test(n)) return "mixin";
+  return "other"; }
+const perishOf = g => !g ? false : g.perish != null ? !!g.perish : ingCat(g) === "fresh" || ingCat(g) === "milk";
+/* the unit people count on the shelf, and what one holds in the item's own unit (grams, ounces or each). Set per item under Edit
+   items; until then it's guessed from the name. One purchase pack can hold several (a case of 6 bags). */
+function countUnit(g){
+  if (!g) return {name:"pack", size:1};
+  if (g.cu && g.cu.name && +g.cu.size > 0) return {name:g.cu.name, size:+g.cu.size};
+  const n = (g.name || "").toLowerCase(), u = String(g.unit || "").toLowerCase(), sz = +g.size || 1, id = g.id || "", pkg = S.packaging.some(p => p.id === id);
+  if (pkg) return /cup|lid/.test(n) ? {name:"sleeve", size:50} : {name:"case", size:sz};
+  if (id === "beans" || /espresso|coffee bean|whole bean/.test(n)) return {name:"bag", size: u === "g" ? 998 : 35.2};   // 2.2 lb bags
+  if (/milk|cider|juice/.test(n) && u === "oz" && sz >= 128 && !/oat|almond|soy/.test(n)) return {name:"gallon jug", size:128};
+  if (/oat|almond|soy|cream|chai|concentrate/.test(n) && u === "oz") return {name:"carton", size: sz % 32 === 0 ? 32 : sz};
+  if (/syrup|sauce/.test(n)) return {name:"bottle", size: /\(1l\)|1 ?l\b|liter/.test(n) ? 33.8 : sz};
+  if (/tea bag/.test(n) || u === "bag") return {name:"tea bag", size:1};
+  if (/matcha|strawberr|frozen|bean/.test(n)) return {name:"bag", size:sz};
+  if (/cinnamon|spice|cocoa/.test(n)) return {name:"jar", size:sz};
+  return {name:"pack", size:sz};
+}
+const unitPlural = (w, n) => n === 1 ? w : /(s|x|ch|sh)$/.test(w) ? w + "es" : w + "s";
+const capText = (size, unit) => { const u = String(unit || "").toLowerCase(), x = +size || 0;
+  if (u === "g") return x >= 900 ? `${(x / 453.592).toFixed(1).replace(/\.0$/, "")} lb` : `${F.int(x)} g`;
+  if (u === "oz" || u === "fl oz") return Math.abs(x - 128) < .5 ? "1 gallon" : Math.abs(x - 33.8) < .3 ? "1 L" : Math.abs(x - 25.4) < .3 ? "750 mL" : `${F.n1(x).replace(/\.0$/, "")} oz`;
+  return x === 1 ? "" : `${F.int(x)}`; };
+const cuLabel = g => { const c = countUnit(g), cap = capText(c.size, g.unit || "each"); return c.name + (cap && !/gallon/.test(c.name) ? `, ${cap}` : ""); };
+/* what one purchase pack is, in count units: "case of 6 bags, 2.2 lb each" or just "gallon jug" */
+const packLabel = g => { const c = countUnit(g), per = (+g.size || 0) / c.size, cap = capText(c.size, g.unit || "each");
+  return Math.abs(per - 1) < .05 ? cuLabel(g) : `case of ${F.int(per)} ${unitPlural(c.name, 2)}${cap && !/gallon/.test(c.name) ? `, ${cap} each` : ""}`; };
+/* an amount in the item's own unit, said in shelf units: "1.5 gallon jugs", "3 bags" */
+const inUnits = (id, q) => { const c = countUnit(ingOf(id)), n = Math.round(q / c.size * 10) / 10; return !n && q > 0 ? `under 0.1 ${unitPlural(c.name, 2)}` : `${n < 10 ? n : Math.round(n)} ${unitPlural(c.name, n)}`; };
+const perishId = id => perishOf(S.ingredients.find(g => g.id === id));
+const KIT_LBL = {iced:"Iced cups", hot:"Hot cups", both:"Every cup"};
+const cleanUrl = u => { u = String(u || "").trim(); if (!u) return ""; return /^https?:\/\//i.test(u) ? u : "https://" + u; };
+const buyBtn = item => item.url ? `<a class="btn ghost sm" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" title="${esc(item.url)}">Buy</a>` : `<span class="muted">No link</span>`;
+const storeSel = g => `<select class="in txt sel-s" data-ostore="${esc(g.id)}" aria-label="Store for ${esc(g.name)}"><option value="">Pick a store</option>${["BJ's","WebstaurantStore","Amazon"].map(x => `<option${storeOf(g.vendor) === x ? " selected" : ""}>${x}</option>`).join("")}</select>`;
+const rowActions = (kind, i, name) => { const a = `data-kind="${kind}" data-i="${i}"`;
+  return UI.editRow === kind + "-" + i
+    ? `<div class="lnk"><button class="btn sm" data-act="doneRow" ${a}>Done</button><button class="linkbtn" data-act="cancelRow" ${a}>Cancel</button><button class="x" data-act="${kind === "ing" ? "delIng" : "delPkg"}" data-i="${i}" title="Remove ${esc(name)}" aria-label="Remove ${esc(name)}">✕</button></div>`
+    : `<button class="btn ghost sm" data-act="editRow" ${a} aria-label="Edit ${esc(name)}">Edit</button>`; };
+function renderIngredients(){
+  const box = $("ingBody"); if (!box) return;
+  const ucI = g => F.usd4(+g.size > 0 ? g.price / g.size : 0) + " / " + esc(g.unit || "");
+  const row = i => { const g = S.ingredients[i];
+    if (UI.editRow === "ing-" + i) return `<tr class="editing ing-edit"><td colspan="8"><div class="ingform">
+        <label class="wide">Ingredient<input class="in txt" data-bind="ingredients.${i}.name" value="${esc(g.name)}" aria-label="Ingredient name"></label>
+        <label class="wide">Category<select class="in txt" data-bind="ingredients.${i}.cat" aria-label="Category">${ING_CATS.map(([c,l]) => `<option value="${c}"${ingCat(g) === c ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+        <label class="chk wide"><input type="checkbox" data-iperish="${esc(g.id)}"${perishOf(g) ? " checked" : ""}> Perishable: weekly cost counts what was bought</label>
+        <label>Pack price<input class="in" type="number" min="0" step="0.01" data-bind="ingredients.${i}.price" data-type="num" value="${g.price}" aria-label="Pack price"></label>
+        <label>Pack size<input class="in" type="number" min="0" step="0.01" data-bind="ingredients.${i}.size" data-type="num" value="${g.size}" aria-label="Pack size"></label>
+        <label>Unit<input class="in txt" data-bind="ingredients.${i}.unit" value="${esc(g.unit)}" aria-label="Unit"></label>
+        <label>Item number<input class="in txt" data-bind="ingredients.${i}.sku" value="${esc(g.sku || "")}" placeholder="From the invoice" aria-label="Item number"></label>
+        <label class="wide">Vendor<input class="in txt" data-bind="ingredients.${i}.vendor" value="${esc(g.vendor || "")}" aria-label="Vendor"></label>
+        <label class="wide">Buy link<input class="in txt" data-bind="ingredients.${i}.url" value="${esc(g.url || "")}" placeholder="Paste the product page" aria-label="Buy link"></label>
+      </div><div class="ingact">${rowActions("ing", i, g.name)}</div></td></tr>`;
+    return `<tr><td class="l">${esc(g.name)}</td><td>${F.usd2(g.price)}</td><td>${fmtQty(+g.size || 0, "")}</td><td class="l">${esc(g.unit)}</td>
+      <td class="calc adm">${ucI(g)}</td><td class="l">${storeSel(g)}</td><td class="l">${buyBtn(g)}</td><td class="adm">${rowActions("ing", i, g.name)}</td></tr>`; };
+  const prow = (p, i) => {
+    if (UI.editRow === "pkg-" + i) return `<tr class="editing"><td colspan="8"><div class="ingform">
+        <label class="wide">Item<input class="in txt" data-bind="packaging.${i}.name" value="${esc(p.name)}" aria-label="Item name"></label>
+        <label class="wide">Used for<select class="in txt" data-bind="packaging.${i}.kit" aria-label="Used for">${["iced","hot","both"].map(k => `<option value="${k}"${p.kit === k ? " selected" : ""}>${KIT_LBL[k]}</option>`).join("")}</select></label>
+        <label>Case price<input class="in" type="number" min="0" step="0.01" data-bind="packaging.${i}.price" data-type="num" value="${p.price}" aria-label="Case price"></label>
+        <label>Count<input class="in" type="number" min="1" step="1" data-bind="packaging.${i}.size" data-type="num" value="${p.size}" aria-label="Count"></label>
+        <label>Item number<input class="in txt" data-bind="packaging.${i}.sku" value="${esc(p.sku || "")}" placeholder="From the invoice" aria-label="Item number"></label>
+        <label class="wide">Buy link<input class="in txt" data-bind="packaging.${i}.url" value="${esc(p.url || "")}" placeholder="Paste the product page" aria-label="Buy link"></label>
+      </div><div class="ingact">${rowActions("pkg", i, p.name)}</div></td></tr>`;
+    return `<tr><td class="l">${esc(p.name)}</td><td>${F.usd2(p.price)}</td><td>${F.int(p.size)}</td><td class="l">${KIT_LBL[p.kit] || p.kit}</td>
+      <td class="calc adm">${F.usd4(+p.size > 0 ? p.price / p.size : 0)} each</td><td class="l">${storeSel(p)}</td><td class="l">${buyBtn(p)}</td><td class="adm">${rowActions("pkg", i, p.name)}</td></tr>`; };
+  const idx = S.ingredients.map((g,i) => i);
+  box.innerHTML = ING_CATS.map(([c, lbl]) => { const g = idx.filter(i => ingCat(S.ingredients[i]) === c); return g.length ? `<tr class="band"><td colspan="8">${lbl}</td></tr>` + g.map(row).join("") : ""; }).join("")
+    + `<tr class="band"><td colspan="8">Packaging. A served cup costs ${F.usd3(kitCost("iced"))} iced, ${F.usd3(kitCost("hot"))} hot</td></tr>` + S.packaging.map(prow).join("");
+}
+
+/* ------------------------------------------------------------------ stock and orders
+   On hand = last count + deliveries since − what logged sales used. Per cafe day = average of logged days, or the Clover
+   days before any are logged. Usage per drink follows the logged mix once 20 drinks are logged, the Clover item report before that. */
+function trackedItems(){
+  const items = [];
+  S.ingredients.forEach(i => { if (+i.price > 0 || i.track) items.push({id:i.id, name:i.name, unit:i.unit, size:+i.size || 0, price:+i.price, vendor:i.vendor || "Other", url:i.url || ""}); });
+  S.packaging.forEach(p => items.push({id:p.id, name:p.name, unit:"each", size:+p.size || 0, price:+p.price, vendor:p.vendor || "WebstaurantStore", url:p.url || ""}));
+  return items;
+}
+const PKG_IDS = () => new Set(S.packaging.map(p => p.id));
+const STK_CATS = ING_CATS.concat([["pkg","Cups, lids and packaging"]]);
+const CNT_GROUPS = [["perish","Perishables"]].concat(ING_CATS.filter(([k]) => !["milk","fresh"].includes(k)), [["milk","Milk and dairy, not perishable"],["fresh","Fresh, not perishable"],["pkg","Cups, lids and packaging"]]);
+const cntGroup = r => PKG_IDS().has(r.id) ? "pkg" : perishId(r.id) ? "perish" : ingCat(S.ingredients.find(g => g.id === r.id));
+function stkCat(id, name){ if (PKG_IDS().has(id)) return "pkg"; return ingCat(S.ingredients.find(g => g.id === id) || {id, name}); }
+function trackModel(){
+  const items = trackedItems(), actUse = {}, uses = [], byDay = {}, unknown = new Set();
+  let drinks = 0;
+  allLines().forEach(({l}) => {
+    const q = +l.q || 0; if (isFood(l)) return;
+    const d = lineDrink(l); if (!d){ unknown.add(l.k); return; }
+    const use = {}; lineUsage(l, d, q, (id, v) => { if (id) use[id] = (use[id] || 0) + v; });
+    Object.keys(use).forEach(id => actUse[id] = (actUse[id] || 0) + use[id]);
+    uses.push({ts:l.d + "T" + l.tm, use}); drinks += q; byDay[l.d] = (byDay[l.d] || 0) + q;
+  });
+  const logged = Object.keys(byDay).sort();
+  const per = {};
+  const addPer = (id, v) => { if (id) per[id] = (per[id] || 0) + v; };
+  if (drinks >= 20) items.forEach(it => per[it.id] = (actUse[it.id] || 0) / drinks);
+  else if (cloverRows().length){ const xs = cloverRows(), tot = xs.reduce((s,x) => s + x.r.units, 0);
+    xs.forEach(({r, d}) => { const w = r.units / tot, alt = d.milk ? (r.alt || 0) / r.units : 0, sv = servesOf(d);
+      sv.forEach(sx => { const k = w / sv.length; lineUsage({ice:sx === "iced", milk:"dairy"}, d, k * (1 - alt), addPer); if (alt) lineUsage({ice:sx === "iced", milk:"oat"}, d, k * alt, addPer); });
+      if (r.syrup) addPer(flavorId("vanilla"), w * r.syrup / r.units * 2 * PUMP_OZ);
+      if (r.foam) expand([["foam", FOAM_OZ]]).forEach(x => addPer(x.id, x.q * w * r.foam / r.units)); }); }
+  else { const L = liveDrinks(); L.forEach(d => { const sv = servesOf(d); sv.forEach(s => lineUsage({ice:s === "iced", milk:"dairy"}, d, 1 / L.length / sv.length, (id, v) => { if (id) per[id] = (per[id] || 0) + v; })); }); }
+  const ev = Store.stock.slice().sort((a,b) => String(a.ts).localeCompare(String(b.ts)));
+  const onHand = {};
+  items.forEach(it => {
+    let v = 0, baseTs = "";
+    ev.forEach(e => { if (e.item === it.id && (e.type === "count" || e.type === "waste")){ v = e.type === "waste" ? 0 : +e.qty || 0; baseTs = e.ts; } });   // leftovers thrown out leave none
+    ev.forEach(e => { if (e.item === it.id && e.type === "receive" && e.ts > baseTs) v += +e.qty || 0; });
+    uses.forEach(u => { if (u.ts > baseTs && u.use[it.id]) v -= u.use[it.id]; });
+    onHand[it.id] = v;
+  });
+  ensureDates();
+  const cal = [...new Set(S.track.dates)].sort(), today = ymd(new Date()), remaining = cal.filter(x => x >= today);
+  const cpd = cloverPerDay();
+  const dayDrinks = logged.length ? drinks / logged.length : cpd || Math.max(0, +S.track.perDay || 60);
+  const src = logged.length ? `the average of ${logged.length} logged ${logged.length === 1 ? "day" : "days"}` : cpd ? "the Clover days" : "the planning number";
+  const wk = weekOf(remaining[0] || today), nextDates = remaining.filter(d => weekOf(d) === wk);   // the order covers the next open week
+  const cover = Math.max(1, nextDates.length), buf = (S.track.buffer || 0) / 100;
+  const T0 = {items, per, byDay, dayDrinks, today, cal};
+  const rows = items.map(it => {
+    if (perishId(it.id)){ const fc = perishFc(T0, it.id, onHand[it.id], nextDates), perDay = fc.rate * fc.perDay, oh = onHand[it.id];
+      const status = perDay <= 1e-9 ? "Not used" : fc.packs > 0 ? (oh <= 1e-9 ? "Out" : "Order now") : "OK", cls = status === "Not used" ? "hot" : fc.packs > 0 ? "neg" : "";
+      return {...it, oh, perDay, need:fc.need, short:fc.need - oh, packs:fc.packs, cost:fc.packs * it.price, daysLeft: perDay > 1e-9 ? Math.max(0, oh) / perDay : Infinity, runsOut:null, status, cls, fc}; }
+    const perDay = (per[it.id] || 0) * dayDrinks, need = perDay * cover * (1 + buf), oh = onHand[it.id], short = need - oh;
+    const packs = short > 1e-6 && it.size > 0 ? Math.ceil(short / it.size) : 0;
+    const daysLeft = perDay > 1e-9 ? Math.max(0, oh) / perDay : Infinity;
+    const runsOut = isFinite(daysLeft) ? remaining[Math.floor(daysLeft)] || null : null;
+    let status, cls;
+    if (perDay <= 1e-9){ status = "Not used"; cls = "hot"; }
+    else if (oh <= 1e-9){ status = "Out"; cls = "neg"; }
+    else if (packs > 0){ status = "Order now"; cls = "neg"; }
+    else if (daysLeft < cover + 2){ status = "Running low"; cls = "low"; }
+    else { status = "OK"; cls = ""; }
+    return {...it, oh, perDay, need, short, packs, cost:packs * it.price, daysLeft, runsOut, status, cls};
+  });
+  const orders = rows.filter(r => r.packs > 0);
+  return {items, rows, orders, logged, drinks, dayDrinks, src, cal, remaining, next:remaining[0] || null, wk, cover, buf, unknown:[...unknown], nextDates, today, per, byDay};
+}
+/* ------------------------------------------------------------------ perishables
+   Ordered at the start of the week; whatever's left at the last close of the week is counted and thrown out (a "waste" entry).
+   A closed week tells us what each item really used per drink sold. The order for the days ahead is the moving average of the
+   last PERISH_WEEKS closed weeks: drinks sold per open day, times the open days ahead, times use per drink, plus a safety margin
+   from how much that use swings (at least 10%), minus what's on hand. It can drop up to a quarter pack, never more than the margin. */
+const PERISH_WEEKS = 2, SAFETY = {lean:.5, balanced:1, safe:1.5};
+const drinksOn = (T, d) => T.byDay[d] || (S.clover.orders[d] ? S.clover.orders[d].log.filter(([, v]) => v > 0).length : 0);   // Clover days count orders
+function weekDrinks(T, w){ let n = 0, days = 0; for (let i = 0; i < 7; i++){ const x = drinksOn(T, addDays(w, i)); if (x > 0){ n += x; days++; } } return {n, days}; }
+function perDayAvg(T, before){   // drinks per open day over the last PERISH_WEEKS weeks with sales, before that week
+  let n = 0, days = 0, k = 0; for (let w = addDays(before, -7), i = 0; i < 52 && k < PERISH_WEEKS; w = addDays(w, -7), i++){ const x = weekDrinks(T, w); if (x.days){ n += x.n; days += x.days; k++; } }
+  return days ? n / days : 0; }
+function perishWeeks(id){
+  const wks = {};
+  Store.stock.forEach(e => { if (e.item !== id || (e.type !== "receive" && e.type !== "waste")) return; const w = weekOf(String(e.ts).slice(0, 10)), x = wks[w] || (wks[w] = {w, got:0, left:0, closed:false});
+    if (e.type === "receive") x.got += +e.qty || 0; else { x.left += +e.qty || 0; x.closed = true; } });
+  return Object.values(wks).filter(x => x.closed && x.got > 0).map(x => ({...x, used:Math.max(0, x.got - x.left), out:x.left <= 1e-9})).sort((a, b) => a.w.localeCompare(b.w));
+}
+function perishFc(T, id, oh, ahead){
+  const it = T.items.find(i => i.id === id) || {size:0}, cw = weekOf(T.today);
+  const hist = perishWeeks(id).filter(x => x.w < cw).map(x => ({...x, n:weekDrinks(T, x.w).n})).filter(x => x.n > 0).slice(-PERISH_WEEKS);
+  const use = hist.some(x => !x.out) ? hist.filter(x => !x.out) : hist, rates = use.map(x => x.used / x.n);   // a week that ran out only shows a floor
+  const rate = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : T.per[id] || 0;
+  const sd = rates.length > 1 ? Math.sqrt(rates.reduce((a, v) => a + (v - rate) ** 2, 0) / (rates.length - 1)) : 0;
+  const perDay = perDayAvg(T, cw) || T.dayDrinks, drinks = perDay * ahead.length, last = hist[hist.length - 1];
+  const k = (SAFETY[S.track.safety] || 1) + (last && last.out ? .5 : 0), margin = k * Math.max(sd, rate * .1) * drinks, need = rate * drinks + margin;
+  const x = it.size > 0 ? (need - Math.max(0, oh)) / it.size : 0, packs = x > 0 ? Math.max(0, Math.ceil(x - Math.min(.25, margin / it.size))) : 0;
+  const got = hist.reduce((a, h) => a + h.got, 0), left = hist.reduce((a, h) => a + h.left, 0);
+  return {rate, perDay, drinks, need, margin, packs, hist, measured: rates.length > 0, waste: got ? left / got : 0, ranOut: !!(last && last.out)};
+}
+const fcWhy = (id, fc, days) => `About ${F.int(fc.drinks)} drinks over ${days} ${days === 1 ? "day" : "days"} (${F.int(fc.perDay)} a day, last ${PERISH_WEEKS} weeks), ${inUnits(id, fc.rate * 10)} per 10 drinks ${fc.measured ? "as measured" : "from the recipes"}. `
+  + (fc.ranOut ? "Ran out last week, so this orders more." : fc.hist.length ? `Last ${fc.hist.length === 1 ? "week" : fc.hist.length + " weeks"} threw out ${F.frac(fc.waste)}.` : "No closed week yet: count the leftovers at the last close to start measuring.");
+function renderStock(T){
+  const out = T.rows.filter(r => r.status === "Out").map(r => r.name), now = T.rows.filter(r => r.status === "Order now").map(r => r.name), low = T.rows.filter(r => r.status === "Running low").map(r => r.name);
+  const ib = $("inv-banner"), list = a => a.slice(0, 6).join(", ") + (a.length > 6 ? ` and ${a.length - 6} more` : "");
+  if (out.length){ ib.className = "banner bad"; ib.textContent = `Out of stock: ${list(out)}. Order these before the next cafe day.${now.length ? ` Also order: ${list(now)}.` : ""}`; }
+  else if (now.length){ ib.className = "banner bad"; ib.textContent = `Order now: ${list(now)}. Stock won't cover the week of ${fmtD(T.wk)}.`; }
+  else if (low.length){ ib.className = "banner warn"; ib.textContent = `Running low: ${list(low)}.`; }
+  else { ib.className = "banner"; ib.textContent = ""; }
+  if (!$("orderList").contains(document.activeElement)) renderBuyList(T);
+  renderCount(T);
+  const itemName = id => trackedItems().find(i => i.id === id) || {name:id, unit:""};
+  const evs = Store.stock.slice().sort((a,b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 12);
+  $("stkLog").innerHTML = evs.length ? evs.map(e => { const it = itemName(e.item);
+    return `<tr><td class="l">${e.type === "count" ? "Count" : e.type === "waste" ? "Thrown out" : "Delivery"}: ${esc(it.name)}, ${fmtQty(+e.qty || 0, it.unit)}, ${fmtD(String(e.ts).slice(0,10))}${e.inv ? `, invoice ${esc(e.inv)}` : ""}</td><td style="width:40px"><button class="x" data-act="delStock" data-id="${esc(e.id)}" title="Delete" aria-label="Delete">✕</button></td></tr>`; }).join("")
+    : `<tr><td class="l empty">None yet. Save a closing count or tick Received on the order.</td></tr>`;
+}
+/* ------------------------------------------------------------------ closing count: what's left in reserve
+   At closing, type what's on the shelf next to each item, in packs (half packs are fine) or in the item's own unit, and save.
+   Each number becomes a count, which resets that item's on hand; blank lines are skipped. */
+UI.cnt = {}; UI.cntU = {};
+function renderCount(T){
+  const box = $("cntList"); if (!box || box.contains(document.activeElement)) return;
+  if (!$("cntDate").value) $("cntDate").value = ymd(new Date());
+  const last = Store.stock.filter(e => e.type === "count").map(e => String(e.ts).slice(0, 10)).sort().pop(), warn = r => ["Out","Order now","Running low"].includes(r.status);
+  set("resSum", `${T.rows.length} items${T.rows.filter(warn).length ? `, ${T.rows.filter(warn).length} low` : ""}. ${last ? `Last count ${fmtD(last)}` : "Not counted yet"}`);
+  const day = $("cntDate").value || ymd(new Date()), wkOpen = S.track.dates.filter(d => weekOf(d) === weekOf(day)).sort(), toss = wkOpen.length > 0 && wkOpen[wkOpen.length - 1] === day, rest = wkOpen.filter(d => d > day);
+  const ed = !!UI.cntEdit && isAdmin(), eb = $("cntEditBtn"); if (eb) eb.textContent = ed ? "Done" : "Edit items";
+  box.classList.toggle("editing", ed);
+  box.innerHTML = CNT_GROUPS.map(([key, lbl]) => { const rs = T.rows.filter(r => cntGroup(r) === key).sort((a, b) => a.name.localeCompare(b.name)); if (!rs.length) return "";
+    const low = rs.filter(warn).length;
+    const ph = key !== "perish" ? "" : toss ? `<p class="note-sm cnt-toss">Last close of the week: count what's left of each, save, then throw it all out. It's logged as thrown out and the shelf starts empty for next week's order.</p>`
+      : rest.length ? `<p class="note-sm">Checks what's here against ${rest.map(d => DOW[toDate(d).getDay()]).join(" and ")}.</p>` : "";
+    return `<section class="cntcat${key === "perish" ? " perish" : ""}"><div class="cnth"><h3>${key === "perish" && toss ? "Perishables, leftovers to throw out" : lbl}</h3><span class="note-sm">${rs.length} ${rs.length === 1 ? "item" : "items"}${low ? ` · <span class="neg-t">${low} low</span>` : ""}</span></div>`
+      + ph + rs.map(r => { const g = ingOf(r.id), isIng = S.ingredients.some(x => x.id === r.id), c = countUnit(g), per = perishOf(isIng ? g : null);
+        if (ed) return `<div class="cnt ed"><b class="nm">${esc(r.name)}</b>
+            ${isIng ? `<select class="in txt" data-icat="${esc(r.id)}" aria-label="${esc(r.name)} category">${ING_CATS.map(([k,l]) => `<option value="${k}"${ingCat(g) === k ? " selected" : ""}>${l}</option>`).join("")}</select>` : `<span class="note-sm">Packaging</span>`}
+            <label class="chk">${isIng ? `<input type="checkbox" data-iperish="${esc(r.id)}"${per ? " checked" : ""}> Perishable` : ""}</label>
+            <span class="cuedit">Counted in <input class="in txt" data-cuname="${esc(r.id)}" value="${esc(c.name)}" aria-label="${esc(r.name)}, counted in"> holding <input class="in" type="number" min="0" step="any" data-cusize="${esc(r.id)}" value="${+c.size}" aria-label="${esc(r.name)}, one holds"> ${esc(g.unit || "each")}</span></div>`;
+        if (UI.cntItem === r.id && isAdmin()){ const L = isIng ? "ingredients" : "packaging", i = (isIng ? S.ingredients : S.packaging).findIndex(x => x.id === r.id);
+          return `<div class="cnt-item"><div class="ingform">
+            <label class="wide">Name<input class="in txt" data-bind="${L}.${i}.name" value="${esc(g.name)}"></label>
+            ${isIng ? `<label class="wide">Category<select class="in txt" data-icat="${esc(r.id)}">${ING_CATS.map(([k,l]) => `<option value="${k}"${ingCat(g) === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>` : ""}
+            <label>Counted in<input class="in txt" data-cuname="${esc(r.id)}" value="${esc(c.name)}"></label>
+            <label>One holds (${esc(g.unit || "each")})<input class="in" type="number" min="0" step="any" data-cusize="${esc(r.id)}" value="${+c.size}"></label>
+            <label>${isIng ? "Pack" : "Case"} price<input class="in" type="number" min="0" step="0.01" data-bind="${L}.${i}.price" data-type="num" value="${+g.price || 0}"></label>
+            <label>${isIng ? `Pack size (${esc(g.unit || "each")})` : "Count per case"}<input class="in" type="number" min="0" step="any" data-bind="${L}.${i}.size" data-type="num" value="${+g.size || 0}"></label>
+            ${isIng ? `<label class="chk wide"><input type="checkbox" data-iperish="${esc(r.id)}"${per ? " checked" : ""}> Perishable: weekly cost counts what was bought</label>` : ""}
+            </div><div class="lnk" style="margin-top:10px"><button class="btn sm" data-act="cntItem" data-id="">Done</button><button class="btn ghost sm" data-act="cntDel" data-id="${esc(r.id)}">Delete ${esc(r.name)}</button></div></div>`; }
+        const u = UI.cntU[r.id] || "cu", n = c.size > 0 ? Math.max(0, r.oh) / c.size : 0, per2 = (+g.size || 0) / c.size;
+        const have = r.oh > 1e-9 ? `${n >= 10 ? F.int(n) : (Math.round(n * 10) / 10)} ${unitPlural(c.name, Math.round(n * 10) / 10)} left` : "None left";
+        const chk = r.fc && !toss && rest.length && r.perDay > 1e-9 ? perishFc(T, r.id, r.oh, rest) : null;
+        const chkH = !chk ? "" : chk.packs > 0 ? `<small class="neg-t">Short for ${rest.map(d => DOW[toDate(d).getDay()]).join(" and ")}: buy about ${esc(inUnits(r.id, chk.packs * (+g.size || 0)))} more</small>` : `<small class="status-ok">Enough for ${rest.map(d => DOW[toDate(d).getDay()]).join(" and ")}</small>`;
+        return `<div class="cnt"><div class="nm"><b>${esc(r.name)}</b><button class="x cnt-pen adm" data-act="cntItem" data-id="${esc(r.id)}" title="Edit or delete ${esc(r.name)}" aria-label="Edit or delete ${esc(r.name)}">✎</button><small>${esc(cuLabel(g))}</small>${chkH}</div>
+          <span class="have${warn(r) ? " " + r.cls : ""}">${have}${warn(r) ? ` · ${r.status.toLowerCase()}` : ""}</span>
+          <input class="in" type="number" min="0" step="any" inputmode="decimal" data-cnt="${esc(r.id)}" value="${esc(UI.cnt[r.id] != null ? UI.cnt[r.id] : "")}" placeholder="Count" aria-label="${esc(r.name)}, how many ${unitPlural(c.name, 2)} left">
+          <select class="in txt" data-cntu="${esc(r.id)}" aria-label="${esc(r.name)}, counted in"><option value="cu"${u === "cu" ? " selected" : ""}>${esc(unitPlural(c.name, 2))}</option>${per2 > 1.05 ? `<option value="pack"${u === "pack" ? " selected" : ""}>full cases (${F.int(per2)})</option>` : ""}<option value="units"${u === "units" ? " selected" : ""}>${esc(g.unit || "each")}</option></select></div>`; }).join("")
+      + `</section>`; }).join("");
+}
+async function saveCount(){
+  const items = trackedItems(), day = $("cntDate").value || ymd(new Date()), ts = day + "T" + hm(new Date()), at = new Date().toISOString(), wkOpen = S.track.dates.filter(d => weekOf(d) === weekOf(day)).sort(), toss = wkOpen[wkOpen.length - 1] === day;
+  const evs = Object.entries(UI.cnt).filter(([, v]) => String(v).trim() !== "").map(([id, v]) => { const it = items.find(i => i.id === id), x = parseFloat(v);
+    const u = UI.cntU[id] || "cu", g = ingOf(id), c = countUnit(g);
+    return it && isFinite(x) && x >= 0 ? {type: toss && perishId(id) ? "waste" : "count", item:id, qty: u === "units" ? x : u === "pack" ? x * it.size : x * c.size, ts, at} : null; }).filter(Boolean);
+  if (!evs.length){ toast("cntToast", "Type a count next to at least one item."); return; }
+  $("cntSave").disabled = true;
+  try { for (const e of evs) await Store.addStock(e); UI.cnt = {}; const w = evs.filter(e => e.type === "waste").length;
+    toast("cntToast", `Saved ${evs.length} ${evs.length === 1 ? "count" : "counts"} for ${fmtD(day)}.${w ? ` ${w} perishable ${w === 1 ? "item is" : "items are"} logged as thrown out: toss them now.` : ""}`); }
+  catch(e){ toast("cntToast", saveError(e)); }
+  $("cntSave").disabled = false; recalc();
+}
+/* a new item to keep in reserve: it's counted at closing and shows on the order list */
+function addInvItem(){
+  const v = id => ($(id).value || "").trim(), name = v("niName"), size = parseFloat(v("niSize")), price = parseFloat(v("niPrice")) || 0;
+  if (!name || !(size > 0)){ toast("niToast", "Give it a name and how much comes in one pack."); return; }
+  if (S.ingredients.concat(S.packaging).some(g => norm(g.name) === norm(name))){ toast("niToast", `${name} is already in inventory.`); return; }
+  const per = Math.max(1, Math.round(+v("niPer") || 1));
+  S.ingredients.push({id:"c" + Date.now().toString(36), kind:"core", name, price, size: size * per, unit:v("niUnit") || "each", vendor:v("niStore"), url:cleanUrl(v("niUrl")), vol:1, custom:true, track:true, cat:v("niCat") || "other", cu:{name:v("niCu") || "pack", size}});
+  ["niName","niPrice","niSize","niUrl","niCu","niPer"].forEach(id => $(id).value = "");
+  markDirty(); renderIngredients(); recalc(); toast("niToast", `Added ${name}. Count it at closing and it shows on the order list.`);
+}
+function renderTrackSliders(){
+  $("trackSliders").innerHTML = `<div class="fields" style="margin-bottom:6px">
+    <label>Safety buffer, %</label><input class="in" type="number" min="0" max="100" step="5" data-bind="track.buffer" data-type="num" aria-label="Safety buffer">
+    <label>Drinks per cafe day<small>Only used before any sales data</small></label><input class="in" type="number" min="0" data-bind="track.perDay" data-type="num" step="1" aria-label="Drinks per cafe day before sales">
+  </div>`;
+}
+/* ---------------------------------------------------- weekly order checklist
+   The base order for a week: what that week's cafe days use at the current pace (logged sales, or the Clover item mix before
+   enough are logged), plus the buffer, minus stock on hand, in whole packs. Everything comes from BJ's, WebstaurantStore or Amazon.
+   Tick Ordered when it's placed and Received when it arrives: Received logs the delivery into stock, and unticking takes it back out. */
+const STORES = ["BJ's","WebstaurantStore","Amazon"];
+const storeOf = v => /bj/i.test(v || "") ? "BJ's" : /webstaurant/i.test(v || "") ? "WebstaurantStore" : /amazon/i.test(v || "") ? "Amazon" : "";
+const buyWeek = T => (T && T.wk) || weekOf(ymd(new Date()));
+function buyOrder(){ const wk = buyWeek(UI.T), o = S.orders[wk] || (S.orders[wk] = {}); if (!o.qty) o.qty = {}; if (!o.st) o.st = {}; return o; }
+function buyItems(T){
+  const wk = buyWeek(T), o = S.orders[wk] || {}, qty = o.qty || {}, st = o.st || {};
+  const rows = (T.rows || []).map(r => { const s = st[r.id] || {}, q = qty[r.id] != null ? Math.max(0, +qty[r.id] || 0) : r.packs;
+    return {id:r.id, name:r.name, store:storeOf(r.vendor), url:r.url, size:r.size, unit:r.unit, price:r.price, sug:r.packs, qty:q, cost:q * (r.price || 0), ordered:!!s.o, received:!!s.r,
+      perish: !!r.fc, why: r.fc ? fcWhy(r.id, r.fc, (T.nextDates || []).length) : r.perDay > 1e-9 ? `This week uses ${inUnits(r.id, r.perDay * T.cover)}, ${r.oh > 1e-9 ? inUnits(r.id, r.oh) : "none"} on hand` : "Not used by the menu"}; });
+  return {wk, rows};
+}
+function renderBuyList(T){
+  const box = $("orderList"); if (!box) return;
+  const B = buyItems(T), showAll = !!UI.buyAll, days = (T.nextDates || []).filter(Boolean);
+  $("buyShow").innerHTML = `<button class="${showAll ? "" : "on"}" data-act="buyAll" data-v="0">To order</button><button class="${showAll ? "on" : ""}" data-act="buyAll" data-v="1">All items</button>`;
+  set("orderHint", `Week of ${fmtD(B.wk)}${days.length ? `, for ${days.map(fmtD).join(", ")}` : ""}. Amounts cover those days at ${F.int(T.dayDrinks)} drinks a day (${T.src}), plus a ${S.track.buffer}% buffer, minus what's on hand. Tick Ordered when you place it and Received when it arrives, which adds it to stock.`);
+  const vis = B.rows.filter(r => showAll || r.qty > 0 || r.ordered || r.received);
+  const want = vis.filter(r => r.qty > 0);
+  let h = vis.length ? `<p class="note-sm" style="margin:0 0 4px">${want.filter(r => r.ordered).length} of ${want.length} ordered, ${want.filter(r => r.received).length} received.</p>` : `<p class="empty">Nothing from inventory to order this week. Switch to All items to add something.</p>`, tot = 0;
+  const rowH = r => `<div class="ordrow${r.received ? " done" : ""}${r.qty ? "" : " zero"}">
+        <div class="nm"><b>${esc(r.name)}</b><small>${esc(r.why)}${r.qty !== r.sug ? `. Suggested ${r.sug}` : ""}</small></div>
+        <div class="ock"><button class="pc${r.ordered ? " av" : ""}" data-act="oOrd" data-id="${esc(r.id)}" aria-pressed="${r.ordered}"${r.received ? " disabled" : ""}>Ordered</button><button class="pc${r.received ? " av" : ""}" data-act="oRec" data-id="${esc(r.id)}" aria-pressed="${r.received}"${r.qty > 0 || r.received ? "" : " disabled"}>Received</button></div>
+        <div class="ctl"><input class="in q" type="number" min="0" step="1" data-oq="${esc(r.id)}" value="${r.qty}" aria-label="Packs of ${esc(r.name)}"${r.received ? " disabled" : ""}><span class="muted nw">× ${esc(packLabel(ingOf(r.id) || {}))}, ${F.usd2(r.cost)}</span>${r.perish && r.received ? `<button class="linkbtn" data-act="oMore" data-id="${esc(r.id)}">Bought more</button>` : ""}</div></div>`;
+  const pr = vis.filter(r => r.perish).sort((a, b) => a.name.localeCompare(b.name)), safe = S.track.safety || "balanced";
+  if (pr.length){ const sub = pr.reduce((s, r) => s + r.cost, 0); tot += sub;
+    h += `<div class="vendor perish"><h3>Perishables <span class="muted" style="font-weight:500">${F.usd2(sub)}</span></h3><p class="note-sm" style="margin:0 0 6px">Order these at the start of the week. Everything left at the last close gets counted and thrown out, so the amounts aim to run out as the week ends.</p>
+      <div class="lnk" style="margin-bottom:4px"><span class="note-sm">Safety margin</span><div class="segc sm">${[["lean","Lean"],["balanced","Balanced"],["safe","Safe"]].map(([v, l]) => `<button class="${safe === v ? "on" : ""}" data-act="pSafe" data-v="${v}">${l}</button>`).join("")}</div></div>`
+      + pr.map(rowH).join("") + `</div>`; }
+  STORES.concat("").forEach(sto => { const rs = vis.filter(r => !r.perish && r.store === sto).sort((a,b) => a.name.localeCompare(b.name)); if (!rs.length) return;
+    const sub = rs.reduce((s,r) => s + r.cost, 0); tot += sub;
+    h += `<div class="vendor"><h3>${sto ? esc(sto) : "No store yet"} <span class="muted" style="font-weight:500">${F.usd2(sub)}</span></h3>${sto ? "" : `<p class="note-sm" style="margin:0">Pick a store for these in the full ordering list below.</p>`}`
+      + rs.map(rowH).join("") + `</div>`; });
+  /* things for this week that inventory doesn't track: Received counts them as money spent that day, nothing goes into stock */
+  const ex = (S.orders[B.wk] || {}).extra || [], exSub = ex.reduce((s, x) => s + (+x.qty || 0) * (+x.price || 0), 0); tot += exSub;
+  h += `<div class="vendor"><h3>Other things to buy <span class="muted" style="font-weight:500">${F.usd2(exSub)}</span></h3><p class="note-sm" style="margin:0 0 6px">Anything this week that isn't in inventory, like cleaning supplies or decorations. Received counts it as money spent that day.</p>`
+    + ex.map((x, i) => `<div class="ordrow${x.r ? " done" : ""}"><div class="nm"><input class="in txt" data-ox="${i}:name" value="${esc(x.name)}" placeholder="What to buy" aria-label="Item"${x.r ? " disabled" : ""}></div>
+        <div class="ock"><button class="pc${x.o ? " av" : ""}" data-act="oxTick" data-i="${i}" data-k="o" aria-pressed="${!!x.o}"${x.r ? " disabled" : ""}>Ordered</button><button class="pc${x.r ? " av" : ""}" data-act="oxTick" data-i="${i}" data-k="r" aria-pressed="${!!x.r}">Received</button></div>
+        <div class="ctl"><input class="in q" type="number" min="0" step="1" data-ox="${i}:qty" value="${+x.qty || 0}" aria-label="How many"${x.r ? " disabled" : ""}><span class="muted nw">at</span><input class="in q" type="number" min="0" step="0.01" data-ox="${i}:price" value="${+x.price || 0}" aria-label="Price each"${x.r ? " disabled" : ""}><span class="muted nw">each, ${F.usd2((+x.qty || 0) * (+x.price || 0))}</span><button class="x" data-act="oxDel" data-i="${i}" aria-label="Remove ${esc(x.name || "item")}">✕</button></div></div>`).join("")
+    + `<button class="btn ghost sm" data-act="oxAdd" style="margin-top:8px">+ Add an item</button></div>`;
+  box.innerHTML = h + `<table class="t"><tr class="tot"><td class="l">Order total</td><td>${F.usd2(tot)}</td></tr></table>`;
+}
+async function orderTick(id, k){
+  const T = UI.T, r = buyItems(T).rows.find(x => x.id === id); if (!r) return;
+  const o = buyOrder(), s = o.st[id] || (o.st[id] = {});
+  o.qty[id] = r.qty;   // once ticked, the amount stays put even when the delivery changes the suggestion
+  if (k === "o"){ s.o = s.o ? "" : new Date().toISOString(); if (!s.o && !s.r) delete o.st[id]; markDirty(); renderBuyList(T); return; }
+  if (s.r){ const ev = s.ev; s.r = ""; s.ev = ""; markDirty(); renderBuyList(T); if (ev) Store.delStock(ev).catch(e => toast("buyToast", saveError(e))); toast("buyToast", `Took ${r.name.toLowerCase()} back out of stock.`); return; }
+  if (!(r.qty > 0)) return;
+  s.o = s.o || new Date().toISOString(); s.r = new Date().toISOString(); markDirty(); renderBuyList(T);
+  try { s.ev = await Store.addStock({type:"receive", item:id, qty:r.qty * (r.size || 0), ts:ymd(new Date()) + "T" + hm(new Date()), at:new Date().toISOString()});
+    markDirty(); toast("buyToast", `Added ${r.qty} × ${fmtQty(r.size || 0, r.unit)} ${r.name.toLowerCase()} to stock.`); }
+  catch(e){ s.r = ""; markDirty(); renderBuyList(T); toast("buyToast", saveError(e)); }
+}
+
+/* ------------------------------------------------------------------ WebstaurantStore invoices
+   pdf.js reads the PDF's text with positions. Each line item is the row that carries the unit price; the item number and
+   description can wrap onto the next line. Some fonts drop "ti", "tt" and "ft" pairs as a blank glyph, fixed by fixLig. */
+const fixLig = s => s.replace(/Kra\0/g, "Kraft").replace(/([aeiou])\0(e|le)/g, "$1tt$2").replace(/\0/g, "ti");
+function parseInvoice(items){
+  const its = items.map(i => ({s:fixLig(i.str).trim(), x:i.x, y:i.y})).filter(i => i.s);
+  const hdr = its.find(i => /^Item Number$/i.test(i.s)), end = its.find(i => /^Subtotal:?$/i.test(i.s));
+  const dt = its.find(i => /^\d{1,2}\/\d{1,2}\/\d{4}/.test(i.s)), on = its.find(i => /^\d{8,}$/.test(i.s));
+  const out = {date: dt ? dt.s.split(" ")[0] : "", order: on ? on.s : "", lines:[]};
+  if (!hdr) return out;
+  const body = its.filter(i => i.y < hdr.y - 2 && (!end || i.y > end.y + 2));
+  const money = s => /^\$[\d,]+\.\d{2}$/.test(s), num = s => +s.replace(/[$,]/g, "");
+  const skuX = Math.min(...body.map(i => i.x));
+  const ys = [...new Set(body.filter(i => money(i.s)).map(i => Math.round(i.y)))].sort((a,b) => b - a);   // one row per line that carries prices, top first
+  ys.forEach((y, k) => {
+    const below = k + 1 < ys.length ? ys[k + 1] : -Infinity;
+    const row = body.filter(i => i.y <= y + 2 && i.y > below + 2).sort((a,b) => b.y - a.y || a.x - b.x);
+    const $s = row.filter(i => money(i.s) && Math.abs(i.y - y) <= 2).sort((a,b) => a.x - b.x);
+    const sku = row.filter(i => i.x < skuX + 5 && !money(i.s)).map(i => i.s).join("");
+    const qtyT = row.find(i => /^\d+$/.test(i.s) && i.x > $s[0].x && Math.abs(i.y - y) <= 2);
+    const desc = row.filter(i => i.x >= skuX + 5 && i.x < $s[0].x - 4 && !money(i.s)).map(i => i.s).join(" ").replace(/\/\s+Case/g, "/Case").replace(/\s+/g, " ");
+    if (!sku || !desc) return;   // subtotal and total rows
+    out.lines.push({sku, desc, price:num($s[0].s), qty: qtyT ? +qtyT.s : 1, total:num($s[$s.length - 1].s)});
+  });
+  return out;
+}
+/* pack size from a Webstaurant description, in the unit the item is tracked in */
+const UNIT_OZ = {oz:1, "fl oz":1, lb:16, g:1/28.3495, kg:35.274, l:33.814, ml:0.033814, gal:128};
+function packOf(desc){
+  const d = desc.toLowerCase().replace(/fl\.\s*oz/g, "fl oz").replace(/([a-z])\./g, "$1");
+  const cs = /([\d,]+)\s*\/\s*case/.exec(d), n = cs ? +cs[1].replace(/,/g, "") : 1;
+  const m = /(\d+(?:\.\d+)?)\s*(fl oz|oz|lb|grams?|g|kg|liters?|l|ml|gal)\b/.exec(d);
+  if (!m) return {n, each:null, unit:null};
+  let u = m[2].replace(/s$/, ""); if (u === "liter") u = "l"; if (u === "gram") u = "g";
+  return {n, each:+m[1], unit:u};
+}
+function packIn(desc, unit){
+  const p = packOf(desc), u = String(unit || "").toLowerCase();
+  if (!p.each || !["g","oz","fl oz","ml"].includes(u)) return p.n;
+  const oz = p.each * (UNIT_OZ[p.unit] || 1) * p.n;
+  return u === "g" ? oz * 28.3495 : u === "ml" ? oz / 0.033814 : oz;
+}
+const skuOf = it => String(it.sku || (/\/([0-9A-Z]{5,})\.html/i.exec(it.url || "") || [])[1] || "").toUpperCase();
+const GENERIC = new Set(["monin","choice","premium","flavoring","syrup","milk","cup","cups","case","the","for","and","with","bag","tea","sugar","liter","fl","oz","lb","gram","bottles","bottle","pack","packet","white","clear","barista","blend","edition","organic","paper","standard"]);
+const words = s => String(s || "").toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter(w => w.length > 2);
+function matchItem(line){
+  const all = S.ingredients.map(g => ({kind:"ing", it:g})).concat(S.packaging.map(p => ({kind:"pkg", it:p})));
+  const sku = line.sku.toUpperCase(), hit = all.find(x => skuOf(x.it) === sku); if (hit) return hit.kind + ":" + hit.it.id;
+  const lw = new Set(words(line.desc)); let best = null, bs = 0;
+  all.forEach(x => { const ws = new Set(words(x.it.name)); let tot = 0, dist = 0; ws.forEach(w => { if (lw.has(w)){ tot++; if (!GENERIC.has(w)) dist++; } });
+    if (dist >= 1 && tot > bs){ bs = tot; best = x; } });
+  return best ? best.kind + ":" + best.it.id : "skip";
+}
+function loadPdfJs(){
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  const base = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = base + "pdf.min.js";
+    s.onload = () => { if (!window.pdfjsLib) return rej(new Error("pdfjs")); window.pdfjsLib.GlobalWorkerOptions.workerSrc = base + "pdf.worker.min.js"; res(window.pdfjsLib); };
+    s.onerror = () => rej(new Error("pdfjs")); document.head.appendChild(s); });
+}
+async function readInvoices(files){
+  const box = $("invResult"); box.innerHTML = `<p class="hint">Reading ${files.length === 1 ? esc(files[0].name) : files.length + " invoices"}…</p>`;
+  let lib; try { lib = await loadPdfJs(); } catch(e){ box.innerHTML = `<p class="res-bad">The PDF reader didn't load. Check your connection and try again.</p>`; return; }
+  const invs = [];
+  for (const f of files){
+    try {
+      const pdf = await lib.getDocument({data:new Uint8Array(await readAs(f, "buf"))}).promise; let items = [];
+      for (let p = 1; p <= pdf.numPages; p++){ const tc = await (await pdf.getPage(p)).getTextContent(); items = items.concat(tc.items.map(i => ({str:i.str, x:i.transform[4], y:i.transform[5] - p * 10000}))); }
+      const r = parseInvoice(items);
+      if (!r.lines.length){ invs.push({file:f.name, error:"No line items found. Is this a WebstaurantStore sales invoice?"}); continue; }
+      const seen = (S.invoices || []).find(x => x.order && x.order === r.order) || invs.find(x => x.order && x.order === r.order);
+      invs.push({file:f.name, order:r.order, date:r.date, dup:!!seen, lines:r.lines.map(l => { const m = matchItem(l); return {...l, act:m, pack:packFor(l, m)}; })});
+    } catch(e){ invs.push({file:f.name, error:"That file couldn't be read as a PDF."}); }
+  }
+  UI.inv = invs; renderInvoices();
+}
+const actItem = act => { const [k, id] = String(act).split(":"); return k === "ing" ? S.ingredients.find(g => g.id === id) : k === "pkg" ? S.packaging.find(p => p.id === id) : null; };
+const newUnit = desc => { const p = packOf(desc); return !p.each ? "each" : ["lb","g","kg"].includes(p.unit) ? "g" : "oz"; };
+function packFor(l, act){ const it = actItem(act); return Math.round(packIn(l.desc, it ? (act.startsWith("pkg") ? "each" : it.unit) : act === "newPkg" ? "each" : newUnit(l.desc)) * 100) / 100; }
+function renderInvoices(){
+  const box = $("invResult"), invs = UI.inv || []; if (!invs.length){ box.innerHTML = ""; return; }
+  const opts = sel => `<option value="skip"${sel === "skip" ? " selected" : ""}>Skip this line</option><option value="newIng"${sel === "newIng" ? " selected" : ""}>Add as a new ingredient</option><option value="newPkg"${sel === "newPkg" ? " selected" : ""}>Add as new packaging</option>`
+    + `<optgroup label="Ingredients">${S.ingredients.map(g => `<option value="ing:${esc(g.id)}"${sel === "ing:" + g.id ? " selected" : ""}>${esc(g.name)}</option>`).join("")}</optgroup>`
+    + `<optgroup label="Packaging">${S.packaging.map(p => `<option value="pkg:${esc(p.id)}"${sel === "pkg:" + p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</optgroup>`;
+  const unitOf = l => { const it = actItem(l.act); return l.act.startsWith("pkg") || l.act === "newPkg" ? "each" : it ? it.unit : l.act === "newIng" ? newUnit(l.desc) : ""; };
+  box.innerHTML = invs.map((v, vi) => v.error ? `<p class="res-bad">${esc(v.file)}: ${esc(v.error)}</p>`
+    : `<h3 style="margin-top:6px">Order ${esc(v.order || v.file)}${v.date ? `, ${esc(v.date)}` : ""}</h3>${v.dup ? `<p class="res-bad" style="margin:0 0 6px">This invoice was already imported. Saving it again adds the delivery twice.</p>` : ""}
+      <div class="scroll"><table class="t invrow"><thead><tr><th class="l">Line</th><th>Qty</th><th>Price</th><th>Pack</th><th class="l">Goes to</th></tr></thead><tbody>`
+      + v.lines.map((l, li) => `<tr class="${l.act === "skip" ? "zero" : ""}"><td class="l">${esc(l.desc)}<small>${esc(l.sku)}</small></td><td>${l.qty}</td><td>${F.usd2(l.price)}</td>
+        <td class="nw">${l.act === "skip" ? "" : `<input class="in w-sm" type="number" min="0" step="any" data-invpack="${vi}:${li}" value="${l.pack}" aria-label="Pack size"> ${esc(unitOf(l))}`}</td>
+        <td class="l"><select class="in txt" data-invact="${vi}:${li}" aria-label="Where this line goes">${opts(l.act)}</select></td></tr>`).join("")
+      + `</tbody></table></div>`).join("")
+    + (invs.some(v => !v.error) ? `<div class="calbar" style="margin-top:10px"><label class="tw" style="display:flex;gap:8px;align-items:center">Received on <input class="in txt" type="date" id="invDate" value="${ymd(new Date())}" aria-label="Date received"></label>
+        <span class="lnk"><button class="btn ghost sm" data-act="invCancel">Cancel</button><button class="btn sm" data-act="invSave">Save prices and delivery</button></span></div>
+        <p class="note-sm">Prices are before tax and shipping. Matched items take the invoice price and pack size.</p>` : "");
+}
+async function saveInvoices(){
+  const invs = (UI.inv || []).filter(v => !v.error), day = ($("invDate") && $("invDate").value) || ymd(new Date()), ts = day + "T" + hm(new Date()), at = new Date().toISOString();
+  const evs = []; let upd = 0, added = 0;
+  invs.forEach(v => { v.lines.forEach(l => {
+    if (l.act === "skip") return;
+    const url = "https://www.webstaurantstore.com/search/" + encodeURIComponent(l.sku) + ".html", pack = +l.pack || 0;
+    let it = actItem(l.act);
+    if (!it){
+      const name = l.desc.replace(/\s*-\s*[\d,]+\/Case$/i, "").trim(), id = "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      if (l.act === "newPkg"){ it = {id, name, price:l.price, size:pack || 1, kit:/hot/i.test(name) ? "hot" : /cold|clear|iced|strawless/i.test(name) ? "iced" : "both", vendor:"WebstaurantStore", url, sku:l.sku}; S.packaging.push(it); }
+      else { it = {id, name, price:l.price, size:pack || 1, unit:newUnit(l.desc), vendor:"WebstaurantStore", url, sku:l.sku, kind:"core", vol:1, custom:true}; it.cat = ingCat(it); S.ingredients.push(it); }
+      added++;
+    } else { it.price = l.price; if (pack > 0) it.size = pack; it.sku = l.sku; if (!it.url) it.url = url; it.vendor = "WebstaurantStore"; upd++; }
+    if (pack > 0) evs.push({type:"receive", item:it.id, qty:pack * l.qty, ts, at, inv:v.order || ""});
+  }); S.invoices.push({order:v.order, date:v.date, at}); });
+  markDirty(); renderIngredients(); recalc();
+  try { for (const e of evs) await Store.addStock(e); } catch(e){ toast("invResult", saveError(e)); return; }
+  UI.inv = null; $("invIn").value = "";
+  $("invResult").innerHTML = `<p class="res-ok">Updated ${upd} ${upd === 1 ? "item" : "items"}${added ? `, added ${added} new` : ""}, and logged ${evs.length} ${evs.length === 1 ? "delivery" : "deliveries"} into stock.</p>`;
+}
+
+const DEF_PATTERN = () => [{start:8, end:12.5, seats:2}, {start:12.5, end:17, seats:2}];
+function patternFor(dow){
+  if (!S.pattern || typeof S.pattern !== "object") S.pattern = {};
+  let p = S.pattern[dow];
+  if (!Array.isArray(p) || !p.length){ p = S.pattern[dow] = DEF_PATTERN(); }
+  p.forEach(sh => { sh.start = +sh.start || 0; sh.end = Math.max(sh.start + 0.5, +sh.end || 0); sh.seats = Math.max(1, Math.round(+sh.seats || 1)); });
+  return p.slice().sort((a,b) => a.start - b.start);
+}
+/* a day's shifts come from the weekly-hours rule that opened it, so saving new hours never rewrites past weeks */
+const shiftsOf = d => { const rl = S.cal ? ruleFor(d) : null, w = toDate(d).getDay(), p = rl && rl.pattern && rl.pattern[w];
+  return Array.isArray(p) && p.length ? p.map(q => ({start:+q.start, end:+q.end, seats:Math.max(1, +q.seats || 1)})).sort((a,b) => a.start - b.start) : patternFor(w); };
+const nextDow = (from, w) => addDays(from, (w - toDate(from).getDay() + 7) % 7);
+const dowShifts = w => shiftsOf(nextDow(ymd(new Date()), w));
+function ensureDay(d){
+  if (!S.days || typeof S.days !== "object") S.days = {};
+  let x = S.days[d];
+  if (!x) x = S.days[d] = {names:[]};
+  x.kind = "ops";   // pilot days are gone: every open day is an operations day
+  if (!Array.isArray(x.names)) x.names = [];
+  const sh = shiftsOf(d);                        // hours and shifts always come from the weekday's pattern
+  x.n = sh.length; x.open = sh[0].start; x.close = Math.max(...sh.map(q => q.end));
+  while (x.names.length < x.n) x.names.push("");
+  return x;
+}
+function staffing(d){ const x = ensureDay(d), sh = shiftsOf(d); let seats = 0, filled = 0;
+  sh.forEach((q,i) => { seats += q.seats; filled += Math.min(q.seats, namesIn(x.names[i]).length); }); return {seats, filled}; }
+/* ------------------------------------------------------ cafe calendar */
+const namesIn = v => String(v || "").split(",").map(t => t.trim()).filter(Boolean);
+function dayLabor(d){
+  const x = S.days && S.days[d]; if (!x) return {cost:0, ph:0};
+  let ph = 0; shiftsOf(d).forEach((q,i) => ph += Math.max(q.seats, namesIn(x.names[i]).length) * (q.end - q.start));
+  return {cost: ph * (+S.exp.wage || 0), ph};
+}
+/* ------------------------------------------------------ weekly hours, When2meet style
+   Rows are the weekdays the cafe opens (from the open days on the calendar), columns are half hours from 7 am to 10 pm. Each block
+   is one shift with its own head count.
+   Drag across a row (or down several rows) to draw a shift; drawing over a block replaces that part of it. Drag a block's end
+   to resize it. Tap a block to set how many people it needs or delete it. Save as rule: from that date on, the cafe opens on the
+   days with shifts, and older rules end the day before. */
+const WK_ROWS = [1,2,3,4,5,6,0], NSLOT = HN * 2;
+const slotT = i => HMIN + i / 2, slotOf = t => Math.round((t - HMIN) * 2);
+function wkInit(){
+  const from = ymd(new Date()), W = UI.wk = {rows:{}, from, seats:2, pop:null};
+  WK_ROWS.forEach(w => { const d = S.track.dates.find(x => x >= from && toDate(x).getDay() === w) || nextDow(from, w);   // the next open day of that weekday
+    W.rows[w] = ruleFor(d) || S.track.dates.includes(d) ? shiftsOf(d).map(q => ({s:Math.max(0, slotOf(q.start)), e:Math.min(NSLOT, slotOf(q.end)), seats:q.seats})).filter(b => b.e > b.s) : []; });
+}
+/* take [s, e) out of a row's blocks, trimming or splitting what overlaps */
+const carve = (bs, s, e) => bs.flatMap(b => b.e <= s || b.s >= e ? [b] : [].concat(b.s < s ? [{...b, e:s}] : [], b.e > e ? [{...b, s:e}] : []));
+const wkShifts = w => UI.wk.rows[w].slice().sort((a,b) => a.s - b.s).map(b => ({start:slotT(b.s), end:slotT(b.e), seats:b.seats}));
+/* rows of blocks over a half-hour grid, starting at slot s0 and n slots wide; shared by the admin editor and the availability page */
+const wkCols = n => `grid-template-columns:repeat(${n},minmax(0,1fr))`;
+const wkHead = (s0, n) => `<div class="wk-r wk-hd"><span></span><div class="wk-c" style="${wkCols(n)}">${Array.from({length:n}, (_, i) => `<span style="grid-column:${i + 1}">${(s0 + i) % 4 === 2 ? hhmm(slotT(s0 + i) * 60) : ""}</span>`).join("")}</div></div>`;
+const wkRow = (label, s0, n, blocks, attrs) => `<div class="wk-r"${attrs || ""}><span class="wk-d">${label}</span><div class="wk-c" style="${wkCols(n)}">${Array.from({length:n}, (_, i) => `<i class="${(s0 + i) % 2 === 0 ? "hr" : ""}" style="grid-column:${i + 1}"></i>`).join("")}${blocks.join("")}</div></div>`;
+function renderWeekGrid(){
+  const box = $("wkGrid"); if (!box) return; if (!UI.wk) wkInit(); const W = UI.wk;
+  /* one row per weekday with an upcoming open day, plus any day with shifts drawn but not saved yet. A weekday opened on the
+     calendar since starts from the shifts that day would get, once; after that it's yours to redraw or clear */
+  const today = ymd(new Date()), horizon = addDays(today, 84), next = {};   // a weekday shows when it's open some day in the next 12 weeks
+  S.track.dates.filter(d => d >= today && d <= horizon).sort().forEach(d => { const w = toDate(d).getDay(); if (!next[w]) next[w] = d; });
+  WK_ROWS.forEach(w => { if (!next[w] && W.rows[w].length){ W.rows[w] = []; if (W.pop && W.pop.w === w) W.pop = null; } });   // shifts left on a weekday that's no longer open would be saved back in
+  if (!W.seeded) W.seeded = new Set(WK_ROWS.filter(w => W.rows[w].length));
+  WK_ROWS.forEach(w => { if (next[w] && !W.rows[w].length && !W.seeded.has(w)){ W.seeded.add(w);
+    W.rows[w] = shiftsOf(next[w]).map(q => ({s:Math.max(0, slotOf(q.start)), e:Math.min(NSLOT, slotOf(q.end)), seats:q.seats})).filter(b => b.e > b.s); } });
+  const show = WK_ROWS.filter(w => next[w]);
+  if (!show.length){ box.innerHTML = `<p class="empty">No open days coming up. Open days on the calendar below, then draw their shifts here.</p>`; $("wkSum").innerHTML = ""; if (!$("wkFrom").value) $("wkFrom").value = W.from; renderRuleList(); return; }
+  let h = wkHead(0, NSLOT);
+  show.forEach((w, i) => {
+    const grp = w >= 1 && w <= 5 ? "Weekdays" : "Weekend", prev = i ? (show[i - 1] >= 1 && show[i - 1] <= 5 ? "Weekdays" : "Weekend") : "";
+    if (grp !== prev) h += `<div class="wk-gap">${grp}</div>`;
+    const bs = W.rows[w].map((b, k) => { const tm = `${DOW[w]} ${tfmt(slotT(b.s))} to ${tfmt(slotT(b.e))}`;
+      return `<div class="wk-b${W.pop && W.pop.w === w && W.pop.k === k ? " sel" : ""}" style="grid-column:${b.s + 1}/${b.e + 1}" data-wb="${w}:${k}" title="${tm}, ${b.seats} ${b.seats === 1 ? "person" : "people"}">
+        <span class="wk-g l" data-grip="l"></span><button class="wk-n" data-act="wkPop" data-w="${w}" data-k="${k}" aria-label="${tm}: ${b.seats} people. Change">${b.seats}</button><span class="wk-g r" data-grip="r"></span></div>`; });
+    h += wkRow(`${DOW[w]}<button class="x wk-drop" data-act="wkDrop" data-w="${w}" aria-label="Stop opening on ${WDAY[w]}s" title="Stop opening on ${WDAY[w]}s">✕</button>`, 0, NSLOT, bs.length ? bs : [`<span class="wk-hint" style="grid-column:1/-1">Drag to draw ${WDAY[w]}'s shifts</span>`], ` data-w="${w}"`);
+    const P = W.pop, b = P && P.w === w && W.rows[w][P.k];
+    if (b) h += `<div class="wk-pop" role="group" aria-label="Edit shift"><b>${DOW[w]} ${tfmt(slotT(b.s))} to ${tfmt(slotT(b.e))}</b>
+        <span class="stepper"><button data-act="wkPopSeat" data-v="-1" aria-label="Fewer people">−</button><span>${b.seats}</span><button data-act="wkPopSeat" data-v="1" aria-label="More people">+</button></span><span class="muted">${b.seats === 1 ? "person" : "people"}</span>
+        <span class="lnk"><button class="linkbtn" data-act="wkPopDel">Delete shift</button><button class="btn sm" data-act="wkPopClose">Done</button></span></div>`;
+  });
+  box.innerHTML = h;
+  const open = WK_ROWS.filter(w => W.rows[w].length);
+  $("wkSum").innerHTML = open.length ? open.map(w => `<div><b>${DOW[w]}</b> ${wkShifts(w).map(q => `${tfmt(q.start)}–${tfmt(q.end)} <span class="muted">(${q.seats})</span>`).join(", ")}</div>`).join("")
+    : `<span class="muted">No shifts yet. Drag across a day to draw one.</span>`;
+  if (!$("wkFrom").value) $("wkFrom").value = W.from;
+  renderRuleList();
+}
+function renderRuleList(){
+  const dn = ds => ds.slice().sort((a,b) => ((a + 6) % 7) - ((b + 6) % 7)).map(v => DOW[v]).join(", ").replace(/, ([^,]+)$/, " and $1");
+  $("ruleList").innerHTML = S.cal.rules.length ? S.cal.rules.map((rl,i) => { const n = ruleDates(rl).filter(d => !S.cal.closed.includes(d)).length;
+      return `<div class="rule"><span>${dn(rl.dows)} from ${fmtD(rl.from)}${rl.until ? " to " + fmtD(rl.until) : ", no end date"}. ${n} days</span><button class="x" data-act="ruleDel" data-i="${i}" aria-label="Remove this rule">✕</button></div>`; }).join("")
+    : `<p class="empty">No saved hours yet.</p>`;
+}
+/* stop opening on a weekday from today: it leaves every rule from today on (older rules end the day before, so past days keep
+   their shifts) and single open days on it close */
+function dropWeekday(w){
+  const t = ymd(new Date());
+  S.cal.rules = S.cal.rules.flatMap(rl => { if (!(rl.dows || []).includes(w) || (rl.until && rl.until < t)) return [rl];
+    const out = rl.from < t ? [Object.assign({}, rl, {until:addDays(t, -1)})] : [], rest = rl.dows.filter(x => x !== w);
+    if (rest.length) out.push(Object.assign({}, rl, {from: rl.from < t ? t : rl.from, dows:rest, pattern: rl.pattern ? Object.fromEntries(Object.entries(rl.pattern).filter(([k]) => +k !== w)) : rl.pattern}));
+    return out; });
+  S.cal.open = S.cal.open.filter(d => d < t || toDate(d).getDay() !== w);
+  if (UI.wk){ UI.wk.rows[w] = []; if (UI.wk.pop && UI.wk.pop.w === w) UI.wk.pop = null; }
+  syncCalDates(); markDirty(); renderShifts(); toast("calToast", `The cafe no longer opens on ${WDAY[w]}s from ${fmtD(t)}. Past ${WDAY[w]}s keep their shifts.`);
+}
+function saveWeekRule(){
+  const from = $("wkFrom").value || ymd(new Date()), until = $("wkUntil").value || "";
+  if (until && until < from){ toast("calToast", "The end date is before the start date."); return; }
+  const pattern = {}, dows = WK_ROWS.filter(w => { const sh = wkShifts(w); if (sh.length) pattern[w] = sh; return sh.length; });
+  S.cal.rules = S.cal.rules.filter(rl => rl.from < from).map(rl => !rl.until || rl.until >= from ? Object.assign(rl, {until:addDays(from, -1)}) : rl);   // older hours end the day before
+  if (dows.length) S.cal.rules.push({dows, from, until, kind:"ops", pattern});
+  dows.forEach(w => S.pattern[w] = pattern[w]);   // the default for a single day opened by hand
+  S.cal.closed = S.cal.closed.filter(d => d < from || (until && d > until));
+  syncCalDates(); ensureDates();
+  const ds = dows.length ? ruleDates(S.cal.rules[S.cal.rules.length - 1]) : [];
+  toast("calToast", dows.length ? `Saved. Open ${dows.map(w => DOW[w]).join(", ")} from ${fmtD(from)}${until ? " to " + fmtD(until) : ""}, ${ds.length} days.` : `Saved. Closed from ${fmtD(from)}.`);
+  renderShifts();
+}
+(function wireWeek(){
+  /* the row under the pointer and the half hour from its x position, so blocks drawn on top never get in the way */
+  const at = e => { const r = [...document.querySelectorAll("#wkGrid .wk-r[data-w]")].find(el => { const b = el.getBoundingClientRect(); return e.clientY >= b.top - 2 && e.clientY <= b.bottom + 2; });
+    if (!r) return null; const c = r.querySelector(".wk-c").getBoundingClientRect();
+    return {w:+r.dataset.w, i:Math.max(0, Math.min(NSLOT - 1, Math.floor((e.clientX - c.left) / c.width * NSLOT)))}; };
+  const apply = p => { const D = UI.wkDrag, W = UI.wk; W.rows = JSON.parse(JSON.stringify(D.snap)); D.moved = true;
+    if (D.grip){ const bs = W.rows[D.w], b = bs[D.k]; if (D.grip === "l") b.s = Math.min(p.i, b.e - 1); else b.e = Math.max(p.i + 1, b.s + 1);
+      W.rows[D.w] = carve(bs.filter(x => x !== b), b.s, b.e).concat(b).sort((x,y) => x.s - y.s); }
+    else { const r0 = WK_ROWS.indexOf(D.w), r1 = WK_ROWS.indexOf(p.w), s = Math.min(D.i, p.i), e = Math.max(D.i, p.i) + 1;
+      WK_ROWS.forEach((w, r) => { if (r >= Math.min(r0, r1) && r <= Math.max(r0, r1)) W.rows[w] = carve(W.rows[w], s, e).concat({s, e, seats:W.seats}).sort((x,y) => x.s - y.s); }); }
+    W.pop = null; UI.wkDirty = true; renderWeekGrid(); };
+  document.addEventListener("pointerdown", e => { if (!e.target.closest || !e.target.closest("#wkGrid") || e.target.closest(".wk-n, .wk-pop") || !isAdmin()) return;
+    const p = at(e); if (!p) return; e.preventDefault();
+    const blk = e.target.closest("[data-wb]"), [bw, bk] = blk ? blk.dataset.wb.split(":").map(Number) : [];
+    UI.wkDrag = {w:p.w, i:p.i, snap:JSON.parse(JSON.stringify(UI.wk.rows)), grip: blk ? e.target.dataset.grip : null, k:bk, blk: blk ? {w:bw, k:bk} : null}; });
+  document.addEventListener("pointermove", e => { const D = UI.wkDrag; if (!D) return; const p = at(e); if (!p || (!D.moved && p.w === D.w && p.i === D.i)) return; apply(p); });
+  document.addEventListener("pointerup", () => { const D = UI.wkDrag; if (!D) return; UI.wkDrag = null;
+    if (!D.moved && D.blk && !D.grip){ UI.wk.pop = D.blk; renderWeekGrid(); } });   // a tap on a block opens its editor
+  document.addEventListener("pointercancel", () => { UI.wkDrag = null; });
+})();
+function renderCal(){
+  const grid = $("calGrid"); if (!grid) return;
+  if (!UI.brush || UI.brush === "pilot") UI.brush = "ops";
+  const today = ymd(new Date()), t0 = toDate(today);
+  if (UI.calOff == null) UI.calOff = 0;
+  const open = new Set(S.track.dates), SD = UI.SD || {};
+  const months = [0,1,2].map(k => new Date(t0.getFullYear(), t0.getMonth() + UI.calOff + k, 1));
+  set("calRange", `${MON[months[0].getMonth()]} to ${MON[months[2].getMonth()]} ${months[2].getFullYear()}`);
+  $("calBrush").innerHTML = [["ops","Open"],["closed","Closed"]].map(([v,l]) => `<button class="${UI.brush === v ? "on" : ""}" data-act="calBrush" data-v="${v}">${l}</button>`).join("");
+  const sel = UI.drag ? UI.drag.set : new Set();
+  grid.innerHTML = months.map(m0 => { const y = m0.getFullYear(), mo = m0.getMonth(), n = new Date(y, mo + 1, 0).getDate(), lead = (m0.getDay() + 6) % 7;
+    let c = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(x => `<div class="dh">${x[0]}</div>`).join("");
+    for (let i = 0; i < lead; i++) c += `<div class="cd pad"></div>`;
+    for (let dd = 1; dd <= n; dd++){ const d = ymd(new Date(y, mo, dd)), on = open.has(d), k = on ? "ops" : "";
+      const sold = SD[d] ? SD[d].n : 0;
+      c += `<div class="cd${on ? " " + k : ""}${d < today ? " past" : ""}${d === today ? " today" : ""}${sel.has(d) ? " sel" : ""}" data-cd="${d}" title="${fmtD(d)}${on ? ", open" : ", closed"}${sold ? `, ${sold} sold` : ""}">${dd}${sold ? `<small>${sold}</small>` : ""}</div>`; }
+    return `<div class="calm"><h4>${["January","February","March","April","May","June","July","August","September","October","November","December"][mo]} ${y}</h4><div class="calw">${c}</div></div>`; }).join("");
+}
+function paintDates(ds, brush){
+  if (!ds.length) return;
+  if (brush === "closed") setDates(S.track.dates.filter(d => !ds.includes(d)));
+  else { setDates(S.track.dates.concat(ds)); ds.forEach(d => { ensureDay(d).kind = brush; }); }
+  markDirty(); syncFields(); recalc();
+  toast("calToast", `${brush === "closed" ? "Closed" : "Opened"} ${ds.length === 1 ? fmtD(ds[0]) : `${ds.length} days, ${fmtD(ds[0])} to ${fmtD(ds[ds.length - 1])}`}.`);
+}
+(function wireCal(){
+  const rng = (a, b) => { if (a > b) [a, b] = [b, a]; const out = []; for (let d = a; d <= b && out.length < 400; d = addDays(d, 1)) out.push(d); return out; };
+  const cellAt = e => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.closest ? el.closest("[data-cd]") : null; };
+  const preview = () => document.querySelectorAll("#calGrid [data-cd]").forEach(c => { const on = UI.drag.set.has(c.dataset.cd); c.classList.toggle("sel", on); c.classList.toggle("unsel", on && UI.drag.brush === "closed"); });
+  document.addEventListener("pointerdown", e => { const c = e.target.closest && e.target.closest("#calGrid [data-cd]"); if (!c || !isAdmin()) return;
+    if (e.button !== 0 && e.button !== 2) return;
+    e.preventDefault(); UI.drag = {start:c.dataset.cd, set:new Set([c.dataset.cd]), brush: e.button === 2 ? "closed" : UI.brush}; preview(); });
+  document.addEventListener("contextmenu", e => { if (e.target.closest && e.target.closest("#calGrid")) e.preventDefault(); });
+  document.addEventListener("pointermove", e => { if (!UI.drag) return; const c = cellAt(e); if (!c) return;
+    UI.drag.set = new Set(rng(UI.drag.start, c.dataset.cd)); preview(); });
+  const end = () => { if (!UI.drag) return; const ds = [...UI.drag.set].sort(), br = UI.drag.brush || UI.brush; UI.drag = null;
+    if (ds.length === 1 && br !== "closed"){ const d = ds[0];
+      if (!S.track.dates.includes(d)) paintDates(ds, br); else renderCal();
+      openDay(d); return; }
+    paintDates(ds, br); };
+  document.addEventListener("pointerup", end); document.addEventListener("pointercancel", () => { UI.drag = null; renderCal(); });
+})();
+
+
+/* ------------------------------------------------ team, availability, day panel */
+// A profile is {id, name, email, phone, role, year, trained}. Availability comes only from each week's form (avail/<Monday>_<id>).
+// Profiles live in the shared settings as S.team, so everyone with the link sees and edits the whole team. No sign-in.
+const team = () => S.team;
+const isMgr = () => true;
+const teamSorted = () => team().slice().sort((a,b) => a.name.localeCompare(b.name));
+const person = n => team().find(p => p.name === n);
+const nameH = n => { const p = person(n); return p && p.trained ? `<b>${esc(n)}</b>` : esc(n); };   // bold = completed barista training
+const newId = () => "p" + Math.random().toString(36).slice(2, 10);
+const WDAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+function covers(r, q){   // back-to-back ranges join up, so 1-4 plus 4-7 covers a 3-6 shift
+  let s = null, e = null;
+  for (const x of (r || []).slice().sort((a,b) => a.s - b.s)){
+    if (e !== null && x.s <= e){ e = Math.max(e, x.e); continue; }
+    if (e !== null && s <= q.start && q.end <= e) return true;
+    s = x.s; e = x.e; }
+  return e !== null && s <= q.start && q.end <= e;
+}
+function parseStaff(text){   // "Name  email  2028  Barista, Support  Saturday: 10:00 AM - 1:00 PM, Sunday: ..." per line
+  return text.split(/\r?\n/).map(line => line.split(/\t|\s{2,}/).map(t => t.trim()).filter(Boolean)).filter(f => f.length).map(f => {
+    const at = f.findIndex(t => /@/.test(t)), p = {name:f.slice(0, Math.max(at, 1)).join(" "), email:at >= 0 ? f[at].toLowerCase() : "", year:"", role:""};
+    f.slice(at + 1).forEach(t => {
+      if (/^\d{4}$/.test(t)){ p.year = t; return; }
+      if (/^trained$/i.test(t)){ p.trained = true; return; }
+      if (!/^\w+day\s*:/i.test(t)) p.role = t; });   // availability columns are skipped: it comes from each week's form
+    return p; }).filter(p => p.name);
+}
+function availFor(d, name, q){ const p = person(name), a = p && availDoc(weekOf(d), p.id); return !!a && !a.none && covers((a.days || {})[d], q); }   // only that week's form answer counts
+const bkFor = (d, name, q) => { const p = person(name), a = p && availDoc(weekOf(d), p.id); return !!a && !a.none && covers((a.bk || {})[d], q); };   // signed up as a backup: the shift was full when they picked it
+const answered = (d, name) => { const p = person(name); return !!(p && availDoc(weekOf(d), p.id)); };
+const availOn = (d, name) => shiftsOf(d).some(q => availFor(d, name, q));
+async function saveStaff(p){
+  p.email = String(p.email || "").trim().toLowerCase();
+  if (!p.id) p.id = newId();
+  if (!S.team.includes(p)) S.team.push(p);
+  markDirty();
+}
+async function delStaff(p){ S.team = S.team.filter(x => x !== p); markDirty(); }
+function renderStaff(){ renderMatrix(); renderTeam(); if (UI.pf && !$("pfPanel").contains(document.activeElement && document.activeElement.tagName === "INPUT" ? document.activeElement : null)) renderPf(); renderDayPanel(); }
+function renderMatrix(){
+  const box = $("mxGrid"); if (!box) return; renderAvailBox();
+  const today = ymd(new Date()); if (!UI.mxWk) UI.mxWk = weekOf(today); const wk = UI.mxWk;
+  $("mxTitle").innerHTML = `Staffing<span class="wk-sub">${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</span>`;
+  const days = [0,1,2,3,4,5,6].map(i => addDays(wk, i)).filter(d => S.track.dates.includes(d));
+  if (!days.length){ box.innerHTML = `<p class="empty">The cafe is closed this week. Open days on the calendar.</p>`; return; }
+  const cols = []; days.forEach(d => { const x = ensureDay(d); shiftsOf(d).forEach((q,i) => cols.push({d, i, q, on:namesIn(x.names[i]), first:i === 0})); });
+  const people = [...new Set(teamSorted().map(p => p.name).concat(...cols.map(c => c.on)))];
+  if (!people.length){ box.innerHTML = `<p class="empty">Add people to the team below to start assigning shifts.</p>`; return; }
+  box.innerHTML = `<div class="scroll"><table class="mx"><thead><tr><th class="nm" rowspan="2">Name</th>${days.map(d => `<th class="d0" colspan="${shiftsOf(d).length}">${fmtD(d)}</th>`).join("")}</tr>
+    <tr>${cols.map(c => `<th class="${c.first ? "d0" : ""}">${tfmt(c.q.start)}<br>${tfmt(c.q.end)}<div class="${c.on.length >= c.q.seats ? "status-ok" : "neg-t"}">${c.on.length}/${c.q.seats}</div></th>`).join("")}</tr></thead>
+    <tbody>${people.map(n => `<tr><th class="nm" scope="row" title="${esc(n)}">${nameH(n)}</th>${cols.map(c => { const as = c.on.includes(n), av = availFor(c.d, n, c.q), bk = !av && bkFor(c.d, n, c.q);
+      return `<td class="${c.first ? "d0" : ""}"><button class="mxc${as ? " as" : ""}${av ? " av" : bk ? " bku" : " na"}" data-act="mxTog" data-d="${c.d}" data-i="${c.i}" data-n="${esc(n)}" aria-pressed="${as}" aria-label="${esc(n)}, ${fmtD(c.d)} ${tfmt(c.q.start)} to ${tfmt(c.q.end)}, ${as ? "on this shift" : av ? "available" : bk ? "backup" : answered(c.d, n) ? "not available" : "hasn't sent availability for this week"}"${c.d < today ? " disabled" : ""}>${as ? "✓" : av ? "" : bk ? "B" : answered(c.d, n) ? "–" : "?"}</button></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+function renderTeam(){
+  const box = $("teamList"); if (!box) return;
+  $("teamAddRow").hidden = $("teamImport").hidden = !isMgr();
+  box.innerHTML = team().length ? teamSorted().map(p => {
+    return `<button class="ptile${p.trained ? " tr" : ""}" data-act="pfOpen" data-id="${esc(p.id)}"><span class="pn">${esc(p.name)}</span>${p.trained ? `<span class="note-sm status-ok">Barista trained</span>` : ""}<span class="note-sm">${esc([p.role, p.year && "Class of " + p.year].filter(Boolean).join(" · "))}</span><span class="note-sm">${esc([p.email, p.phone].filter(Boolean).join(" · ") || "No contact details yet")}</span></button>`; }).join("")
+    : `<p class="empty">No one yet. Add the people who work shifts.</p>`;
+}
+const pfPerson = () => team().find(x => x.id === UI.pf);
+function openPf(id){ UI.pf = id; renderPf(); openSheet("pfPanel"); }
+function renderPf(){
+  const box = $("pfBody"), p = pfPerson(); if (!box || !UI.pf) return; if (!p){ closeSheet("pfPanel"); return; }
+  const mgr = isMgr(), link = [p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : "", p.phone ? `<a href="tel:${esc(p.phone.replace(/[^\d+]/g, ""))}">${esc(p.phone)}</a>` : ""].filter(Boolean).join(" · ");
+  box.innerHTML = `<div class="tile-h"><h2 id="pfTitle">${esc(p.name)}</h2><button class="x" data-act="pfClose" aria-label="Close">✕</button></div>${link ? `<p class="tw" style="margin:6px 0 0">${link}</p>` : ""}`
+    + (mgr ? `<div class="pf-f"><label>Name<input class="in txt" data-pf="name" value="${esc(p.name)}"></label><label>Email<input class="in txt" type="email" data-pf="email" value="${esc(p.email || "")}" autocomplete="off"></label><label>Phone<input class="in txt" type="tel" data-pf="phone" value="${esc(p.phone || "")}" autocomplete="off"></label><label>Role<input class="in txt" data-pf="role" value="${esc(p.role || "")}" placeholder="Barista, Support"></label><label>Class year<input class="in txt" data-pf="year" value="${esc(p.year || "")}" inputmode="numeric"></label><label class="chk"><input type="checkbox" data-act="pfTrained"${p.trained ? " checked" : ""}> Completed barista training</label><div><button class="btn sm" data-act="pfSave">Save details</button></div></div>` : "")
+    + `<p class="toast" id="pfToast" role="status"></p>`
+    + (mgr ? `<div style="margin-top:22px"><button class="btn ghost sm" data-act="pfDel">Remove ${esc(p.name)}</button></div>` : "");
+}
+function openSheet(id){ $(id).hidden = false; const f = $(id).querySelector("button"); if (f) f.focus(); }
+function closeSheet(id){ $(id).hidden = true; if (id === "pfPanel") UI.pf = null; }
+function openDay(d){ UI.dayPanel = d; ensureDay(d); renderDayPanel(); $("dayPanel").hidden = false; const f = $("dayPanel").querySelector("button"); if (f) f.focus(); }
+function closeDay(){ UI.dayPanel = null; $("dayPanel").hidden = true; }
+function renderDayPanel(){
+  const d = UI.dayPanel, box = $("dpBody"); if (!d || !box) return;
+  const open = S.track.dates.includes(d), x = ensureDay(d), SD = UI.SD || {}, s = SD[d];
+  const onShift = {}; x.names.slice(0, x.n).forEach((v,i) => namesIn(v).forEach(n => (onShift[n] || (onShift[n] = [])).push(i)));
+  const people = [...new Set(team().map(p => p.name).concat(Object.keys(onShift)))].sort((a,b) => a.localeCompare(b));
+  const avail = people.filter(n => availOn(d, n)), unavail = people.filter(n => !availOn(d, n));
+  const L = dayLabor(d);
+  let h = `<div class="tile-h"><h2 id="dpTitle">${fmtD(d)}</h2><button class="x" data-act="dpClose" aria-label="Close">✕</button></div>`;
+  if (!open){
+    h += `<p class="hint">The cafe is closed this day.</p><div class="chips"><button class="chip" data-act="dpOpen" data-v="ops">Open this day</button></div>`;
+    box.innerHTML = h; return;
+  }
+  h += `<div class="calbar" style="margin:10px 0 0"><span class="tw">${tfmt(x.open)} to ${tfmt(x.close)}, from the weekly hours. About ${F.int((UI.T || {}).dayDrinks || 0)} drinks. Labor ${F.usd0(L.cost)}.</span><button class="btn ghost sm" data-act="dpCloseDay">Close this day</button></div>
+    <h3>Shifts</h3>`;
+  const SH = shiftsOf(d);
+  for (let i = 0; i < x.n; i++){
+    const on = namesIn(x.names[i]), q = SH[i], need = Math.max(0, q.seats - on.length);
+    const cand = avail.filter(n => !on.includes(n) && availFor(d, n, q));
+    h += `<div class="sh-slot"><div class="top"><span>${tfmt(q.start)} to ${tfmt(q.end)}</span><span class="${need ? "status-over" : "status-ok"}" style="font-size:12px">${on.length} of ${q.seats} filled</span></div>
+      <div class="pchips">${on.map(n => `<button class="pc on" data-act="dpUn" data-i="${i}" data-n="${esc(n)}" title="Take ${esc(n)} off this shift">${nameH(n)}</button>`).join("")}${Array.from({length:need}, () => `<span class="seatempty">Open spot</span>`).join("")}</div>
+      <div class="note-sm" style="margin-top:8px">${cand.length ? "Available, tap to add" : avail.some(n => availFor(d, n, q)) ? "Everyone available is already on this shift" : "Nobody is marked available for this shift"}</div>
+      ${(() => { const bks = people.filter(n => !on.includes(n) && bkFor(d, n, q)); return bks.length ? `<div class="note-sm" style="margin-top:8px">Backups, tap to add</div><div class="pchips">${bks.map(n => `<button class="pc add" data-act="dpAs" data-i="${i}" data-n="${esc(n)}">${nameH(n)} (backup)</button>`).join("")}</div>` : ""; })()}
+      <div class="pchips">${cand.map(n => `<button class="pc add${onShift[n] ? " busy" : ""}" data-act="dpAs" data-i="${i}" data-n="${esc(n)}"${onShift[n] ? ` title="Also on shift ${onShift[n].map(k => k + 1).join(" and ")}"` : ""}>${nameH(n)}${onShift[n] ? ` (shift ${onShift[n].map(k => k + 1).join(", ")})` : ""}</button>`).join("")}</div>
+      <div class="row2" style="margin-top:8px"><input class="in txt" list="peopleList" data-dpname="${i}" placeholder="Someone else" aria-label="Add a name to shift ${i + 1}" style="font-size:14px"><button class="btn ghost sm" data-act="dpAdd" data-i="${i}">Add</button></div></div>`;
+  }
+  h += `<h3>Who's available ${toDate(d).toLocaleDateString("en-US", {weekday:"long"})}</h3><p class="note-sm" style="margin:-4px 0 6px">From this week's availability form. People who haven't answered it show as unavailable.</p>
+    <div class="pchips">${people.map(n => `<span class="pc ${availOn(d, n) ? "av" : "off"}">${nameH(n)}${onShift[n] ? ` · shift ${onShift[n].map(k => k + 1).join(", ")}` : ""}</span>`).join("") || `<span class="empty">${isMgr() ? "Add people to the team under Staffing first." : "Sign in as a manager to see who's available."}</span>`}</div>
+    ${s ? `<div class="dsales"><b>${F.int(s.n)}</b> drinks, <b>${F.usd0(s.rev)}</b>, ${F.int(s.orders)} orders.</div>` : ""}`;
+  box.innerHTML = h;
+}
+function setShiftNames(d, i, fn){ const x = ensureDay(d); x.names[i] = fn(namesIn(x.names[i])).join(", "); markDirty(); renderDayPanel(); renderShifts(); renderHome(); }
+
+
+
+/* ------------------------------------------------------------------ availability link
+   One link per week, posted in the group chat: ?avail=<Monday>. Each person picks their name and taps the shifts they can work.
+   Answers save to their own document, avail/<Monday>_<person id>, so people filling it in at the same time never overwrite each other.
+   These answers are the only availability the portal uses. */
+const availDoc = (wk, pid) => (Store.avail || []).find(a => a.week === wk && a.pid === pid) || null;
+const availUrl = wk => location.origin + location.pathname + "?avail=" + wk;
+const weekDays = wk => [0,1,2,3,4,5,6].map(i => addDays(wk, i)).filter(d => S.track.dates.includes(d));
+/* the week's shifts as blocks: people available so far (from this week's answers) out of people needed. With a person and their
+   picks it becomes their form: their picks count live and tapping a block toggles it. */
+const availCount = (wk, d, q, exceptPid) => team().filter(p => { if (p.id === exceptPid) return false; const a = availDoc(wk, p.id); return a && !a.none && covers((a.days || {})[d], q); }).length;
+const availBk = (wk, d, q, exceptPid) => team().filter(p => { if (p.id === exceptPid) return false; const a = availDoc(wk, p.id); return a && !a.none && covers((a.bk || {})[d], q); }).length;
+/* full: enough people already said yes, or enough are already on it in the schedule */
+const shiftFull = (wk, d, i, q, exceptPid) => Math.max(availCount(wk, d, q, exceptPid), namesIn((((S.days || {})[d] || {}).names || [])[i]).length) >= q.seats;
+function coverageGrid(wk, me){
+  const days = weekDays(wk), all = days.flatMap(d => shiftsOf(d)); if (!all.length) return "";
+  const s0 = Math.max(0, Math.floor(slotOf(Math.min(...all.map(q => q.start))) / 2) * 2), s1 = Math.min(NSLOT, Math.ceil(slotOf(Math.max(...all.map(q => q.end))) / 2) * 2), n = Math.max(2, s1 - s0);
+  let open = 0;
+  const rows = days.map(d => wkRow(`${DOW[toDate(d).getDay()]} ${toDate(d).getDate()}`, s0, n, shiftsOf(d).map((q, i) => {
+    const sel = me && !me.none && me.sel[d] ? me.sel[d][i] : false, mine = !!sel, bk = sel === "bk", pid = me && me.pid;
+    const have = availCount(wk, d, q, pid) + (mine && !bk ? 1 : 0), nb = availBk(wk, d, q, pid) + (bk ? 1 : 0), left = Math.max(0, q.seats - have), full = shiftFull(wk, d, i, q, pid); open += left;
+    const lbl = `${toDate(d).toLocaleDateString("en-US", {weekday:"long"})} ${tfmt(q.start)} to ${tfmt(q.end)}: ${have} of ${q.seats} available${left ? `, needs ${left} more` : ""}${nb ? `, ${nb} ${nb === 1 ? "backup" : "backups"}` : ""}`;
+    const tip = !me ? "" : bk ? ". You're a backup" : mine ? ". You're in" : full ? ". It's full. Tap to sign up as a backup" : ". Tap if you can work it";
+    return `<button class="wk-b av ${bk ? "mine bku" : mine ? "mine" : left ? "need" : "ok"}" style="grid-column:${slotOf(q.start) - s0 + 1}/${slotOf(q.end) - s0 + 1}" title="${lbl}${tip}" aria-label="${lbl}${tip}"${me && !me.none ? ` data-act="avTog" data-d="${d}" data-i="${i}" aria-pressed="${mine}"` : " disabled"}>${bk ? "Backup ✓" : `${have}/${q.seats}${mine ? " ✓" : !mine && me && full ? " · backup?" : ""}`}${nb && !bk ? ` +${nb}` : ""}</button>`; })));
+  return `<div class="wkg ro">${wkHead(s0, n)}${rows.join("")}</div>
+    <p class="note-sm" style="margin:4px 0 0">${open ? `<b class="neg-t">${open} ${open === 1 ? "spot still needs" : "spots still need"} someone.</b> ` : `<b class="status-ok">Every shift is covered.</b> `}Each shift shows people available so far out of people needed: orange still needs people, green is covered${me ? ", blue is you, purple means you're a backup. Tap a full shift to sign up as its backup" : ". +1 means one backup"}.</p>`;
+}
+/* the week's schedule as it stands, to screenshot or copy into the group chat */
+function scheduleOf(wk){
+  const short = n => { const f = n.split(" ")[0]; return team().filter(p => p.name.split(" ")[0] === f).length > 1 ? n : f; };
+  return weekDays(wk).map(d => { const x = ensureDay(d);
+    return {d, shifts: shiftsOf(d).map((q, i) => { const on = namesIn(x.names[i]);
+      return {q, on:on.map(short), open:Math.max(0, q.seats - on.length), bk:team().filter(p => !on.includes(p.name) && bkFor(d, p.name, q)).map(p => short(p.name))}; })}; });
+}
+const schDay = d => toDate(d).toLocaleDateString("en-US", {weekday:"long", month:"short", day:"numeric"});
+function openSchedule(){
+  const wk = UI.mxWk || weekOf(ymd(new Date())), days = scheduleOf(wk);
+  $("schBody").innerHTML = `<div class="mh"><div><h2 id="schTitle">Schedule</h2><div class="p">Week of ${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</div></div><button class="x" data-act="schClose" aria-label="Close">✕</button></div>`
+    + (days.length ? days.map(x => `<section class="sch-d"><h3>${schDay(x.d)}</h3>${x.shifts.map(s => `<div class="sch-s"><span class="sch-t">${tfmt(s.q.start)}–${tfmt(s.q.end)}</span><span>${s.on.map(esc).join(", ")}${s.open ? `${s.on.length ? ", " : ""}<span class="neg-t">${s.open} open ${s.open === 1 ? "spot" : "spots"}</span>` : ""}${s.bk.length ? `<br><span class="note-sm">Backup: ${s.bk.map(esc).join(", ")}</span>` : ""}</span></div>`).join("")}</section>`).join("")
+      + `<button class="btn big madd" data-act="schCopy">Copy for the group chat</button><p class="toast" id="schToast" role="status"></p>`
+      : `<p class="empty">The cafe is closed this week.</p>`);
+  $("schDlg").showModal();
+}
+async function copySchedule(){
+  const wk = UI.mxWk || weekOf(ymd(new Date()));
+  const msg = [`Good Grace's Cafe schedule, week of ${fmtD(wk)}`].concat(...scheduleOf(wk).map(x => ["", schDay(x.d)].concat(x.shifts.map(s =>
+    `${tfmt(s.q.start)}–${tfmt(s.q.end)}: ${s.on.concat(s.open ? [`${s.open} open ${s.open === 1 ? "spot" : "spots"}`] : []).join(", ")}${s.bk.length ? ` (backup: ${s.bk.join(", ")})` : ""}`)))).join("\n");
+  try { await navigator.clipboard.writeText(msg); toast("schToast", "Copied. Paste it in the group chat."); }
+  catch(e){ window.prompt("Copy this and paste it in the group chat:", msg); }
+}
+function renderAvailBox(){
+  const box = $("availBox"); if (!box) return;
+  const wk = UI.mxWk || weekOf(ymd(new Date())), days = weekDays(wk);
+  if (!days.length){ box.innerHTML = ""; return; }
+  const done = teamSorted().filter(p => availDoc(wk, p.id)), todo = teamSorted().filter(p => !availDoc(wk, p.id));
+  box.innerHTML = `<div class="alink"><b style="flex:1 1 100%">Availability for the week of ${fmtD(wk)}</b><code>${esc(availUrl(wk))}</code>
+    <button class="btn sm" data-act="availCopy" data-w="${wk}">Copy for the group chat</button><a class="btn ghost sm" href="${esc(availUrl(wk))}" target="_blank" rel="noopener">Open</a>
+    <div style="flex:1 1 100%">${coverageGrid(wk, null)}</div>
+    <span class="note-sm" style="flex:1 1 100%">${done.length} of ${team().length} answered${done.length ? ": " + done.map(p => esc(p.name) + (availDoc(wk, p.id).none ? " (can't work)" : "")).join(", ") : ""}.${todo.length && done.length ? ` Still waiting on ${todo.map(p => { const f = p.name.split(" ")[0]; return esc(team().filter(x => x.name.split(" ")[0] === f).length > 1 ? p.name : f); }).join(", ")}.` : ""}</span></div>`;
+}
+async function copyAvail(wk){
+  const msg = `Good Grace's Cafe: put in your availability for the week of ${fmtD(wk)} here: ${availUrl(wk)}`;
+  try { await navigator.clipboard.writeText(msg); toast("staffToast", "Copied. Paste it in the group chat."); }
+  catch(e){ window.prompt("Copy this and paste it in the group chat:", msg); }
+}
+/* the staff-facing page */
+function nextAvailWeek(){ const t = ymd(new Date()), nx = S.track.dates.slice().sort().find(d => d >= t); return weekOf(nx || t); }
+function renderAvailView(){
+  const box = $("availView"); if (!box) return;
+  const wk = UI.av.wk || nextAvailWeek(), days = weekDays(wk), A = UI.av;
+  let pid = A.pid; if (pid && !team().some(p => p.id === pid)) pid = A.pid = "";
+  let h = `<div class="sec"><h2>Your availability</h2><p class="hint">Week of ${fmtD(wk)} to ${fmtD(addDays(wk, 6))}. Pick your name, tap every shift you can work, then Save.</p>`;
+  if (!Store.loaded){ box.innerHTML = h + `<p class="empty">Loading…</p></div>`; return; }
+  if (!days.length){ box.innerHTML = h + `<p class="empty">The cafe isn't open that week. Nothing to fill in.</p></div>`; return; }
+  h += `<label class="pf-f" style="margin:0"><span class="note-sm">Your name</span><select class="in txt" id="avName" aria-label="Your name"><option value="">Choose your name</option>${teamSorted().map(p => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
+    <p class="note-sm">Not on the list? Ask a manager to add you to the team.</p>`;
+  if (pid){
+    if (!A.sel || A.selFor !== pid + wk){ const doc = availDoc(wk, pid);
+      A.selFor = pid + wk; A.none = !!(doc && doc.none);
+      A.sel = {}; days.forEach(d => A.sel[d] = shiftsOf(d).map(q => !doc || doc.none ? false : covers((doc.bk || {})[d], q) ? "bk" : covers((doc.days || {})[d], q)));
+      A.had = !!doc; }
+    h += coverageGrid(wk, {pid, sel:A.sel, none:A.none})
+      + `<label class="swrow"><span>I can't work this week</span><input type="checkbox" class="switch" id="avNone"${A.none ? " checked" : ""}></label>
+      <button class="btn big" style="width:100%;margin-top:6px" data-act="avSave">${A.had ? "Update my availability" : "Save my availability"}</button>
+      <p class="toast" id="avToast" role="status"></p>`;
+  }
+  else h += coverageGrid(wk, null);
+  box.innerHTML = h + `</div>`;
+}
+async function saveAvail(){
+  const A = UI.av, wk = A.wk || nextAvailWeek(), p = team().find(x => x.id === A.pid); if (!p) return;
+  const days = {}, bk = {}, pick = (v, out) => weekDays(wk).forEach(d => { const r = shiftsOf(d).filter((q,i) => A.sel[d][i] === v).map(q => ({s:q.start, e:q.end})); if (r.length) out[d] = r; });
+  if (!A.none){ pick(true, days); pick("bk", bk); }
+  const doc = {week:wk, pid:p.id, name:p.name, days, bk, none:!!A.none, at:new Date().toISOString()};
+  try { await Store.saveAvail(doc); A.had = true; renderAvailView(); toast("avToast", `Thanks, ${p.name.split(" ")[0]}. Saved. Open this link again any time to change it.`); }
+  catch(e){ toast("avToast", saveError(e)); }
+}
+
+/* ------------------------------------------------------------------ sales by day (home, day panel, analytics) */
+function salesDays(){
+  const out = {}, get = d => out[d] || (out[d] = {n:0, food:0, rev:0, orders:0, drinks:{}});
+  Store.sales.forEach(doc => {
+    const ls = (doc.lines || []).filter(l => +l.q > 0 && l.d && (isFood(l) || lineDrink(l))); if (!ls.length) return;
+    const ok = {};
+    ls.forEach(l => { const q = +l.q, o = get(l.d), d = lineDrink(l);
+      o.rev += (l.p != null ? +l.p : lineRevenue(l, d)) * q;
+      if (isFood(l)) o.food += q; else { o.n += q; o.drinks[d.name] = (o.drinks[d.name] || 0) + q; }
+      (ok[l.d] || (ok[l.d] = new Set())).add(doc.kind === "upload" ? (l.o ? "o:" + l.o : l.d + " " + l.tm) : "doc"); });
+    Object.entries(ok).forEach(([d, s]) => get(d).orders += doc.dayOrders && doc.dayOrders[d] != null ? +doc.dayOrders[d] : s.size);
+  });
+  return out;
+}
+
+/* ------------------------------------------------------------------ this week's menu: which drinks run which day */
+/* a small window: the week's day tabs, that day's drinks on top, and the drink bank below to search and add from.
+   "Every day" edits all the week's open days at once. A day nobody changed runs the usual menu (on in the drink bank). */
+UI.wm = {wk:"", day:"", q:""};
+const wmIds = d => menuFor(d).filter(x => x.sec !== "core").map(x => x.id);
+function renderWeekMenu(){
+  const box = $("wmBody"); if (!box || !$("wmDlg").open) return;
+  const W = UI.wm, today = ymd(new Date());
+  if (!W.wk){ const nx = S.track.dates.slice().sort().find(d => d >= today); W.wk = weekOf(nx || today); }
+  const days = weekDays(W.wk), sameAll = days.every(d => wmIds(d).join() === wmIds(days[0]).join());
+  if (!W.day || (W.day !== "all" && !days.includes(W.day))) W.day = days.length > 1 && sameAll ? "all" : days[0] || "";
+  const tgt = W.day === "all" ? days : [W.day];
+  let h = `<div class="mh"><div class="wknav"><button class="x" data-act="wmWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="wmTitle">Menu<span class="wk-sub">week of ${fmtD(W.wk)}</span></h2><button class="x" data-act="wmWk" data-v="1" aria-label="Next week">›</button></div><button class="x" data-act="wmClose" aria-label="Close">✕</button></div>`;
+  if (!days.length){ box.innerHTML = h + `<p class="empty">The cafe is closed this week. Open days on the calendar under Weeks and shifts.</p>`; return; }
+  h += `<div class="segc wmdays">${(days.length > 1 ? [["all","Every day"]] : []).concat(days.map(d => [d, fmtD(d)])).map(([v,l]) => `<button class="${W.day === v ? "on" : ""}" data-act="wmDay" data-v="${v}">${l}</button>`).join("")}</div>`;
+  // on the menu: for Every day, the drinks running any day, marked when only some days have them
+  const on = [...new Set(tgt.flatMap(wmIds))].map(drinkById).filter(Boolean);
+  h += `<div class="wmsel"><div class="ol">On the menu${W.day === "all" ? " every day" : `, ${fmtD(W.day)}`}${tgt.some(d => dayList(d)) ? ` <button class="linkbtn" data-act="wmReset">Back to usual</button>` : " · usual menu"}</div>
+    ${on.length ? on.map(d => { const part = W.day === "all" ? tgt.filter(x => wmIds(x).includes(d.id)) : tgt;
+      return `<span class="wmchip ${d.sec}">${esc(d.name)}<small>${d.sec === "signature" ? "Signature" : "Specialty"}${part.length < tgt.length ? ", " + part.map(x => DOW[toDate(x).getDay()]).join(" and ") + " only" : ""}</small><button class="x" data-act="wmDel" data-id="${esc(d.id)}" aria-label="Take ${esc(d.name)} off">✕</button></span>`; }).join("")
+      : `<p class="empty" style="margin:4px 0">Core drinks only. Add from the drink bank below.</p>`}</div>
+    <input class="in txt" type="search" id="wmQ" value="${esc(W.q)}" placeholder="Search the drink bank" aria-label="Search the drink bank">
+    <div id="wmList"></div>`;
+  box.innerHTML = h; renderWmList();
+}
+/* the drink bank below: this season's drinks first, then the most sold */
+function renderWmList(){
+  const box = $("wmList"); if (!box) return;
+  const W = UI.wm, days = weekDays(W.wk), tgt = W.day === "all" ? days : [W.day], cnt = drinkCounts(), cs = curSeason(), q = W.q.trim().toLowerCase();
+  const onAll = id => tgt.every(d => wmIds(d).includes(id));
+  const xs = allDrinks().filter(d => d.sec !== "core" && (!q || [d.name].concat(d.aliases || [], syrupOf(d), seasonName(d.season), d.sp ? specialSummary(d.sp) : "").join(" ").toLowerCase().includes(q)))
+    .sort((a,b) => ((b.season === cs || !b.season) - (a.season === cs || !a.season)) || (cnt[b.id] || 0) - (cnt[a.id] || 0) || a.name.localeCompare(b.name));
+  box.innerHTML = xs.length ? xs.map(d => `<div class="wmrow"><div><b>${esc(d.name)}</b><small>${d.sec === "signature" ? "Signature" : "Specialty"} · ${esc(seasonName(d.season))} · ${F.usd2(d.price)}${cnt[d.id] ? ` · ${F.int(cnt[d.id])} sold` : ""}</small></div>${onAll(d.id) ? `<span class="muted">On ✓</span>` : `<button class="btn ghost sm" data-act="wmAdd" data-id="${esc(d.id)}">Add</button>`}</div>`).join("")
+    : `<p class="empty">No drink matches "${esc(W.q)}". <button class="linkbtn" data-act="bldOpen">Build a new one</button></p>`;
+}
+function openWeekMenu(){ UI.wm = {wk:"", day:"", q:""}; const dl = $("wmDlg"); if (!dl.open) dl.showModal(); renderWeekMenu(); }
+const menuChanged = () => { markDirty(); renderWeekMenu(); renderHome(); renderMenu(); renderDrinkGrid(); };
+
+/* ------------------------------------------------------------------ home: shifts, this week's menu, how to build it */
+/* the open days of the coming cafe week, and every drink running on any of them */
+function weekMenuDays(){ const t = ymd(new Date()), ds = S.track.dates.slice().sort(), nx = ds.find(d => d >= t); return nx ? ds.filter(d => d >= t && weekOf(d) === weekOf(nx)) : []; }
+function weekMenuDrinks(){ const ds = weekMenuDays(); if (!ds.length) return liveDrinks(); const ids = new Set(ds.flatMap(d => menuFor(d).map(x => x.id))); return allDrinks().filter(d => ids.has(d.id)); }
+/* ------------------------------------------------------------------ home: what matters right now
+   Top to bottom: a status strip (open or closed, who's on now, the next shift), the checklists that are due, what needs
+   attention, today's sales while open, the coming shifts, this week's menu, then how to build the drinks. */
+const nowH = () => { const n = new Date(); return n.getHours() + n.getMinutes() / 60; };
+const dayHours = d => { const sh = shiftsOf(d); return {o:sh[0].start, c:Math.max(...sh.map(q => q.end)), sh}; };
+const isOpenDay = d => S.track.dates.includes(d);
+const initials = n => String(n || "").split(/\s+/).filter(Boolean).map(w => w[0].toUpperCase()).slice(0, 2).join("");
+
+/* checklists. Prep: the first day of a run of open days, showing from noon the day before, due at opening. Opening: shows an
+   hour before opening, due at opening. Closing: shows half an hour before close, due half an hour after. A list stays up, marked
+   late, until it's done or someone skips it with a reason; an unfinished closing list carries over to the next day. Each tick
+   records who and when. S.lists holds the items (Edit checklists, admin); S.checks[date][list] holds the ticks. */
+const LIST_LBL = {prep:"Prep", open:"Opening", close:"Closing"};
+const LIST_DEF = {
+  prep:["Make 2 batches of matcha","Cook the specialty syrups for the week","Start the strawberry purée (it sits overnight)","Batch the cold foam, 1 container","Charge the Clover terminal and the scales","Label every prepped item: item, prep date, discard date"],
+  open:["Espresso machine on and heating","Pull a test shot and dial in the grinder","Fill the ice bin","Milk, cold foam and purée in the fridge","Stock cups, lids, sleeves and straws","Clover on and logged in","Menu board out with this week's drinks"],
+  close:["Log any sales that weren't logged","Backflush and clean the espresso machine","Wash pitchers, shakers and scoops","Last day of the run: pour out syrups, purée, matcha and cold foam, wash the containers","Wipe the counters and empty the trash","Closing count under Inventory","Lights off and lock up"]};
+function dueLists(){
+  const t = ymd(new Date()), h = nowH(), y = addDays(t, -1), tm = addDays(t, 1), out = [];
+  const add = (key, date, due, late) => { const st = (S.checks[date] || {})[key] || {}, items = S.lists[key] || [], done = items.filter(x => (st.d || {})[x.id]).length;
+    if (!items.length || st.skip || done === items.length) return; out.push({key, date, due, late, done, n:items.length, st}); };
+  if (isOpenDay(y)) add("close", y, dayHours(y).c + 0.5, true);
+  if (isOpenDay(tm) && !isOpenDay(t) && h >= 12) add("prep", tm, dayHours(tm).o, false);
+  if (isOpenDay(t)){ const {o, c} = dayHours(t);
+    if (!isOpenDay(y)) add("prep", t, o, h >= o);
+    if (h >= o - 1) add("open", t, o, h >= o);
+    if (h >= c - 0.5) add("close", t, c + 0.5, h >= c + 0.5); }
+  return out.sort((a, b) => b.late - a.late);
+}
+const meSelect = () => `<select class="in txt" data-me="1" aria-label="Your name"><option value="">Pick your name</option>${teamSorted().map(p => `<option${p.name === UI.me ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select>`;
+function ckCard(L){
+  const items = S.lists[L.key] || [], d = L.st.d || {}, other = L.date !== ymd(new Date());
+  return `<section class="ck${L.late ? " late" : ""}"><div class="ck-h"><div><h2>${LIST_LBL[L.key]} checklist${other ? `, ${fmtD(L.date)}` : ""}</h2>
+      <span class="note-sm">${L.late ? `<b class="neg-t">Late</b> · ` : ""}Due ${tfmt(L.due)} · ${L.done} of ${L.n} done</span></div><div class="ck-bar" aria-hidden="true"><i style="width:${L.done / L.n * 100}%"></i></div></div>
+    <div class="ck-items">${items.map(x => { const c = d[x.id];
+      return `<button class="ck-i${c ? " done" : ""}" data-act="ckTog" data-k="${L.key}" data-d="${L.date}" data-i="${esc(x.id)}" aria-pressed="${!!c}"><span class="box" aria-hidden="true">${c ? "✓" : ""}</span><span class="t">${esc(x.t)}</span>${c ? `<small title="${esc(c.by)}">${esc(initials(c.by))} ${fmtT(c.at)}</small>` : ""}</button>`; }).join("")}</div>
+    <div class="ck-f"><label class="tw">Checking off as ${meSelect()}</label><button class="linkbtn" data-act="ckSkip" data-k="${L.key}" data-d="${L.date}">Skip this list</button></div></section>`;
+}
+/* today's finished lists, as one line under the status */
+function doneToday(){ const t = ymd(new Date()), C = S.checks[t] || {};
+  return Object.keys(LIST_LBL).filter(k => C[k] && (C[k].skip || (S.lists[k] || []).length && (S.lists[k] || []).every(x => (C[k].d || {})[x.id]))).map(k => {
+    if (C[k].skip) return `${LIST_LBL[k]} skipped by ${esc(C[k].skip.by)}`;
+    const last = Object.values(C[k].d).sort((a, b) => a.at.localeCompare(b.at)).pop(); return `${LIST_LBL[k]} done by ${esc(last.by)} at ${fmtT(last.at)}`; }); }
+/* things that need someone, newest problems first */
+function attention(){
+  const T = UI.T || {rows:[]}, t = ymd(new Date()), out = [], ds = S.track.dates.slice().sort(), nx = ds.find(d => d >= t), past = ds.filter(d => d < t);
+  const low = T.rows.filter(r => r.status === "Out" || r.status === "Order now");
+  if (low.length) out.push({tone:"bad", text:`Low on ${low.slice(0, 4).map(r => r.name).join(", ")}${low.length > 4 ? ` and ${low.length - 4} more` : ""}`, tab:"inventory"});
+  if (nx && (toDate(nx) - toDate(t)) / 864e5 <= 3){ const B = buyItems(T), left = B.rows.filter(r => r.qty > 0 && !r.ordered);
+    if (left.length) out.push({tone:"warn", text:`This week's order isn't placed yet: ${left.length} ${left.length === 1 ? "item" : "items"}`, tab:"inventory"}); }
+  const wkOpen = ds.filter(d => weekOf(d) === weekOf(t)), shT = S.track.dates.includes(t) ? shiftsOf(t) : [];
+  if (wkOpen.length && wkOpen[wkOpen.length - 1] === t && shT.length && new Date().getHours() + new Date().getMinutes() / 60 >= Math.max(...shT.map(q => q.end)) - .5
+      && !Store.stock.some(e => e.type === "waste" && String(e.ts).slice(0, 10) === t)) out.push({tone:"warn", text:"Last close of the week: count the leftover perishables in the closing count, then throw them out", tab:"inventory"});
+  const lastDay = past[past.length - 1];
+  if (lastDay && !Store.stock.some(e => e.type === "count" && String(e.ts).slice(0, 10) >= lastDay)) out.push({tone:"warn", text:`No closing count since ${fmtD(lastDay)}`, tab:"inventory"});
+  if (isAdmin() && nx){ const wk = ds.filter(d => d >= t && weekOf(d) === weekOf(nx)), open = wk.reduce((s, d) => { const x = ensureDay(d); return s + shiftsOf(d).reduce((a, q, i) => a + Math.max(0, q.seats - namesIn(x.names[i]).length), 0); }, 0);
+    if (open) out.push({tone:"warn", text:`${open} open shift ${open === 1 ? "spot" : "spots"} on ${wk.map(fmtD).join(" and ")}`, tab:"shifts"});
+    const missing = team().filter(p => !availDoc(weekOf(nx), p.id)).length;
+    if (team().length && missing) out.push({tone:"info", text:`${missing} of ${team().length} haven't sent availability for the week of ${fmtD(weekOf(nx))}`, tab:"shifts"}); }
+  return out;
+}
+function renderHome(){
+  if (!$("homeStatus")) return;
+  const t = ymd(new Date()), h = nowH(), ds = S.track.dates.slice().sort(), nx = ds.find(d => d > t) || null;
+  // status strip
+  let st, onNow = "", next = "";
+  if (isOpenDay(t)){ const {o, c, sh} = dayHours(t), x = ensureDay(t), cur = sh.findIndex(q => h >= q.start && h < q.end), up = sh.findIndex(q => q.start > h);
+    st = h < o ? `<b>Opens at ${tfmt(o)}</b> today` : h < c ? `<b class="status-ok">Open now</b> until ${tfmt(c)}` : `<b>Closed</b> for today`;
+    if (cur >= 0) onNow = `On now: ${namesIn(x.names[cur]).map(nameH).join(", ") || `<span class="neg-t">nobody yet</span>`}`;
+    if (up >= 0) next = `Next shift ${tfmt(sh[up].start)}: ${namesIn(x.names[up]).map(nameH).join(", ") || `<span class="neg-t">nobody yet</span>`}`; }
+  else st = `<b>Closed today</b>${nx ? `. Next open ${fmtD(nx)}, ${tfmt(dayHours(nx).o)}` : ""}`;
+  const done = doneToday();
+  $("homeStatus").innerHTML = `<div class="hs-main"><div class="hs-state">${st}</div>${onNow || next ? `<div class="hs-who">${[onNow, next].filter(Boolean).join(" · ")}</div>` : ""}${done.length ? `<div class="note-sm">${done.join(" · ")}</div>` : ""}</div>
+    <div class="hs-act"><button class="btn big" data-act="tab" data-tab="log">Log sales</button><button class="linkbtn adm" data-act="ckEdit">Edit checklists</button></div>`;
+  // checklists that are due
+  $("homeLists").innerHTML = dueLists().map(ckCard).join("");
+  // needs attention
+  const at = attention();
+  $("homeAttn").hidden = !at.length;
+  $("homeAttnList").innerHTML = at.map(a => `<button class="attn ${a.tone}" data-act="tab" data-tab="${a.tab}"><span class="dot" aria-hidden="true"></span><span>${esc(a.text)}</span><span class="go" aria-hidden="true">›</span></button>`).join("");
+  // today while open: sales so far against the same weekday last week
+  const SD = UI.SD || {}, lw = addDays(t, -7), cl = S.clover.orders[lw], lwSales = SD[lw] ? SD[lw].rev : cl ? cl.log.reduce((s, [, v]) => s + v, 0) : 0;
+  const showToday = isOpenDay(t) && h >= dayHours(t).o - 0.25;
+  $("homeToday").hidden = !showToday;
+  if (showToday){ const d = SD[t] || {n:0, food:0, rev:0, orders:0};
+    $("homeTodayBody").innerHTML = `<div class="mlist"><div><div class="l">Drinks</div><div class="v">${F.int(d.n)}</div></div><div><div class="l">Pastries</div><div class="v">${F.int(d.food)}</div></div><div><div class="l">Sales</div><div class="v">${F.usd0(d.rev)}</div></div><div><div class="l">Last ${DOW[toDate(lw).getDay()]}, all day</div><div class="v">${lwSales ? F.usd0(lwSales) : "None"}</div></div></div>`; }
+  renderHomeShifts(); renderHomeMenu();
+}
+/* the coming cafe days' shifts: today if open, else the next open weekend */
+function renderHomeShifts(){
+  const today = ymd(new Date()), dates = S.track.dates.slice().sort(), isToday = dates.includes(today), nx = dates.find(d => d >= today);
+  const days = isToday ? [today] : nx ? dates.filter(d => d >= today && weekOf(d) === weekOf(nx)) : [];
+  $("homeShiftTitle").innerHTML = isToday ? `Today's shifts<span class="wk-sub">${fmtD(today)}</span>` : days.length ? `${weekOf(nx) === weekOf(today) ? "This weekend" : "Next cafe days"}<span class="wk-sub">${days.map(fmtD).join(" and ")}</span>` : "Shifts";
+  $("homeShifts").innerHTML = days.length ? `<div class="hd-days">${days.map(d => { const x = ensureDay(d);
+      return `<div class="hd-day">${days.length > 1 ? `<h3>${fmtD(d)}</h3>` : ""}${shiftsOf(d).map((q, i) => { const ns = namesIn(x.names[i]), open = Math.max(0, q.seats - ns.length);
+          return `<div class="hsh"><span class="t">${tfmt(q.start)}–${tfmt(q.end)}</span><span>${ns.length ? ns.map(nameH).join(", ") : `<span class="muted">Nobody yet</span>`}${open ? ` <span class="neg-t">${open} open</span>` : ""}</span></div>`; }).join("")}
+        <button class="linkbtn adm" data-act="dpShow" data-d="${d}">Edit shifts</button></div>`; }).join("")}</div>`
+    : `<p class="empty">No cafe days coming up.${isAdmin() ? " Set the hours under Weeks and shifts." : ""}</p>`;
+}
+function renderHomeMenu(){
+  const grp = (lbl, xs) => xs.length ? `<div><h3>${lbl}</h3>${xs.map(d => `<div class="mrow2"><button class="drink" data-act="diagram" data-id="${esc(d.id)}">${esc(d.name)}</button><span class="muted">${F.usd2(d.price)}</span></div>`).join("")}</div>` : "";
+  const mdays = weekMenuDays(), menus = mdays.map(d => menuFor(d).filter(x => x.sec !== "core")), same = menus.every(m => m.map(x => x.id).join() === (menus[0] || []).map(x => x.id).join());
+  const special = same ? (() => { const m = mdays.length ? menus[0] : liveDrinks().filter(x => x.sec !== "core"); return grp("Signature", m.filter(d => d.sec === "signature")) + grp("Specialty", m.filter(d => d.sec === "specialty")); })()
+    : mdays.map((d, i) => `<div><h3>${fmtD(d)}</h3>${menus[i].map(x => `<div class="mrow2"><button class="drink" data-act="diagram" data-id="${esc(x.id)}">${esc(x.name)}</button><span class="muted">${x.sec === "signature" ? "Signature" : "Specialty"}, ${F.usd2(x.price)}</span></div>`).join("") || `<div class="mrow2 muted">Core drinks only</div>`}</div>`).join("");
+  $("homeMenuSub").textContent = mdays.length ? (same ? `${mdays.map(fmtD).join(" and ")}. Tap a drink to see how it's made.` : "Different drinks on different days. Tap a drink to see how it's made.") : "Tap a drink to see how it's made.";
+  $("homeMenu").innerHTML = `<div class="hmenu">${special}${grp("Core", allDrinks().filter(d => d.sec === "core" && isOn(d)))}<div><h3>Food</h3><div class="mrow2"><span>Pastry</span><span class="muted">${F.usd2(+S.pastry.price || 0)}</span></div></div></div>`;
+  const box = $("homeDiag"), S2 = weekMenuDrinks().filter(d => d.sec !== "core");
+  box.innerHTML = S2.length ? [["signature","How to make the signature drinks"],["specialty","How to make the specialty drinks"]].map(([sec, lbl]) => { const xs = S2.filter(d => d.sec === sec);
+      return xs.length ? `<div class="sec"><h2>${lbl}</h2><div class="hgrid">${xs.map(d => `<section class="hcard"><div class="diag-h"><h3>${esc(d.name)}</h3><span class="muted">${F.usd2(d.price)}</span></div>${diagramHTML(d)}</section>`).join("")}</div></div>` : ""; }).join("") : "";
+}
+/* Edit checklists (admin): one item per line */
+function openCkEdit(){
+  $("ckBody").innerHTML = `<div class="mh"><div><h2 id="ckTitle">Checklists</h2><div class="p">One item per line. Ticks already made stay with their items.</div></div><button class="x" data-act="ckClose" aria-label="Close">✕</button></div>`
+    + Object.keys(LIST_LBL).map(k => `<label class="ckedit"><b>${LIST_LBL[k]}</b><span class="note-sm">${{prep:"Shows from noon the day before the first day of a run of open days, due at opening.", open:"Shows an hour before opening, due at opening.", close:"Shows half an hour before closing, due half an hour after."}[k]}</span>
+      <textarea class="in txt" rows="6" data-cklist="${k}">${esc((S.lists[k] || []).map(x => x.t).join("\n"))}</textarea></label>`).join("")
+    + `<button class="btn big madd" data-act="ckSave">Save checklists</button>`;
+  $("ckDlg").showModal();
+}
+function saveCkEdit(){
+  document.querySelectorAll("[data-cklist]").forEach(ta => { const k = ta.dataset.cklist, old = S.lists[k] || [];
+    S.lists[k] = ta.value.split("\n").map(x => x.trim()).filter(Boolean).map((t, i) => (old.find(o => o.t === t) || {id:k + Date.now().toString(36) + i, t})); });
+  markDirty(); $("ckDlg").close(); renderHome();
+}
+
+/* ------------------------------------------------------------------ analytics: one page, read top to bottom
+   One range control (and a compare-to-the-period-before switch) drives everything. Headline numbers with their change, the cost
+   recuperation chart, demand through the day next to the top drinks, then the tables; the rest is folded away. */
+UI.an = {preset:"latest", from:"", to:"", cmp:true};
+function anRangeOf(){
+  const A = UI.an, t = ymd(new Date());
+  if (A.preset === "custom") return {from:A.from || "", to:A.to || ""};
+  if (A.preset === "all") return {from:"", to:""};
+  if (A.preset === "month") return {from:t.slice(0, 8) + "01", to:t};
+  if (A.preset === "4w") return {from:addDays(weekOf(t), -21), to:addDays(weekOf(t), 6)};
+  const M = UI.M || dayMoney(), ds = Object.keys(M).filter(d => M[d].sales > 0 && d <= t).sort(), w = weekOf(ds[ds.length - 1] || t);   // latest week with sales
+  return {from:w, to:addDays(w, 6)};
+}
+/* drink and food counts for a range: logged sales, plus Clover item reports that fall inside it (the dates a report covers
+   take their counts from the report, so nothing is counted twice) */
+function itemStats(from, to){
+  const inR = d => !!d && d >= (from || "") && d <= (to || "9999-12-31"), C = S.clover;
+  const reps = C.items.filter(r => r.from && r.to && inR(r.from) && inR(r.to)), inRep = d => C.items.some(r => r.from && d >= r.from && d <= r.to);
+  const by = {}, H = {both:0, iced:0, milkD:0, oat:0, alm:0, sy:0, fo:0}, syr = {}, unknown = new Set(), days = {};
+  let n = 0, food = 0;
+  const add = (id, name, sec, q, r) => { const x = by[id] || (by[id] = {id, name, sec, n:0, rev:0}); x.n += q; x.rev += r; };
+  Store.sales.forEach(doc => (doc.lines || []).forEach(l => {
+    if (!(+l.q > 0) || !inR(l.d)) return; const q = +l.q, d = lineDrink(l);
+    if (!isFood(l) && !d){ unknown.add(l.k); return; }
+    const day = days[l.d] || (days[l.d] = {n:0, food:0, drinks:{}}), r = (l.p != null ? +l.p : lineRevenue(l, d)) * q;
+    if (inRep(l.d)) return;
+    if (isFood(l)){ food += q; day.food += q; add("pastry", "Pastry", "food", q, r); return; }
+    n += q; day.n += q; day.drinks[d.name] = (day.drinks[d.name] || 0) + q; add(d.id, d.name, d.sec, q, r);
+    if (d.serve === "both"){ H.both += q; if (l.ice) H.iced += q; }
+    if (d.milk){ H.milkD += q; if (l.milk === "oat") H.oat += q; if (l.milk === "almond") H.alm += q; }
+    if (l.sy){ H.sy += q; const k = syOf(l); syr[k] = (syr[k] || 0) + q; }
+    if (l.fo) H.fo += q; }));
+  reps.forEach(rp => (rp.rows || []).forEach(r => { const u = +r.units || 0; if (!(u > 0)) return; const d = r.cat === "drink" && findDrink(r.name);
+    if (d){ n += u; add(d.id, d.name, d.sec, u, +r.revenue || 0); if (d.milk || (d.iced || d.hot || []).some(x => x[0] === "oat")){ H.milkD += u; H.oat += +r.alt || 0; } H.sy += +r.syrup || 0; H.fo += +r.foam || 0; }
+    else { food += u; add("cl:" + norm(r.name), r.name, "food", u, +r.revenue || 0); } }));
+  return {by, H, syr, unknown, days, n, food, reps, cdays:Object.keys(C.orders).filter(inR).sort()};
+}
+function renderAnalytics(){
+  if (!$("anKpis")) return;
+  const A = UI.an, M = UI.M = dayMoney(), R0 = anRangeOf(), from = R0.from, to = R0.to;
+  const inR = d => !!d && d >= (from || "") && d <= (to || "9999-12-31");
+  const len = from && to ? Math.round((toDate(to) - toDate(from)) / 864e5) + 1 : 0, pf = len ? addDays(from, -len) : "", pt = len ? addDays(from, -1) : "";
+  const cmp = A.cmp && len > 0, inP = d => cmp && d >= pf && d <= pt;
+  // controls
+  [["anFrom", from],["anTo", to]].forEach(([id, v]) => { const el = $(id); if (el && el !== document.activeElement) el.value = v || ""; });
+  $("anRange").innerHTML = [["latest", A.preset === "latest" ? `Week of ${fmtD(from).replace(/^\w+ /, "")}` : "Latest week"],["4w","Last 4 weeks"],["month","This month"],["all","All time"]].map(([v,l]) => `<button class="${A.preset === v ? "on" : ""}" data-act="anRange" data-v="${v}">${l}</button>`).join("");
+  $("anCmp").checked = !!A.cmp; $("anCmpLbl").textContent = len ? `Compare with ${fmtD(pf)} to ${fmtD(pt)}` : "Compare with the period before";
+  // numbers
+  const R = sumDays(M, inR), P = cmp ? sumDays(M, inP) : null, I = itemStats(from, to), IP = cmp ? itemStats(pf, pt) : null;
+  const bn = $("t-banner");
+  if (I.unknown.size){ bn.className = "banner warn"; bn.textContent = `Sales for ${[...I.unknown].slice(0, 4).join(", ")} don't match a drink, so they aren't counted. Rebuild that drink with New drink under the same name.`; }
+  else { bn.className = "banner"; bn.textContent = ""; }
+  const delta = (cur, prev, good) => { if (!cmp) return ""; if (!prev) return `<span class="muted">Nothing the period before</span>`; const d = (cur - prev) / Math.abs(prev), up = d >= 0;
+    return `<span class="${up === (good !== false) ? "up" : "down"}">${up ? "▲" : "▼"} ${F.frac(Math.abs(d))}</span> <span class="muted">vs before</span>`; };
+  const kpi = (l, v, d, s) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${[d, s].filter(Boolean).join(" · ")}</div></div>`;
+  const aov = R.orders ? R.sales / R.orders : 0, paov = P && P.orders ? P.sales / P.orders : 0;
+  const noItems = !I.n && !I.food && R.orders > 0;   // Clover order totals, but no item report covering these days
+  $("anKpis").innerHTML = kpi("Sales", F.usd0(R.sales || 0), delta(R.sales || 0, P && P.sales), R.orders ? `${F.int(R.orders)} orders` : "No sales in this range")
+    + (noItems ? kpi("Drinks sold", "–", "", "No drink counts for these days yet: import the Clover item report or log sales")
+               : kpi("Drinks sold", F.int(I.n), delta(I.n, IP && IP.n), `${F.int(I.food)} ${I.food === 1 ? "pastry" : "pastries"}`))
+    + kpi("Average order", aov ? F.usd2(aov) : "None", delta(aov, paov), R.orders && !noItems ? `${F.n1((I.n + I.food) / R.orders)} items an order` : "")
+    + kpi("Profit", F.usd0(R.profit || 0), delta(R.profit || 0, P && P.profit), R.sales ? `${F.frac(R.profit / R.sales)} of sales` : "");
+  // primary chart, then demand and the top drinks
+  renderRecoup(M);
+  renderClover(I.cdays, I.reps);
+  const X = Object.values(I.by), drinks = X.filter(x => x.sec !== "food").sort((a, b) => b.n - a.n), top = drinks.slice(0, 10), mx = Math.max(1, ...top.map(x => x.n));
+  $("anTop10").innerHTML = top.length ? top.map(x => `<div class="t10"><span class="nm">${esc(x.name)}</span><span class="bar"><i class="${x.sec}" style="width:${x.n / mx * 100}%"></i></span><b>${F.int(x.n)}</b></div>`).join("")
+    + `<div class="t10-k"><span><i class="signature"></i>Signature</span><span><i class="specialty"></i>Specialty</span><span><i class="core"></i>Core</span></div>`
+    : `<p class="empty">${noItems ? "Clover has these days' order totals but not which drinks sold. Import the Clover item report for them, or log sales here." : "No drinks sold in this range."}</p>`;
+  // tables
+  const tot = X.reduce((s, x) => s + x.rev, 0), prevN = id => IP && IP.by[id] ? IP.by[id].n : 0;
+  $("anItems").innerHTML = X.length ? `<thead><tr><th class="l">Item</th><th>Sold</th>${cmp ? "<th>Change</th>" : ""}<th>Sales</th><th>Share</th></tr></thead><tbody>`
+      + X.sort((a, b) => b.n - a.n).map(x => { const p = prevN(x.id), ch = !cmp ? "" : p ? `<td class="${x.n >= p ? "up" : "down"}">${x.n >= p ? "▲" : "▼"} ${F.frac(Math.abs(x.n - p) / p)}</td>` : `<td class="muted">New</td>`;
+        return `<tr><td class="l">${esc(x.name)}${x.sec !== "core" ? ` <span class="note-sm">${x.sec === "food" ? "food" : x.sec}</span>` : ""}</td><td>${F.int(x.n)}</td>${ch}<td>${F.usd0(x.rev)}</td><td class="muted">${F.frac(tot ? x.rev / tot : 0)}</td></tr>`; }).join("") + `</tbody>`
+    : `<tbody><tr><td class="l empty">${noItems ? "No drink counts for these days yet." : "Nothing sold in this range."}</td></tr></tbody>`;
+  const H = I.H, pct = (a, b) => b ? F.frac(a / b) : "None";
+  $("anHabits").hidden = !I.n;   // no drink counts, no ordering habits to show
+  $("anHabits").innerHTML = [["Alt milk", pct(H.oat + H.alm, H.milkD)], ["Added syrup", pct(H.sy, I.n)], ["Cold foam", pct(H.fo, I.n)], ["Iced, given the choice", pct(H.iced, H.both)]]
+    .map(([l, v]) => `<div><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
+  const st = Object.values(I.syr).reduce((s, v) => s + v, 0);
+  $("anSyr").innerHTML = st ? Object.entries(I.syr).sort((a, b) => b[1] - a[1]).map(([id, q]) => `<tr><td class="l">${esc(flavorName(id))}</td><td>${F.int(q)}</td><td class="muted">${F.frac(q / st)}</td></tr>`).join("")
+    : `<tr><td class="l empty">No syrups added in logged sales yet.</td></tr>`;
+  renderMonths(M);
+  // folded: how profit is worked out, cost of goods by week, days, spending
+  const Fe = S.fees, card = (R.sales || 0) * (+Fe.cardPct || 0) / 100 + (R.orders || 0) * (+Fe.cardFix || 0), fee = (R.sales || 0) * (+Fe.feePct || 0) / 100, char = (R.sales || 0) * (+Fe.charityPct || 0) / 100;
+  const mrow = (l, v, neg) => `<tr><td class="l">${l}</td><td>${neg ? "−" : ""}${F.usd2(v)}</td><td class="muted">${F.frac(R.sales ? v / R.sales : 0)}</td></tr>`;
+  $("anMoney").innerHTML = `<tr><td class="l">Sales</td><td>${F.usd2(R.sales || 0)}</td><td class="muted">100%</td></tr>` + mrow("Cost of goods, perishables at the full cost of what was bought", R.cogs || 0, true)
+    + mrow("Card processing", card, true) + mrow(`Additional fees, ${F.pct(+Fe.feePct || 0)}`, fee, true) + mrow(`Charity, ${F.pct(+Fe.charityPct || 0)}`, char, true)
+    + `<tr class="tot"><td class="l">Profit</td><td class="${(R.profit || 0) < 0 ? "neg-t" : ""}">${F.usd2(R.profit || 0)}</td><td>${F.frac(R.sales ? R.profit / R.sales : 0)}</td></tr>`
+    + (R.spent ? `<tr><td class="l">One-off spending</td><td>−${F.usd2(R.spent)}</td><td></td></tr><tr class="tot"><td class="l">After one-off spending</td><td>${F.usd2(R.profit - R.spent)}</td><td></td></tr>` : "");
+  const wkC = {}; Object.entries(M).forEach(([d, x]) => { if (!inR(d)) return; const w = wkC[weekOf(d)] || (wkC[weekOf(d)] = {sales:0, other:0, p:0, cogs:0, bought:x.wkBought, used:0, waste:0});
+    w.sales += x.sales; w.other += x.other; w.p += x.p; w.cogs += x.cogs; w.used += x.pUsed; w.waste += x.waste; });
+  const wks = Object.keys(wkC).sort().reverse(), anyUsed = wks.some(w => !wkC[w].bought && wkC[w].used > 0);
+  $("anCogs").innerHTML = wks.length ? `<thead><tr><th class="l">Week of</th><th>Sales</th><th>Perishables, sunk</th><th>Thrown out</th><th>Everything else</th><th>Cost of goods</th><th>Of sales</th></tr></thead><tbody>`
+      + wks.map(w => { const x = wkC[w]; return `<tr><td class="l">${fmtD(w)}</td><td>${F.usd0(x.sales)}</td><td>${F.usd0(x.p)}${x.bought ? ` <span class="note-sm">bought</span>` : x.used > 0 ? "*" : ""}</td><td>${x.waste ? F.usd0(x.waste) : x.bought ? "–" : ""}</td><td>${F.usd0(x.other)}</td><td><b>${F.usd0(x.cogs)}</b></td><td class="muted">${x.sales ? F.frac(x.cogs / x.sales) : ""}</td></tr>`; }).join("") + `</tbody>`
+    : `<tbody><tr><td class="l empty">No sales or deliveries in this range.</td></tr></tbody>`;
+  set("anCogsNote", `Perishables are a sunk cost: each week counts the full cost of what was received, since what's left at the last close gets thrown out. Thrown out is what that was worth, already inside the perishables cost. Everything else counts what the drinks used.${anyUsed ? " * No perishable deliveries were recorded that week, so it uses the recipe amounts." : ""}`);
+  const dl = Object.keys(M).filter(d => inR(d) && M[d].sales > 0).sort().reverse();
+  $("dayBody").innerHTML = dl.length ? dl.map(d => { const x = M[d], dd = I.days[d], top = dd ? Object.entries(dd.drinks).sort((a, b) => b[1] - a[1])[0] : null;
+      return `<tr><td class="l">${fmtD(d)}${S.clover.orders[d] ? ` <span class="note-sm">Clover</span>` : ""}</td><td>${F.int(x.orders)}</td><td>${dd && dd.n ? F.int(dd.n) : "–"}</td><td>${F.usd2(x.sales)}</td><td class="l">${top ? esc(top[0]) : ""}</td></tr>`; }).join("")
+    : `<tr><td class="l empty" colspan="5">No sales in this range.</td></tr>`;
+  renderPerish(inR);
+  renderCharges();
+}
+/* perishables by week: the drinks forecast against what sold, and what was bought, used and thrown out */
+function renderPerish(inR){
+  const el = $("anPerish"), T = UI.T; if (!el || !T) return;
+  const by = {}; Store.stock.forEach(e => { if ((e.type !== "receive" && e.type !== "waste") || !perishId(e.item)) return; const d = String(e.ts).slice(0, 10); if (!inR(d)) return;
+    const w = by[weekOf(d)] || (by[weekOf(d)] = {got:0, left:0, closed:false}), v = (+e.qty || 0) * perUnit(e.item); if (e.type === "receive") w.got += v; else { w.left += v; w.closed = true; } });
+  const wks = Object.keys(by).sort().reverse().slice(0, 12);
+  el.innerHTML = wks.length ? `<thead><tr><th class="l">Week of</th><th>Drinks forecast</th><th>Drinks sold</th><th>Bought</th><th>Used</th><th>Thrown out</th></tr></thead><tbody>`
+      + wks.map(w => { const x = by[w], days = S.track.dates.filter(d => weekOf(d) === w).length, fc = perDayAvg(T, w) * days, sold = weekDrinks(T, w).n;
+        return `<tr><td class="l">${fmtD(w)}</td><td>${fc ? F.int(fc) : "–"}</td><td>${sold ? F.int(sold) : "–"}</td><td>${F.usd0(x.got)}</td><td>${x.closed ? F.usd0(Math.max(0, x.got - x.left)) : "–"}</td><td class="${x.closed && x.got && x.left / x.got > .15 ? "neg-t" : ""}">${x.closed ? `${F.usd0(x.left)}${x.got ? ` <span class="muted">${F.frac(x.left / x.got)}</span>` : ""}` : `<span class="note-sm">not closed</span>`}</td></tr>`; }).join("") + `</tbody>`
+    : `<tbody><tr><td class="l empty">No perishables ordered in this range. Tick Received on the perishables order, then count leftovers at the last close of the week.</td></tr></tbody>`;
+}
+/* ---------- money by day: sales, cost of goods, fees, and cash in and out. The week, month and range views add these up.
+   Cost of goods: what the drinks used, except perishables, which count at what was received that week when any was recorded.
+   Cash out: deliveries (Received on the order, or an imported invoice, at today's price) plus one-off spending with a date. */
+function dayMoney(){
+  const C = S.clover, out = {}, D = d => out[d] || (out[d] = {sales:0, orders:0, other:0, pUsed:0, pBought:0, deliv:0, spent:0, waste:0}), cset = new Set(Object.keys(C.orders));
+  Store.sales.forEach(doc => { const ok = {};
+    (doc.lines || []).forEach(l => { if (!(+l.q > 0) || !l.d || cset.has(l.d)) return; const d = lineDrink(l); if (!isFood(l) && !d) return;
+      const q = +l.q, r = (l.p != null ? +l.p : lineRevenue(l, d)) * q, c = costSplit(l, d, q), x = D(l.d); x.sales += r; x.other += c.o; x.pUsed += c.p;
+      (ok[l.d] || (ok[l.d] = new Set())).add(doc.kind === "upload" ? (l.o ? "o:" + l.o : l.tm) : "doc"); });
+    Object.entries(ok).forEach(([d, st]) => D(d).orders += doc.dayOrders && doc.dayOrders[d] != null ? +doc.dayOrders[d] : st.size); });
+  const ps = perishShare();
+  Object.entries(C.orders).forEach(([d, o]) => { const dr = o.log.reduce((t, [, v]) => t + v, 0), cr = dr * (+C.cogsRate || 0), x = D(d);
+    x.sales += dr; x.orders += o.log.filter(([, v]) => v > 0).length; x.other += cr * (1 - ps); x.pUsed += cr * ps; });
+  Store.stock.forEach(e => { if (e.type === "waste"){ D(String(e.ts).slice(0, 10)).waste += (+e.qty || 0) * perUnit(e.item); return; } if (e.type !== "receive") return; const d = String(e.ts).slice(0, 10), v = (+e.qty || 0) * perUnit(e.item), x = D(d); x.deliv += v; if (perishId(e.item)) x.pBought += v; });
+  (S.charges || []).forEach(c => { if (c.date) D(c.date).spent += +c.amount || 0; });
+  Object.values(S.orders || {}).forEach(o => (o.extra || []).forEach(x => { if (x.r) D(x.r).spent += (+x.qty || 0) * (+x.price || 0); }));   // extra order items, the day they arrived
+  const bought = {}, Fe = S.fees; Object.entries(out).forEach(([d, x]) => { if (x.pBought > 0) bought[weekOf(d)] = true; });
+  Object.entries(out).forEach(([d, x]) => { x.wkBought = !!bought[weekOf(d)]; x.p = x.wkBought ? x.pBought : x.pUsed; x.cogs = x.other + x.p;
+    x.fees = x.sales * ((+Fe.cardPct || 0) + (+Fe.feePct || 0) + (+Fe.charityPct || 0)) / 100 + x.orders * (+Fe.cardFix || 0);
+    x.profit = x.sales - x.cogs - x.fees; x.in = x.sales - x.fees; x.out = x.deliv + x.spent; });
+  return out;
+}
+const MONEY_KEYS = ["sales","orders","other","p","pUsed","pBought","cogs","fees","profit","in","out","deliv","spent","waste"];
+const sumDays = (M, keep) => Object.entries(M).filter(([d]) => keep(d)).reduce((a, [, x]) => { MONEY_KEYS.forEach(k => a[k] = (a[k] || 0) + (x[k] || 0)); return a; }, {});
+/* cost recuperation since the first money in or out: bars for each week's cash in (sales after fees and charity) and out
+   (deliveries and one-off spending), and the running total, which crosses zero the week everything spent is earned back */
+function renderRecoup(M){
+  const el = $("anRecoup"); if (!el) return;
+  const ds = Object.keys(M).filter(d => M[d].in || M[d].out).sort(), cw = weekOf(ymd(new Date())), W = chartW(el), Hh = 260;
+  el.setAttribute("viewBox", `0 0 ${W} ${Hh}`);
+  if (!ds.length){ el.innerHTML = `<text class="ax" x="${W / 2}" y="120" text-anchor="middle">Nothing in or out yet. Add what you've spent below, and import sales.</text>`; set("anRecoupNote", ""); return; }
+  const by = {}; ds.forEach(d => { const w = weekOf(d), b = by[w] || (by[w] = {in:0, out:0}); b.in += M[d].in; b.out += M[d].out; });
+  const last = weekOf(ds[ds.length - 1]) > cw ? weekOf(ds[ds.length - 1]) : cw, all = []; let cum = 0;
+  for (let w = weekOf(ds[0]); w <= last && all.length < 520; w = addDays(w, 7)){ const b = by[w] || {in:0, out:0}; cum += b.in - b.out; all.push({w, in:b.in, out:b.out, cum}); }
+  const show = all.slice(-Math.max(8, Math.min(52, Math.floor(W / 34)))), m = {l:56, r:12, t:16, b:44}, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const hi = Math.max(50, ...show.map(p => Math.max(p.in, p.cum))) * 1.08, lo = Math.min(-50, ...show.map(p => Math.min(-p.out, p.cum))) * 1.08;
+  const y = v => m.t + (hi - v) / (hi - lo) * ih, bw = Math.min(iw / show.length, 90), x0w = m.l + (iw - bw * show.length) / 2, cx = i => x0w + (i + .5) * bw;
+  let g = "";
+  [hi, hi / 2, 0, lo / 2, lo].forEach(v => g += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"${v === 0 ? ' style="stroke:var(--label3);stroke-width:1.4"' : ""}/><text class="ax" x="${m.l - 5}" y="${y(v) + 4}" text-anchor="end">${v < 0 ? "−" : ""}${F.usd0(Math.abs(v))}</text>`);
+  const every = Math.ceil(show.length / Math.max(3, Math.floor(iw / 70)));
+  show.forEach((p, i) => { const x0 = x0w + i * bw + bw * .14, w = bw * .34;
+    if (p.in > 0) g += `<rect class="b-pos" x="${x0}" y="${y(p.in)}" width="${w}" height="${y(0) - y(p.in)}" rx="2"><title>Week of ${fmtD(p.w)}: ${F.usd2(p.in)} in after fees</title></rect>`;
+    if (p.out > 0) g += `<rect class="b-neg" x="${x0 + w + bw * .04}" y="${y(0)}" width="${w}" height="${y(-p.out) - y(0)}" rx="2"><title>Week of ${fmtD(p.w)}: ${F.usd2(p.out)} spent</title></rect>`;
+    if (i % every === 0) g += `<text class="ax" x="${cx(i)}" y="${Hh - 26}" text-anchor="middle">${fmtD(p.w).replace(/^\w+ /, "")}</text>`; });
+  g += `<polyline fill="none" stroke="var(--tint)" stroke-width="2.6" stroke-linejoin="round" points="${show.map((p, i) => cx(i).toFixed(1) + "," + y(p.cum).toFixed(1)).join(" ")}"/>`
+    + show.map((p, i) => `<circle cx="${cx(i).toFixed(1)}" cy="${y(p.cum).toFixed(1)}" r="3" fill="var(--tint)"><title>Week of ${fmtD(p.w)}: running total ${p.cum < 0 ? "−" : ""}${F.usd2(Math.abs(p.cum))}</title></circle>`).join("");
+  g += `<rect x="${m.l}" y="${Hh - 12}" width="10" height="8" rx="2" class="b-pos"/><text class="ax" x="${m.l + 14}" y="${Hh - 5}">In, after fees and charity</text>`
+    + `<rect x="${m.l + 170}" y="${Hh - 12}" width="10" height="8" rx="2" class="b-neg"/><text class="ax" x="${m.l + 184}" y="${Hh - 5}">Spent</text>`
+    + `<rect x="${m.l + 236}" y="${Hh - 10}" width="14" height="3" rx="1" fill="var(--tint)"/><text class="ax" x="${m.l + 254}" y="${Hh - 5}">Running total</text>`;
+  el.innerHTML = g;
+  const tin = all.reduce((t, p) => t + p.in, 0), tout = all.reduce((t, p) => t + p.out, 0), now = all[all.length - 1].cum;
+  const back = all.find((p, i) => p.cum >= 0 && all.slice(0, i).some(q => q.cum < 0));
+  $("anRecoupNote").innerHTML = `Since ${fmtD(all[0].w)}: <b>${F.usd0(tin)}</b> in after fees and charity, <b>${F.usd0(tout)}</b> spent. `
+    + (now < 0 ? `<b class="neg-t">${F.usd0(-now)} still to earn back.</b>` : back ? `<b class="status-ok">Paid back the week of ${fmtD(back.w)}</b>, ${F.usd0(now)} ahead now.` : `<b class="status-ok">${F.usd0(now)} ahead.</b>`)
+    + (!Store.stock.some(e => e.type === "receive") ? " Supplies count once deliveries are recorded: Received on the order, or an invoice import." : "");
+}
+/* profit by calendar month, all time: operating profit, then one-off spending, and a running total */
+function renderMonths(M){
+  const el = $("anMonths"); if (!el) return;
+  const by = {}; Object.entries(M).forEach(([d, x]) => { const b = by[d.slice(0, 7)] || (by[d.slice(0, 7)] = {}); MONEY_KEYS.forEach(k => b[k] = (b[k] || 0) + (x[k] || 0)); });
+  const ks = Object.keys(by).sort(); if (!ks.length){ el.innerHTML = `<tbody><tr><td class="l empty">No months with sales or spending yet.</td></tr></tbody>`; return; }
+  let run = 0; const T = {};
+  el.innerHTML = `<thead><tr><th class="l">Month</th><th>Sales</th><th>Cost of goods</th><th>Fees and charity</th><th>Profit</th><th>One-off spending</th><th>Net</th><th>Running total</th></tr></thead><tbody>`
+    + ks.map(k => { const b = by[k], net = b.profit - b.spent; run += net; ["sales","cogs","fees","profit","spent"].forEach(f => T[f] = (T[f] || 0) + b[f]);
+        const [yy, mm] = k.split("-").map(Number);
+        return `<tr><td class="l">${["January","February","March","April","May","June","July","August","September","October","November","December"][mm - 1]} ${yy}</td><td>${F.usd0(b.sales)}</td><td>${F.usd0(b.cogs)}</td><td>${F.usd0(b.fees)}</td><td class="${b.profit < 0 ? "neg-t" : ""}">${F.usd0(b.profit)}</td><td>${b.spent ? "−" + F.usd0(b.spent) : ""}</td><td class="${net < 0 ? "neg-t" : ""}"><b>${F.usd0(net)}</b></td><td class="${run < 0 ? "neg-t" : "status-ok"}">${F.usd0(run)}</td></tr>`; }).join("")
+    + `<tr class="tot"><td class="l">All time</td><td>${F.usd0(T.sales)}</td><td>${F.usd0(T.cogs)}</td><td>${F.usd0(T.fees)}</td><td>${F.usd0(T.profit)}</td><td>${T.spent ? "−" + F.usd0(T.spent) : ""}</td><td>${F.usd0(T.profit - T.spent)}</td><td></td></tr></tbody>`;
+}
+/* stock cost of q of one sales line, split into perishable and everything else */
+function costSplit(l, d, q){ const o = {p:0, o:0}; if (isFood(l)){ o.o = (+S.pastry.cost || 0) * q; return o; }
+  lineUsage(l, d, q, (id, v) => { if (!id) return; const c = v * perUnit(id); if (perishId(id)) o.p += c; else o.o += c; }); return o; }
+/* the perishable share of an average drink's cost, from the current mix, for Clover days that only have a COGS rate */
+function perishShare(){ const T = UI.T || {rows:[]}; let p = 0, t = 0; T.rows.forEach(r => { const c = (r.perDay || 0) * (r.size ? r.price / r.size : 0); t += c; if (perishId(r.id)) p += c; }); return t ? p / t : 0; }
+/* date range presets; the range itself is any two dates */
+function lastCafeWeek(){
+  const today = ymd(new Date()), past = [...new Set(S.track.dates.concat(Object.keys(S.clover.orders)))].filter(d => d <= today).sort(), last = past[past.length - 1];
+  if (!last) return {from:"", to:""};
+  const wk = past.filter(d => weekOf(d) === weekOf(last)); return {from:wk[0], to:last};
+}
+/* one-off spending (equipment, supplies bought outside the order list, fees): each has a date so it lands in its week and month */
+function renderCharges(){
+  const box = $("chargeBody"); if (!box || box.contains(document.activeElement)) return;
+  const L = (S.charges || []).map((x, i) => ({x, i})).sort((a, b) => String(b.x.date || "").localeCompare(String(a.x.date || "")));
+  box.innerHTML = L.map(({x, i}) => `<tr>
+    <td style="width:150px"><input class="in txt" type="date" data-bind="charges.${i}.date" value="${esc(x.date || "")}" aria-label="Date"></td>
+    <td class="l"><input class="in txt" data-bind="charges.${i}.name" value="${esc(x.name)}" aria-label="What it was"></td>
+    <td style="width:120px"><input class="in" type="number" min="0" step="0.01" data-bind="charges.${i}.amount" data-type="num" value="${+x.amount || 0}" aria-label="Amount"></td>
+    <td style="width:40px"><button class="x" data-act="delCharge" data-i="${i}" aria-label="Remove">✕</button></td></tr>`).join("")
+    || `<tr><td class="l empty" colspan="4">Nothing yet. Add equipment and anything bought outside the order list.</td></tr>`;
+}
+
+/* ---------- Clover analytics: sales curves, order sizes, peaks, top drinks (Good-Graces-Sales-Analytics.md)
+   Clover days and item reports live in the shared settings (S.clover), added with Import sales. orders: {date: {label, open,
+   close, log:[[time, total]]}}, one row per Clover transaction. items: [{label, from, to, rows}], one per item sales report.
+   Each renderer draws into its own element and does nothing if it's missing. */
+const cloverRows = () => S.clover.items.flatMap(rp => (rp.rows || []).filter(r => r.cat === "drink" && +r.units > 0)).map(r => ({r, d:findDrink(r.name)})).filter(x => x.d);
+/* ponytail: Clover logs orders, not drinks; most orders are one drink, so orders a day stands in for drinks a day */
+const cloverPerDay = () => { const D = Object.values(S.clover.orders); return D.length ? D.reduce((s,o) => s + o.log.filter(([, v]) => v > 0).length, 0) / D.length : 0; };
+const toMin = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const hhmm = m => { const h = Math.floor(m / 60), mm = m % 60; return `${h % 12 || 12}${mm ? ":" + String(mm).padStart(2, "0") : ""}${h < 12 ? "a" : "p"}`; };
+/* a chart's drawing width in px, from its card (640 while the tab is hidden; the tab redraws when shown) */
+const chartW = el => { const w = Math.round(el.getBoundingClientRect().width); return w > 200 ? w : 640; };
+const CLR = ["var(--tint)", "var(--orange)", "var(--green)", "var(--purple)", "var(--teal)", "var(--pink)", "var(--indigo)", "var(--brown)"];
+function cloverDays(dates){
+  const C = S.clover, card = C.card || {pct:0.023, fixed:0.10};
+  return dates.map((date, i) => { const o = C.orders[date];
+    const sales = o.log.filter(([, v]) => v > 0), rev = o.log.reduce((s, [, v]) => s + v, 0);
+    const bins = {}; sales.forEach(([t, v]) => { const k = Math.floor(toMin(t) / 30) * 30; (bins[k] = bins[k] || {n:0, rev:0}).n++; bins[k].rev += v; });
+    const ms = sales.map(([t]) => toMin(t)).sort((a, b) => a - b);
+    let peak = {n:0, at:0}; ms.forEach(m => { const n = ms.filter(x => x >= m && x < m + 30).length; if (n > peak.n) peak = {n, at:m}; });
+    const fees = sales.reduce((s, [, v]) => s + v * card.pct + card.fixed, 0);
+    return {date, label:o.label || fmtD(date), open:toMin(o.open || (sales[0] || ["09:00"])[0]), close:toMin(o.close || (sales[sales.length - 1] || ["17:00"])[0]), orders:sales.length, rev, avg:sales.length ? rev / sales.length : 0,
+      first:ms[0], last:ms[ms.length - 1], bins, peak, log:sales, profit:rev - rev * (+C.cogsRate || 0) - fees, color:CLR[i % CLR.length]};
+  }).filter(d => d.orders);
+}
+/* orders per half hour. Average day: the mean of every Clover day in the range, the demand to plan shifts around. By weekday:
+   the same mean for each weekday (an average Saturday next to an average Sunday). Each day: one line per day. */
+UI.curve = "avg";
+function curveSeries(D){
+  const mean = (ds, label, color) => { const bins = {}; ds.forEach(d => Object.entries(d.bins).forEach(([k, b]) => { const x = bins[k] || (bins[k] = {n:0, rev:0}); x.n += b.n / ds.length; x.rev += b.rev / ds.length; }));
+    return {label, color, bins, open:Math.min(...ds.map(d => Math.min(d.open, d.first))), close:Math.max(...ds.map(d => Math.max(d.close, d.last + 1))), days:ds.length}; };
+  if (UI.curve === "each") return D.map(d => ({label:d.label, color:d.color, bins:d.bins, open:Math.min(d.open, d.first), close:Math.max(d.close, d.last + 1), days:1}));
+  if (UI.curve === "dow"){ const by = {}; D.forEach(d => (by[toDate(d.date).getDay()] = by[toDate(d.date).getDay()] || []).push(d));
+    return [1,2,3,4,5,6,0].filter(w => by[w]).map((w, i) => mean(by[w], `Average ${WDAY[w]}, ${by[w].length} ${by[w].length === 1 ? "day" : "days"}`, CLR[i % CLR.length])); }
+  return [mean(D, `Average of ${D.length} ${D.length === 1 ? "day" : "days"}`, "var(--orange)")];
+}
+function renderSalesCurve(D){
+  const el = $("anCurve"); if (!el) return;
+  const segEl = $("anCurveMode"); if (segEl) segEl.innerHTML = [["avg","Average day"],["dow","By weekday"],["each","Each day"]].map(([v,l]) => `<button class="${UI.curve === v ? "on" : ""}" data-act="anCurve" data-v="${v}">${l}</button>`).join("");
+  const W = chartW(el), Hh = 230; el.setAttribute("viewBox", `0 0 ${W} ${Hh}`);
+  if (!D.length){ el.innerHTML = `<text class="ax" x="${W / 2}" y="110" text-anchor="middle">No Clover days in this range. Add them with Import sales.</text>`; set("anCurveNote", ""); return; }
+  const SR = curveSeries(D), fmtN = v => UI.curve === "each" ? F.int(v) : F.n1(v).replace(/\.0$/, "");
+  const m = {l:30, r:10, t:14, b:40}, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const t0 = Math.floor(Math.min(...SR.map(x => x.open)) / 30) * 30, t1 = Math.max(...SR.map(x => x.close + 29));
+  const slots = []; for (let t = t0; t < t1; t += 30) slots.push(t);
+  const mx = Math.max(4, ...SR.flatMap(x => slots.map(s => (x.bins[s] || {n:0}).n))) * 1.1;
+  const x = s => m.l + (s - t0 + 15) / (t1 - t0) * iw, y = v => m.t + ih - v / mx * ih;
+  let g = "";
+  [0, mx / 2, mx].forEach(v => g += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${m.l - 5}" y="${y(v) + 4}" text-anchor="end">${fmtN(v)}</text>`);
+  const lstep = Math.max(1, Math.ceil(slots.length / Math.max(3, Math.floor(iw / 46))));
+  slots.forEach((s, i) => { if (i % lstep === 0) g += `<text class="ax" x="${x(s)}" y="${m.t + ih + 16}" text-anchor="middle">${hhmm(s)}</text>`; });
+  SR.forEach(sr => {
+    const pts = slots.filter(s => s >= sr.open - 30 && s < sr.close).map(s => [x(s), y((sr.bins[s] || {n:0}).n), s]);
+    if (SR.length === 1) g += `<path d="M${pts[0][0].toFixed(1)},${y(0)} ${pts.map(p => "L" + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")} L${pts[pts.length - 1][0].toFixed(1)},${y(0)} Z" fill="${sr.color}" opacity=".14"/>`;
+    g += `<polyline fill="none" stroke="${sr.color}" stroke-width="${SR.length === 1 ? 3 : 2.2}" stroke-linejoin="round" points="${pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ")}"/>`;
+    pts.forEach(([px, py, s]) => { const b = sr.bins[s] || {n:0, rev:0}; g += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="2.8" fill="${sr.color}"><title>${esc(sr.label)}, ${hhmm(s)} to ${hhmm(s + 30)}: ${fmtN(b.n)} orders, ${F.usd2(b.rev)}</title></circle>`; });
+  });
+  let lx = m.l; SR.slice(0, 7).forEach(sr => { g += `<rect x="${lx}" y="${Hh - 12}" width="12" height="3" rx="1" fill="${sr.color}"/><text class="ax" x="${lx + 16}" y="${Hh - 8}">${esc(sr.label)}</text>`; lx += 30 + sr.label.length * 6.2; });
+  el.innerHTML = g;
+  // the busiest half hours of the average day, for staffing
+  if (UI.curve === "each"){ set("anCurveNote", "Hover a point for that half hour's orders and sales."); return; }
+  $("anCurveNote").innerHTML = SR.map(sr => { const top = Object.entries(sr.bins).sort((a,b) => b[1].n - a[1].n).slice(0, 3).map(([k, b]) => `${hhmm(+k)} to ${hhmm(+k + 30)} (${F.n1(b.n)})`);
+    const tot = Object.values(sr.bins).reduce((t, b) => t + b.n, 0);
+    return `<b>${esc(sr.label)}</b>: ${F.n1(tot)} orders a day. Busiest: ${top.join(", ")}.`; }).join("<br>");
+}
+function renderOrderSizes(D){
+  const el = $("anOrderSize"); if (!el) return;
+  const B = [["Under $4", 0, 4], ["$4 to 4.99", 4, 5], ["$5 to 5.99", 5, 6], ["$6 to 7.99", 6, 8], ["$8 to 11.99", 8, 12], ["$12 and up", 12, 1e9]];
+  const all = D.flatMap(d => d.log.map(([, v]) => v));
+  if (!all.length){ el.innerHTML = `<tbody><tr><td class="l empty">No Clover orders in this range.</td></tr></tbody>`; return; }
+  const n = B.map(([, a, b]) => all.filter(v => v >= a && v < b).length), mx = Math.max(...n);
+  el.innerHTML = `<tbody>${B.map(([l], i) => `<tr><td class="l">${l}</td><td class="bar"><div class="rb"><i style="width:${n[i] / mx * 100}%"></i></div></td><td>${F.int(n[i])}</td><td class="muted">${F.frac(n[i] / all.length)}</td></tr>`).join("")}</tbody>`;
+}
+function renderCloverDays(D){
+  const el = $("anCloverDays"); if (!el) return;
+  el.innerHTML = D.length ? D.map(d => `<tr><td class="l">${esc(d.label)}</td><td>${F.int(d.orders)}</td><td>${F.usd2(d.rev)}</td><td>${F.usd2(d.avg)}</td><td>${hhmm(d.peak.at)}, ${d.peak.n}</td><td>${F.usd2(d.profit)}</td></tr>`).join("")
+    : `<tr><td class="l empty" colspan="6">No Clover days in this range.</td></tr>`;
+}
+/* Clover item reports inside the range, added up by item */
+function renderTopDrinks(reps){
+  const el = $("anTop"); if (!el) return;
+  const by = {}; reps.forEach(rp => (rp.rows || []).forEach(r => { const k = norm(r.name), x = by[k] || (by[k] = {name:r.name, cat:r.cat, units:0, revenue:0, cost:0, alt:0, syrup:0, foam:0});
+    ["units","revenue","alt","syrup","foam"].forEach(f => x[f] += +r[f] || 0); x.cost += (+r.revenue || 0) * (1 - (r.margin != null ? +r.margin : 1)); }));
+  const rows = Object.values(by).filter(r => r.units > 0).sort((a, b) => b.units - a.units);
+  set("anTopLabel", reps.length ? reps.map(r => r.label || `${fmtD(r.from)} to ${fmtD(r.to)}`).join("; ") : "No Clover item report falls inside this range.");
+  const box = $("anMods");
+  if (!rows.length){ el.innerHTML = ""; if (box) box.innerHTML = ""; return; }
+  const mx = Math.max(...rows.map(r => r.units)), drinks = rows.filter(r => r.cat === "drink").reduce((s, r) => s + r.units, 0);
+  el.innerHTML = `<thead><tr><th class="l">Item</th><th></th><th>Sold</th><th>Share</th><th>Sales</th><th>Margin</th></tr></thead><tbody>${rows.map(r => `<tr><td class="l">${esc(r.name)}${r.cat !== "drink" ? ` <span class="note-sm">${esc(r.cat)}</span>` : ""}</td><td class="bar"><div class="rb"><i style="width:${r.units / mx * 100}%"></i></div></td><td>${F.int(r.units)}</td><td class="muted">${r.cat === "drink" && drinks ? F.frac(r.units / drinks) : ""}</td><td>${F.usd2(r.revenue)}</td><td>${r.revenue ? F.frac(1 - r.cost / r.revenue) : ""}</td></tr>`).join("")}</tbody>`;
+  const milky = rows.filter(r => { const d = r.cat === "drink" && findDrink(r.name); return d && (d.milk || (d.iced || d.hot || []).some(x => x[0] === "oat")); });   // drinks with milk in the recipe
+  const sum = k => rows.reduce((s, r) => s + (r[k] || 0), 0), mu = milky.reduce((s, r) => s + r.units, 0), pastry = rows.filter(r => r.cat !== "drink").reduce((s, r) => s + r.units, 0);
+  if (box) box.innerHTML = [["Alt milk, milk drinks", F.frac(mu ? sum("alt") / mu : 0)], ["Added syrup, all drinks", F.frac(drinks ? sum("syrup") / drinks : 0)], ["Cold foam, all drinks", F.frac(drinks ? sum("foam") / drinks : 0)], ["Pastry per 10 drinks", F.n1(drinks ? pastry / drinks * 10 : 0)]]
+    .map(([l, v]) => `<div><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
+}
+function renderClover(dates, reps){
+  if (!$("anCurve")) return;
+  const D = cloverDays(dates);
+  renderSalesCurve(D); renderOrderSizes(D); renderCloverDays(D); renderTopDrinks(reps);
+}
+
+/* ------------------------------------------------------------ Import sales: this weekend's files, all at once (Analytics)
+   Each file is sorted by its columns. A drink and a date per row (a line-item export or your own sheet) becomes logged sales.
+   A time and an order total with no item (Clover transactions) becomes that day's Clover orders. An item and a count with no
+   date (Clover item sales report) becomes an item report for the dates you pick. A good-graces-sales JSON file, written by
+   Claude from the import guide, goes through parseGG. An older sales-data.json file is read as is.
+   ponytail: column names are matched loosely since no Clover export was on hand to copy; the preview shows what was read. */
+const plural = (n, w) => `${F.int(n)} ${w}${Math.round(n) === 1 ? "" : "s"}`;
+const findCol = (head, re, not) => head.findIndex(h => re.test(h) && !(not && not.test(h)));
+const money = v => { if (typeof v === "number") return v; const s = String(v).replace(/[$,\s]/g, ""), neg = /^\(.*\)$/.test(s), x = parseFloat(s.replace(/[()]/g, "")); return isFinite(x) ? (neg ? -x : x) : null; };
+function sniff(aoa){
+  const hi = aoa.findIndex(r => r && r.filter(c => String(c).trim() !== "").length >= 2); if (hi < 0) return {error:"No header row."};
+  const h = aoa[hi].map(x => String(x).trim().toLowerCase());
+  const item = findCol(h, /^(drink|item|items|product|name|item name|menu item|line item)$/), date = findCol(h, /date|day|time|timestamp|created|paid/), qty = findCol(h, /sold|qty|quantity|count|units|^#$/);
+  const amt = findCol(h, /amount|total|net sales|gross sales|sales|revenue|price/, /tip|tax|refund|fee|discount|count|qty/);
+  if (item >= 0 && date >= 0) return {kind:"lines"};
+  if (item >= 0 && qty >= 0) return {kind:"items", hi, item, qty, amt};
+  if (date >= 0 && amt >= 0) return {kind:"orders", hi, date, amt, time:findCol(h, /^(time|hour|order time|payment time)$/)};
+  return {error:"Couldn't tell what this is. It needs a drink and a date, an item and a count sold, or a time and an order total."};
+}
+async function readSheet(file){
+  if (/\.json$/i.test(file.name)) return {json:JSON.parse(await readAs(file, "text"))};
+  if (/\.csv$/i.test(file.name) || file.type === "text/csv") return {aoa:parseCSV(await readAs(file, "text"))};
+  const X = await loadSheetJS(), wb = X.read(await readAs(file, "buf"), {type:"array"});
+  return {aoa:X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:true, defval:""})};
+}
+const blankRow = r => !r || r.every(c => String(c).trim() === "");
+async function readImports(files){
+  const box = $("impResult"); box.innerHTML = `<p class="hint">Reading ${files.length} ${files.length === 1 ? "file" : "files"}…</p>`;
+  const out = [];
+  for (const f of files){
+    try {
+      const r = await readSheet(f);
+      if (r.json && r.json.format === GG_FORMAT){ out.push(parseGG(r.json, f.name)); continue; }
+      if (r.json){ const j = r.json, nd = Object.keys(j.orders || {}).length, ni = [].concat(j.items || []).length;
+        out.push(nd || ni ? {file:f.name, kind:"json", json:j, text:`${nd} Clover ${nd === 1 ? "day" : "days"} and ${ni} item ${ni === 1 ? "report" : "reports"}`} : {file:f.name, error:"This JSON isn't a sales-data file."}); continue; }
+      const k = sniff(r.aoa);
+      if (k.error){ out.push({file:f.name, error:k.error}); continue; }
+      if (k.kind === "lines"){ const res = rowsToLines(r.aoa); if (res.error){ out.push({file:f.name, error:res.error}); continue; }
+        const ds = [...new Set(res.lines.map(l => l.d))].sort();
+        out.push({file:f.name, kind:"lines", lines:res.lines, dates:ds, text:`Logged sales: ${F.int(res.lines.reduce((s,l) => s + l.q, 0))} items on ${ds.map(fmtD).join(", ")}${res.skipped.length ? `. ${res.skipped.length} rows skipped` : ""}`}); continue; }
+      if (k.kind === "orders"){ const days = {};
+        for (let i = k.hi + 1; i < r.aoa.length; i++){ const row = r.aoa[i]; if (blankRow(row)) continue;
+          const d = parseDateVal(row[k.date]), tm = parseTimeVal(k.time >= 0 ? row[k.time] : row[k.date]), v = money(row[k.amt]);
+          if (d && tm && v != null) (days[d] || (days[d] = [])).push([tm, Math.round(v * 100) / 100]); }
+        const ds = Object.keys(days).sort();
+        out.push(ds.length ? {file:f.name, kind:"orders", days, dup:ds.filter(d => S.clover.orders[d]),
+          text:`Clover orders: ${ds.map(d => `${fmtD(d)}, ${plural(days[d].filter(x => x[1] > 0).length, "order")}, ${F.usd2(days[d].reduce((s,x) => s + x[1], 0))}`).join("; ")}`} : {file:f.name, error:"No rows with a readable time and order total."}); continue; }
+      const rows = [];
+      for (let i = k.hi + 1; i < r.aoa.length; i++){ const row = r.aoa[i]; if (blankRow(row)) continue;
+        const name = String(row[k.item]).trim(), u = money(row[k.qty]); if (!name || !(u > 0) || /^(sub)?total|soft launch/i.test(name)) continue;
+        rows.push(reportRow(name, u, k.amt >= 0 ? money(row[k.amt]) || 0 : 0)); }
+      const odd = rows.filter(x => x.cat === "other").map(x => x.name);
+      out.push(rows.length ? {file:f.name, kind:"items", rows, text:`Item report: ${rows.length} items, ${F.int(rows.reduce((s,x) => s + x.units, 0))} sold${odd.length ? `. Not on the menu: ${odd.slice(0, 5).join(", ")}${odd.length > 5 ? "…" : ""}` : ""}`} : {file:f.name, error:"No items with a count sold."});
+    } catch(e){ out.push({file:f.name, error: /xlsx/.test(e && e.message) ? "Excel files need a library that didn't load. Save it as CSV and try again." : "Couldn't read this file."}); }
+  }
+  // an item report has no dates in it: default to the Clover days in this batch, or the last cafe weekend
+  const od = out.filter(x => x.kind === "orders").flatMap(x => Object.keys(x.days)).sort(), lw = lastCafeWeek();
+  out.filter(x => x.kind === "items").forEach(x => { x.from = od[0] || lw.from || ymd(new Date()); x.to = od[od.length - 1] || lw.to || x.from; });
+  UI.imp = out; renderImports();
+}
+function renderImports(){
+  const box = $("impResult"), L = UI.imp || []; if (!L.length){ box.innerHTML = ""; return; }
+  const ok = L.filter(x => !x.error).length;
+  box.innerHTML = L.map((x, i) => x.error ? `<div class="impf bad"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.error)}</div></div>`
+    : `<div class="impf"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.text)}</div>${x.kind === "gg" && x.replace ? `<p class="res-bad" style="margin:4px 0 0">Replaces anything already in the portal for ${x.dates.length === 1 ? fmtD(x.dates[0]) : `${plural(x.dates.length, "date")}, ${fmtD(x.dates[0])} to ${fmtD(x.dates[x.dates.length - 1])}`}.</p>` : ""}${x.dup && x.dup.length ? `<p class="res-bad" style="margin:4px 0 0">Already imported ${x.dup.map(fmtD).join(", ")}. These replace them.</p>` : ""}${x.kind === "lines" && x.dates.some(d => UI.SD && UI.SD[d]) ? `<p class="res-bad" style="margin:4px 0 0">Some of these days already have logged sales. Importing adds to them.</p>` : ""}
+      ${x.kind === "items" ? `<div class="calbar" style="margin:6px 0 0"><label class="tw">Covers <input class="in txt" type="date" data-impd="${i}:from" value="${x.from}"></label><label class="tw">to <input class="in txt" type="date" data-impd="${i}:to" value="${x.to}"></label></div>` : ""}</div>`).join("")
+    + (ok ? `<p style="margin-top:10px"><button class="btn" data-act="impAll">Import ${ok === 1 ? "it" : `all ${ok}`}</button> <button class="btn ghost" data-act="impCancel">Cancel</button></p>` : "");
+}
+const hStr = x => `${pad2(Math.floor(x))}:${pad2(Math.round((x % 1) * 60))}`;
+const addReport = r => { S.clover.items = S.clover.items.filter(x => !(x.from === r.from && x.to === r.to)).concat(r); };
+function putCloverDay(d, log){ log.sort((a,b) => a[0].localeCompare(b[0])); const sh = S.track.dates.includes(d) ? shiftsOf(d) : null;
+  S.clover.orders[d] = {label:fmtD(d), open: sh ? hStr(sh[0].start) : log[0][0], close: sh ? hStr(Math.max(...sh.map(q => q.end))) : log[log.length - 1][0], log}; }
+function mergeClover(j){
+  Object.entries(j.orders || {}).forEach(([d, o]) => { if (o && Array.isArray(o.log)) S.clover.orders[d] = {label:o.label || fmtD(d), open:o.open, close:o.close, log:o.log}; });
+  [].concat(j.items || []).forEach(it => { if (it && Array.isArray(it.rows)) addReport({label:it.label || "", from:it.from || "", to:it.to || "", rows:it.rows}); });
+  if (j.cogsRate != null) S.clover.cogsRate = +j.cogsRate;
+  if (j.card) S.clover.card = j.card;
+}
+async function importAll(){
+  const L = (UI.imp || []).filter(x => !x.error), box = $("impResult"); if (!L.length) return;
+  box.innerHTML = `<p class="hint">Importing…</p>`;
+  try {
+    for (const x of L){
+      if (x.kind === "lines") for (let i = 0; i < x.lines.length; i += 700) await Store.addSale({kind:"upload", file:x.file, at:new Date().toISOString(), lines:x.lines.slice(i, i + 700)});
+      if (x.kind === "orders") Object.entries(x.days).forEach(([d, log]) => putCloverDay(d, log));
+      if (x.kind === "items") addReport({label:`${fmtD(x.from)} to ${fmtD(x.to)}`, from:x.from, to:x.to, rows:x.rows});
+      if (x.kind === "json") mergeClover(x.json);
+      if (x.kind === "gg") await importGG(x);
+    }
+  } catch(e){ box.innerHTML = `<p class="res-bad">${esc(saveError(e))}</p>`; return; }
+  UI.imp = null; $("impIn").value = ""; markDirty(); recalc();
+  box.innerHTML = `<p class="res-ok">Imported ${L.length} ${L.length === 1 ? "file" : "files"}. The numbers below include ${L.length === 1 ? "it" : "them"} now.</p>`;
+}
+
+/* ------------------------------------------------------------ bulk sales import: a guide for Claude, and the file it writes
+   Download the guide (a .md built from the live menu), hand it to Claude with the raw sales data in whatever shape it's in,
+   and Claude writes one JSON file in the format below. Import sales reads it like any other file. Each date goes in at one
+   level of detail: transactions (each order and its items), daily (items per day), or periods (items over a range). Order
+   times and totals alone go in orders, on their own or beside daily. By default a file replaces what's there for its dates. */
+const GG_FORMAT = "good-graces-sales";
+function importGuide(){
+  const A = S.addons, today = ymd(new Date()), t = (cells) => "| " + cells.join(" | ") + " |";
+  const drinks = allDrinks().slice().sort((a, b) => (a.sec === "core" ? 0 : 1) - (b.sec === "core" ? 0 : 1) || a.name.localeCompare(b.name));
+  const past = S.track.dates.filter(d => d <= today).sort().slice(-40), next = S.track.dates.filter(d => d > today).sort().slice(0, 6);
+  const serveTxt = {hot:"hot only", iced:"iced only", both:"hot or iced"};
+  return `# Good Grace's Cafe: sales import guide (for Claude)
+
+Made by the portal on ${today}. The menu and prices below are current as of that day. Download a fresh copy from the portal after the menu changes.
+
+## Your job
+
+You'll be given raw sales data for Good Grace's Cafe, a student-run cafe at Grace Hopper College, Yale. It can come in any shape: point-of-sale exports (CSV or Excel), reports, spreadsheets, hand tallies, photos of tally sheets or receipts, or pasted text. Turn all of it into **one JSON file** in the format below and name it \`good-graces-sales-<first date>-to-<last date>.json\`.
+
+The manager uploads the file in the portal under **Analytics → Import sales**, checks the preview, and imports it. The file must be plain JSON: no comments, no trailing commas, nothing before or after it.
+
+When you hand the file over, also write a short summary:
+- the dates covered, and which section each date went into;
+- per day: orders, drinks, pastries and dollars;
+- anything you left out, and why;
+- any item names you couldn't match to the menu.
+
+## Choose one level of detail for each date
+
+Use the most detailed level the data supports. Each date goes in **exactly one** of these:
+
+1. **\`transactions\`**: each order with its items. Use it whenever you can see which items were in which order.
+2. **\`daily\`**: how many of each item sold that day.
+3. **\`periods\`**: item totals for a range of days that can't be split by day.
+
+**\`orders\`** holds order times and totals when the items aren't known. It can be the only data for a date, or sit beside \`daily\` for the same date (the portal then takes the money and the busy times from \`orders\`, and the drink counts from \`daily\`). Never put a date in both \`orders\` and \`transactions\`.
+
+## What the data might look like, and where it goes
+
+| You're given | Put it in |
+|:--|:--|
+| Clover orders or line-item export (order ID, date and time, item, modifiers, price) | \`transactions\`: group the rows by order ID |
+| Clover transactions or payments export (time and amount, no items) | \`orders\` |
+| Clover item sales report for one day | \`daily\` |
+| Clover item sales report for several days | \`periods\`, or \`daily\` if it's broken out by day |
+| Square item details CSV (date, time, item, quantity, modifiers applied, gross sales, transaction ID) | \`transactions\`: group by transaction ID |
+| Square transactions CSV | \`orders\` |
+| A sheet with one row per drink sold | \`transactions\`: rows sharing an order number are one order; without order numbers, each row is its own order |
+| A grid of counts: days by drinks, either way round | \`daily\` |
+| A hand tally sheet or a photo of one | \`daily\`. Count carefully, and list anything you can't read in the summary instead of guessing |
+| Receipts, on paper or in photos | \`transactions\` |
+| Several of these covering different days | One file, each date at its own level |
+| Several exports of the same days | Combine them, dropping duplicates by order ID |
+| Only a dollar total for a day | Can't be imported. Put it in \`notes\` and mention it in the summary |
+
+## Formats
+
+- **Dates:** \`YYYY-MM-DD\`. If the source leaves out the year, use the most recent past date with that month and day (the cafe opened in fall 2026). A sale on a day the cafe wasn't open is probably a date mistake: check it and mention it.
+- **Times:** 24-hour \`HH:MM\` in New Haven local time (Eastern). "2:05 PM" becomes \`14:05\`. If an export is in UTC (the times end in Z or the header says UTC), convert to Eastern.
+- **Money:** plain numbers in dollars, no "$". Use what the customer paid after discounts. Leave out tips, and leave out tax if it's shown separately.
+- **Quantities:** whole numbers above 0.
+- **Leave out:** refunds (and the sale they refund), voided items, test orders and gift card sales. Free or comped drinks stay in, with a price of 0, since they used stock.
+
+## The menu
+
+Write each item's \`name\` exactly as in the Name column. Every baked good (croissant, muffin, cookie and so on) is **Pastry**.
+
+${t(["Name", "Also called", "Served", "Price", "On the menu now"])}
+${t([":--", ":--", ":--", "--:", ":--"])}
+${drinks.map(d => t([d.name, [].concat(d.aliases || [], d.code ? [d.code] : []).filter((x, i, a) => norm(x) !== norm(d.name) && a.findIndex(y => norm(y) === norm(x)) === i).join(", "), serveTxt[d.serve] || d.serve, F.usd2(d.price), isOn(d) ? "yes" : "no"])).join("\n")}
+${t(["Pastry", "any baked good", "", F.usd2(+S.pastry.price || 0), "yes"])}
+
+If an item doesn't match anything here, don't force it onto the closest drink. Put it in \`unmatched\` with its date, name, quantity and revenue.
+
+**Milks:** \`dairy\` (2% or whole, the default), \`oat\`, \`almond\`.
+
+**Syrups** a customer can add: ${syrupItems().map(i => syrupShort(i)).join(", ")}.
+
+**Add-on prices:** oat milk ${F.usd2(+A.altCharge || 0)}, almond milk ${F.usd2(+(A.almCharge ?? A.altCharge) || 0)}, added syrup ${F.usd2(+A.syrupCharge || 0)} (covers 2 pumps), cold foam ${F.usd2(+A.foamCharge || 0)}. An item's price includes its add-ons.
+
+Signature and specialty drinks already include their own syrups and cold foam. Only set \`syrup\` or \`foam\` on an item when the customer added extra on top of the recipe.
+
+## Item fields
+
+Used inside \`transactions\`, \`daily\` and \`periods\`.
+
+| Field | Required | Meaning |
+|:--|:--|:--|
+| \`name\` | yes | Exactly as in the menu table |
+| \`qty\` | yes | How many |
+| \`temp\` | no | \`"iced"\` or \`"hot"\`. Only matters for drinks served hot or iced. Leave it out if you don't know |
+| \`milk\` | no | \`"dairy"\`, \`"oat"\` or \`"almond"\`. Leave it out for dairy |
+| \`syrup\` | no | An added syrup from the list, by name |
+| \`pumps\` | no | 1 or 2 (the default) |
+| \`foam\` | no | \`true\` when cold foam was added |
+| \`price\` | no | What the customer paid for **one** of this item, add-ons included. Use it in \`transactions\` |
+| \`revenue\` | no | What was paid for **all** of this item together. Handy in \`daily\` and \`periods\` |
+
+In \`periods\`, an item can also say how many of them had alt milk, an added syrup or cold foam: \`"alt": 4, "syrup": 7, "foam": 2\`.
+
+## Sections
+
+- **\`transactions\`**: \`[{ "date", "time", "id", "total", "items": [item, ...] }]\`. \`id\` is the order or receipt number; make one up if there isn't one, unique within the file. \`total\` is what the order cost after discounts, without tips.
+- **\`daily\`**: \`[{ "date", "items": [item, ...], "orders", "sales" }]\`. \`orders\` is how many orders there were that day, and \`sales\` the day's total in dollars, if you know them. The portal spreads \`sales\` over the items.
+- **\`orders\`**: \`[{ "date", "time", "total" }]\`, one per order.
+- **\`periods\`**: \`[{ "from", "to", "items": [item, ...] }]\`.
+- **\`unmatched\`**: \`[{ "date", "name", "qty", "revenue" }]\`, items you couldn't match. They aren't imported, but the portal lists them.
+- **\`notes\`**: a string for anything the manager should know.
+- **\`replace\`**: \`true\` (the default) replaces whatever the portal already has for the dates in this file, so redoing a week is safe. Use \`false\` only when told to add on top.
+
+## Checks before you hand it over
+
+- Each date is at one level (\`orders\` may sit beside \`daily\`).
+- Every item name matches the menu table exactly, or is in \`unmatched\`.
+- Where an order has a total, its item prices add up to it (within $0.05). If they don't, keep the item prices and say so in \`notes\`.
+- The counts and totals add up to the source's own totals.
+- No order ID appears twice.
+- It's valid JSON.
+
+## A complete example
+
+~~~json
+{
+  "format": "${GG_FORMAT}",
+  "version": 1,
+  "source": "Clover exports for the weekend of Oct 17",
+  "replace": true,
+  "transactions": [
+    { "date": "2026-10-17", "time": "10:42", "id": "QX4T9", "total": 10.25,
+      "items": [
+        { "name": "Latte", "qty": 1, "temp": "iced", "milk": "oat", "syrup": "Vanilla", "price": 5.25 },
+        { "name": "Chai Latte", "qty": 1, "temp": "hot", "price": 4.50 },
+        { "name": "Pastry", "qty": 1, "price": 0.50 }
+      ] }
+  ],
+  "daily": [
+    { "date": "2026-10-18", "orders": 41, "sales": 212.50,
+      "items": [ { "name": "Latte", "qty": 14 }, { "name": "Chai Latte", "qty": 9, "temp": "iced" }, { "name": "Pastry", "qty": 6 } ] }
+  ],
+  "orders": [
+    { "date": "2026-10-18", "time": "11:05", "total": 8.50 }
+  ],
+  "periods": [],
+  "unmatched": [ { "date": "2026-10-17", "name": "Hot cocoa", "qty": 2, "revenue": 7.00 } ],
+  "notes": "Two Oct 17 orders had item prices $0.25 over their totals; kept the item prices."
+}
+~~~
+
+## For reference: when the cafe was open
+
+Recent open days: ${past.length ? past.join(", ") : "none yet"}.${next.length ? ` Next: ${next.join(", ")}.` : ""}
+`;
+}
+function downloadGuide(){
+  const a = document.createElement("a"), url = URL.createObjectURL(new Blob([importGuide()], {type:"text/markdown"}));
+  a.href = url; a.download = `good-graces-sales-import-guide-${ymd(new Date())}.md`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+/* an item report row, from a name, units and revenue (Clover item reports and periods) */
+function reportRow(name, u, rv, x){
+  const d = findDrink(name), cat = d ? "drink" : /pastr|donut|doughnut|cake|cookie|muffin|croissant|scone|biscoff|bagel|danish|brownie|loaf/i.test(name) ? "pastry" : "other";
+  const cost = d ? costOf(d, d.serve === "hot" ? "hot" : "iced", "dairy") * u : 0;
+  return {name: d ? d.name : name, cat, units:u, revenue:rv, cost:Math.round(cost * 100) / 100, margin: d && rv ? Math.round((1 - cost / rv) * 1000) / 1000 : 1, alt:+(x || {}).alt || 0, syrup:+(x || {}).syrup || 0, foam:+(x || {}).foam || 0};
+}
+/* the file Claude writes, checked and turned into what the portal stores */
+function parseGG(j, file){
+  if (+j.version !== 1) return {file, error:`This file says version ${String(j.version)}. Download the import guide again and redo it.`};
+  const skipped = [], lines = [], dayOrders = {}, orders = {}, periods = [], tDates = new Set(), cnt = {tx:0, txItems:0, dItems:0, oN:0, oSum:0};
+  const syr = v => { if (!v) return false; const k = norm(String(v).replace(/syrup/i, "")); const hit = syrupItems().find(i => norm(syrupShort(i)) === k) || syrupItems().find(i => norm(i.name).includes(k)); return hit ? hit.id : false; };
+  const item = (x, d, tm, o) => {
+    const name = String((x || {}).name || "").trim(), q = Math.round(+(x || {}).qty || 0);
+    if (!(q > 0)){ skipped.push(`${fmtD(d)}: ${name || "an item"} with quantity ${(x || {}).qty}`); return null; }
+    const dr = findDrink(name), food = !dr && /^pastry$|pastr|croissant|muffin|scone|cookie|danish|bagel|donut|cake|brownie|loaf/i.test(name);
+    if (!dr && !food){ skipped.push(`${fmtD(d)}: "${name}" isn't on the menu`); return null; }
+    const paid = x.price != null && isFinite(+x.price) ? +x.price : x.revenue != null && isFinite(+x.revenue) ? +x.revenue / q : null, mk = String(x.milk || "").toLowerCase();
+    const l = food ? {d, tm, k:"Pastry", id:"pastry", food:"pastry", q, p: paid != null ? paid : +S.pastry.price || 0}
+      : {d, tm, k:dr.name, id:dr.id, q, ice: dr.serve === "iced" ? true : dr.serve === "hot" ? false : /^ice/i.test(String(x.temp || "")), milk: dr.milk && /oat|almond/.test(mk) ? mk.match(/oat|almond/)[0] : "dairy", sy:syr(x.syrup), fo: x.foam === true || /^(y|yes|true|1)$/i.test(String(x.foam || ""))};
+    if (!food){ if (l.sy) l.pumps = +x.pumps === 1 ? 1 : 2; l.p = paid != null ? Math.round(paid * 100) / 100 : Math.round(lineRevenue(l, dr) * 100) / 100; }
+    if (o) l.o = o; lines.push(l); return l; };
+  const day = (v, what) => { const d = /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : parseDateVal(v); if (!d) skipped.push(`${what}: no readable date`); return d; };
+  (j.transactions || []).forEach((t, i) => { const d = day(t.date, `Transaction ${i + 1}`); if (!d) return; const tm = parseTimeVal(t.time) || "";
+    const o = String(t.id || `${d} ${tm} #${i + 1}`), n = (t.items || []).map(x => item(x, d, tm, o)).filter(Boolean).length; if (n){ tDates.add(d); cnt.tx++; cnt.txItems += n; } });
+  (j.daily || []).forEach((dy, i) => { const d = day(dy.date, `Daily entry ${i + 1}`); if (!d) return;
+    if (tDates.has(d)){ skipped.push(`${fmtD(d)}: daily totals left out, the transactions already cover that day`); return; }
+    const its = Array.isArray(dy.items) ? dy.items : Object.entries(dy.items || {}).map(([name, qty]) => ({name, qty}));
+    const ls = its.map(x => item(x, d, "", "")).filter(Boolean); cnt.dItems += ls.reduce((s, l) => s + l.q, 0);
+    if (+dy.sales > 0 && ls.length){ const tot = ls.reduce((s, l) => s + l.p * l.q, 0); if (tot > 0) ls.forEach(l => l.p = Math.round(l.p * dy.sales / tot * 100) / 100); }
+    if (+dy.orders > 0) dayOrders[d] = Math.round(+dy.orders); });
+  (j.orders || []).forEach((o, i) => { const d = day(o.date, `Order ${i + 1}`), tm = parseTimeVal(o.time), v = +o.total; if (!d) return;
+    if (!tm || !isFinite(v)){ skipped.push(`Order ${i + 1} on ${fmtD(d)}: no readable time or total`); return; }
+    if (tDates.has(d)) return; (orders[d] || (orders[d] = [])).push([tm, Math.round(v * 100) / 100]); cnt.oN++; cnt.oSum += v; });
+  if ((j.orders || []).some(o => tDates.has(o.date))) skipped.push("Order totals on days with transactions were left out, the transactions cover them");
+  (j.periods || []).forEach((p, i) => { const from = day(p.from, `Period ${i + 1}`), to = day(p.to, `Period ${i + 1}`); if (!from || !to) return;
+    const rows = (p.items || []).map(x => { const u = Math.round(+x.qty || 0); return u > 0 && String(x.name || "").trim() ? reportRow(String(x.name).trim(), u, +x.revenue || (x.price != null ? +x.price * u : 0), x) : null; }).filter(Boolean);
+    if (rows.length) periods.push({label:`${fmtD(from)} to ${fmtD(to)}`, from, to, rows}); });
+  const dates = [...new Set(lines.map(l => l.d).concat(Object.keys(orders)))];
+  periods.forEach(p => { for (let d = p.from; d <= p.to && dates.length < 2000; d = addDays(d, 1)) if (!dates.includes(d)) dates.push(d); }); dates.sort();
+  if (!dates.length) return {file, error:"Nothing in this file could be imported." + (skipped.length ? " " + skipped.slice(0, 3).join(". ") : "")};
+  const um = j.unmatched || [], rng = ds => ds.length ? (ds.length > 1 ? `${fmtD(ds[0])} to ${fmtD(ds[ds.length - 1])}` : fmtD(ds[0])) : "";
+  const dd = [...new Set(lines.filter(l => !l.o).map(l => l.d))].sort(), td = [...tDates].sort(), od = Object.keys(orders).sort();
+  const text = [td.length ? `Transactions: ${plural(cnt.tx, "order")}, ${plural(cnt.txItems, "item line")}, ${rng(td)}` : "", dd.length ? `Daily totals: ${plural(dd.length, "day")}, ${F.int(cnt.dItems)} items, ${rng(dd)}` : "",
+    od.length ? `Order totals only: ${plural(od.length, "day")}, ${plural(cnt.oN, "order")}, ${F.usd2(cnt.oSum)}` : "", periods.length ? `Summaries: ${periods.map(p => p.label).join("; ")}` : ""].filter(Boolean).join(". ")
+    + (um.length ? `. Not imported, not on the menu: ${um.slice(0, 5).map(x => `${x.name} (${x.qty || "?"})`).join(", ")}${um.length > 5 ? "…" : ""}` : "")
+    + (skipped.length ? `. Skipped: ${skipped.slice(0, 4).join("; ")}${skipped.length > 4 ? ` and ${skipped.length - 4} more` : ""}` : "")
+    + (j.notes ? `. Notes: ${String(j.notes).slice(0, 300)}` : "");
+  return {file, kind:"gg", lines, dayOrders, orders, periods, dates, replace: j.replace !== false, text};
+}
+/* clear what's stored for these dates before a file replaces them: sales entries (a sale with other days on it is saved again
+   without these days), Clover days, and item reports that overlap */
+async function clearDates(ds){
+  const set = new Set(ds);
+  for (const doc of Store.sales.slice()){ const ls = doc.lines || []; if (!ls.some(l => set.has(l.d))) continue;
+    const keep = ls.filter(l => !set.has(l.d)), rest = Object.assign({}, doc); delete rest.id;
+    await Store.delSale(doc.id); if (keep.length) await Store.addSale(Object.assign(rest, {lines:keep})); }
+  ds.forEach(d => delete S.clover.orders[d]);
+  S.clover.items = S.clover.items.filter(r => !(r.from && r.to && ds.some(d => d >= r.from && d <= r.to)));
+}
+async function importGG(x){
+  if (x.replace) await clearDates(x.dates);
+  const by = {}; x.lines.forEach(l => (by[l.d] || (by[l.d] = [])).push(l));   // one day per saved entry, so a day's orders count once
+  for (const [d, ls] of Object.entries(by)) for (let i = 0; i < ls.length; i += 700){
+    const doc = {kind:"upload", file:x.file, at:new Date().toISOString(), lines:ls.slice(i, i + 700)}; if (x.dayOrders[d] != null && i === 0) doc.dayOrders = {[d]: x.dayOrders[d]};
+    await Store.addSale(doc); }
+  Object.entries(x.orders).forEach(([d, log]) => putCloverDay(d, log));
+  x.periods.forEach(addReport);
+}
+
+/* ------------------------------------------------------------ sales file uploads */
+function parseCSV(text){
+  const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i + 1] === '"'){ f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ","){ row.push(f); f = ""; }
+    else if (c === "\n" || c === "\r"){ if (c === "\r" && text[i + 1] === "\n") i++; row.push(f); rows.push(row); row = []; f = ""; }
+    else f += c;
+  }
+  if (f !== "" || row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+function loadSheetJS(){
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload = () => window.XLSX ? res(window.XLSX) : rej(new Error("xlsx")); s.onerror = () => rej(new Error("xlsx")); document.head.appendChild(s); });
+}
+function parseDateVal(v){
+  if (v == null || v === "") return null;
+  if (typeof v === "number" && v > 20000 && v < 80000){ const dt = new Date(Math.round((Math.floor(v) - 25569) * 86400000)); return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`; }
+  const s = String(v).trim(); let m;
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+  if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/))){ const y = m[3].length === 2 ? 2000 + +m[3] : +m[3]; return `${y}-${pad2(m[1])}-${pad2(m[2])}`; }
+  const t = Date.parse(s); return isNaN(t) ? null : ymd(new Date(t));
+}
+function parseTimeVal(v){
+  if (v == null || v === "") return null;
+  if (typeof v === "number"){ const fr = v >= 1 ? v % 1 : v; const mins = Math.round(fr * 1440); return `${pad2(Math.floor(mins / 60) % 24)}:${pad2(mins % 60)}`; }
+  const s = String(v).trim().toLowerCase(); let m;
+  if ((m = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm|a|p)?/))){ let h = +m[1]; const ap = m[3]; if (ap && ap[0] === "p" && h < 12) h += 12; if (ap && ap[0] === "a" && h === 12) h = 0; return `${pad2(h)}:${m[2]}`; }
+  if ((m = s.match(/^(\d{1,2})\s*(am|pm)$/))){ let h = +m[1]; if (m[2] === "pm" && h < 12) h += 12; if (m[2] === "am" && h === 12) h = 0; return `${pad2(h)}:00`; }
+  return null;
+}
+const truthy = v => /^(y|yes|true|1|x|iced|ice|✓)$/i.test(String(v).trim());
+function rowsToLines(aoa){
+  const res = {lines:[], skipped:[]};
+  const hi = aoa.findIndex(r => r.filter(c => String(c).trim() !== "").length >= 2);
+  if (hi < 0){ res.error = "The file has no header row."; return res; }
+  const head = aoa[hi].map(h => String(h).trim().toLowerCase());
+  const col = names => head.findIndex(h => names.includes(h));
+  const C = {date:col(["date","day","sale date","transaction date"]), time:col(["time","hour","sale time"]),
+    dt:col(["datetime","date time","timestamp","created at","date/time"]), drink:col(["drink","item","product","name","item name","menu item"]),
+    qty:col(["qty","quantity","count","units","#"]), iced:col(["iced","ice","temp","temperature","serve","hot/iced","iced?"]),
+    milk:col(["milk","milk type"]), syrup:col(["syrup","flavor","add syrup","syrup?"]), foam:col(["foam","cold foam","foam?"]),
+    mods:col(["modifiers","modifiers applied","options","modifier","notes"]),
+    order:col(["order","order id","order number","transaction","transaction id","receipt","receipt number","payment id","ticket","ticket number"])};
+  if (C.drink < 0){ res.error = "No drink column. Name one column drink or item."; return res; }
+  if (C.date < 0 && C.dt < 0){ res.error = "No date column. Name one column date."; return res; }
+  for (let r = hi + 1; r < aoa.length; r++){
+    const row = aoa[r]; if (!row || row.every(c => String(c).trim() === "")) continue;
+    const get = i => i >= 0 ? row[i] : "";
+    const name = String(get(C.drink)).trim();
+    const d = findDrink(name), food = !d && /pastry|pastries|croissant|muffin|scone|cookie|danish|bagel|food/i.test(name);
+    if (!d && !food){ res.skipped.push(`Row ${r + 1}: "${name || "blank"}" is not on the menu`); continue; }
+    const date = parseDateVal(C.date >= 0 ? get(C.date) : get(C.dt));
+    if (!date){ res.skipped.push(`Row ${r + 1}: no readable date`); continue; }
+    const tm = parseTimeVal(C.time >= 0 ? get(C.time) : get(C.dt)) || "12:00";
+    let q = C.qty >= 0 ? parseFloat(get(C.qty)) : 1; if (!isFinite(q)) q = 1;
+    if (q <= 0){ res.skipped.push(`Row ${r + 1}: quantity ${q}, likely a refund`); continue; }
+    if (food){ const fl = {d:date, tm, k:"Pastry", id:"pastry", food:"pastry", q, p:+S.pastry.price || 0}; if (C.order >= 0 && String(get(C.order)).trim()) fl.o = String(get(C.order)).trim(); res.lines.push(fl); continue; }
+    const mods = (String(get(C.mods)) + " " + name + " " + String(get(C.milk))).toLowerCase();
+    let ice = d.serve === "iced" ? true : d.serve === "hot" ? false : null;
+    if (ice === null){ const iv = String(get(C.iced)).toLowerCase(); ice = C.iced >= 0 && iv ? (iv.includes("hot") ? false : truthy(iv) || iv.includes("iced")) : /\biced?\b/.test(mods) ? true : /\bhot\b/.test(mods) ? false : false; }
+    const milk = mods.includes("oat") ? "oat" : mods.includes("almond") ? "almond" : "dairy";
+    const syTxt = (String(get(C.syrup)) + " " + String(get(C.mods))).toLowerCase(), syHit = syrupItems().find(i => syTxt.includes(syrupShort(i).toLowerCase()));
+    const sy = syHit ? syHit.id : (C.syrup >= 0 ? truthy(get(C.syrup)) : /syrup/.test(syTxt)) ? flavorId("vanilla") || true : false;
+    const fo = C.foam >= 0 ? truthy(get(C.foam)) : /foam/.test(String(get(C.mods)).toLowerCase());
+    const line = {d:date, tm, k:d.name, id:d.id, q, ice, milk: d.milk ? milk : "dairy", sy, fo};
+    if (C.order >= 0 && String(get(C.order)).trim()) line.o = String(get(C.order)).trim();
+    line.p = Math.round(lineRevenue(line, d) * 100) / 100;
+    res.lines.push(line);
+  }
+  return res;
+}
+const readAs = (file, kind) => (kind === "text" && file.text) ? file.text() : (kind === "buf" && file.arrayBuffer) ? file.arrayBuffer()
+  : new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); kind === "text" ? r.readAsText(file) : r.readAsArrayBuffer(file); });
+
+/* ------------------------------------------------------------------ admin lock
+   Staff see Home, Log sales, the schedule, Inventory and Menu. The admin password (top right) unlocks prices, the drink bank,
+   analytics, cafe hours and the team, and stays unlocked on that device until Lock. The password is fixed in code as a salted
+   PBKDF2 hash; to change it, hash the new one the same way (200,000 rounds, SHA-256) and replace ADMIN_PW.
+   ponytail: this hides screens in the browser; anyone with the link can still read and write the data underneath (see
+   firestore.rules). Real protection means Firebase Auth on writes. */
+const ADMIN_PW = {salt:"gg-hopper-2026", hash:"665daa1806e9dc37dcd7bc3021d16a43c9de9dc8c51b1d97155a962bf9d25433"};
+const isAdmin = () => UI.admin === true;
+async function pwHash(pw, salt){
+  const enc = new TextEncoder(), k = await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveBits"]);
+  const b = await crypto.subtle.deriveBits({name:"PBKDF2", salt:enc.encode(salt), iterations:200000, hash:"SHA-256"}, k, 256);
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
+}
+function checkAdmin(){ let k = ""; try { k = localStorage.getItem("gg-admin") || ""; } catch(e){} UI.admin = k === ADMIN_PW.hash; applyRole(); }
+function showTab(tab){
+  if (tab === "analytics") requestAnimationFrame(() => renderAnalytics());
+  document.querySelectorAll(".step").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  document.querySelectorAll(".pane").forEach(p => p.classList.toggle("on", p.id === "pane-" + tab));
+}
+function applyRole(){
+  const a = isAdmin(); document.body.classList.toggle("admin", a);
+  const b = $("admBtn"); if (b) b.textContent = a ? "Admin" : "Admin sign-in";
+  const cur = document.querySelector(".step.on"); if (!a && cur && cur.classList.contains("adm")) showTab("home");
+  if (!a){ if (!$("gearPanel").hidden) closeSheet("gearPanel"); if (UI.dayPanel) closeDay(); if (UI.pf) closeSheet("pfPanel"); }
+}
+function renderAdm(){
+  const box = $("admBody"); if (!box) return;
+  const on = isAdmin();
+  box.innerHTML = `<div class="mh"><div><h2 id="admTitle">${on ? "Admin" : "Admin sign-in"}</h2>
+      <div class="p">${on ? "Everything is unlocked on this device." : "Unlocks prices, the drink bank, analytics, cafe hours and the team."}</div></div>
+      <button class="x" data-act="admClose" aria-label="Close">✕</button></div>`
+    + (on ? `<button class="btn" data-act="admLock">Lock this device</button>`
+          : `<form class="admf" data-adm="login"><input type="text" name="username" value="admin" autocomplete="username" hidden>
+      <input class="in txt" type="password" id="admPw" autocomplete="current-password" placeholder="Password" aria-label="Password" required>
+      <button class="btn" type="submit">Unlock</button></form>`)
+    + `<p class="toast" id="admToast" role="status" style="margin:0"></p>`;
+}
+function openAdm(){ renderAdm(); const dl = $("admDlg"); if (!dl.open) dl.showModal(); const f = $("admPw"); if (f) f.focus(); }
+async function admSubmit(){
+  const pw = ($("admPw") || {}).value || "";
+  if (!(window.crypto && crypto.subtle)){ toast("admToast", "This browser can't check passwords on this page. Open the portal at its https address."); return; }
+  if (await pwHash(pw, ADMIN_PW.salt) !== ADMIN_PW.hash){ toast("admToast", "That password isn't right."); $("admPw").select(); return; }
+  try { localStorage.setItem("gg-admin", ADMIN_PW.hash); } catch(e){}
+  UI.admin = true; $("admDlg").close(); applyRole(); renderAll();
+}
+
+/* ------------------------------------------------------------------ persistence */
+const Store = {mode:"memory", db:null, sales:[], stock:[], avail:[], loaded:false};
+const LSK = "good-graces-model-v2";
+const lsGet = () => { try { return JSON.parse(localStorage.getItem(LSK) || "null"); } catch(e){ return null; } };
+const lsSet = v => { try { localStorage.setItem(LSK, JSON.stringify(v)); return true; } catch(e){ return false; } };
+let lastCfg = "", saveTimer = null, saving = false, saveAgain = false;
+const setSave = t => set("saveState", t);
+const persistLocal = () => { if (Store.mode === "local") lsSet({cfg:S, sales:Store.sales, stock:Store.stock, avail:Store.avail}); };
+function markDirty(){ if (UI.availMode) return; clearTimeout(saveTimer); saveTimer = setTimeout(saveConfig, 1000); }
+async function saveConfig(){
+  if (UI.availMode || (Store.mode === "db" && !Store.loaded)) return;   // never save over settings that haven't loaded yet
+  const j = JSON.stringify(S);
+  if (j === lastCfg) return;
+  if (Store.mode === "db"){
+    if (saving){ saveAgain = true; return; }
+    saving = true; lastCfg = j; setSave("Saving…");
+    try { await Store.db.doc("config/main").set({json:j, at:new Date().toISOString()}); setSave("All changes saved for everyone"); }
+    catch(e){ setSave(saveError(e)); }
+    saving = false; if (saveAgain){ saveAgain = false; saveConfig(); }
+  } else if (Store.mode === "local"){ lastCfg = j; persistLocal(); setSave("Saved in this browser"); }
+}
+const S_DEF = JSON.stringify(S);
+const stableId = name => "p" + (norm(name).slice(0, 24) || Math.random().toString(36).slice(2, 10));
+function applyConfig(cfg, boot){
+  if (!cfg || typeof cfg !== "object") return;
+  const D = JSON.parse(S_DEF);
+  Object.keys(D).forEach(k => { S[k] = cfg[k] !== undefined && cfg[k] !== null ? cfg[k] : D[k]; });
+  ["ingredients","packaging","specials","bases","off","syrHide","charges","invoices","team"].forEach(k => { if (!Array.isArray(S[k])) S[k] = D[k]; });
+  ["prices","assign","dayMenu","lists","checks","pattern","orders","days"].forEach(k => { if (!S[k] || typeof S[k] !== "object" || Array.isArray(S[k])) S[k] = D[k]; });
+  ["addons","pastry","fees","track","clover"].forEach(k => { S[k] = Object.assign({}, D[k], S[k] && typeof S[k] === "object" ? S[k] : {}); });
+  if (!S.clover.orders || typeof S.clover.orders !== "object" || Array.isArray(S.clover.orders)) S.clover.orders = {};
+  if (!Array.isArray(S.clover.items)) S.clover.items = [];
+  S.exp = {wage: +(cfg.exp || {}).wage || D.exp.wage};
+  [].concat(S.ingredients, S.packaging).forEach(i => { if (typeof i.vendor === "string") i.vendor = i.vendor.trim().replace(/\s+/g, " "); });
+  if (S.addons.almCharge == null) S.addons.almCharge = S.addons.altCharge;
+  if (!S.cal || typeof S.cal !== "object" || !cfg.cal) S.cal = {rules:[], open:(S.track.dates || []).slice(), closed:[]};
+  ["rules","open","closed"].forEach(k => { if (!Array.isArray(S.cal[k])) S.cal[k] = []; });
+  { const have = new Set(S.team.map(p => p.name)); Object.values(S.days).forEach(x => (x.names || []).forEach(v => namesIn(v).forEach(n => { if (!have.has(n)){ have.add(n); S.team.push({name:n, rule:{}, off:[]}); } }))); }
+  S.team.forEach(p => { if (!p.id) p.id = stableId(p.name); delete p.rule; delete p.off; });   // availability now comes only from each week's form   // stable, so the availability form and the portal agree on who's who
+  if (!(cfg.v >= 5)){ migrateV4(cfg); if (!boot) markDirty(); }
+  if (cfg.v === 5){ S.specials = S.specials.filter(sp => sp.on !== false); if (!boot) markDirty(); }
+  if (!(cfg.v >= 7)) S.ingredients.forEach(g => { if (!g.cat || g.cat === "mixin") g.cat = guessCat(g); });   // v7 split fresh items out of mix-ins
+  if (!(cfg.v >= 10)){ S.clover.orders = {}; S.clover.items = []; if (!boot) markDirty(); }   // v10: the sales copied in from sales-data.json are gone; everything comes from Import sales
+  if (!(cfg.v >= 9)) S.specials.forEach(sp => { if (sp.ownPrice == null) sp.ownPrice = true; });   // v9: auto prices are for drinks built from now on
+  if (!(cfg.v >= 8)) S.ingredients.forEach(g => { if (g.cat === "milk" && guessCat(g) === "alt") g.cat = "alt"; });   // v8: alt milk has its own category
+  Object.keys(LIST_DEF).forEach(k => { if (!Array.isArray(S.lists[k])) S.lists[k] = LIST_DEF[k].map((t, i) => ({id:k + i, t})); });
+  S.charges.forEach(c => { if (!c.date) c.date = (S.track.dates || []).slice().sort()[0] || ymd(new Date()); });   // undated spending counts from the first cafe day   // v5 carried every recipe-lab idea over, off the menu; only real drinks stay
+  if (!UI.wkDirty) UI.wk = null;   // the weekly-hours grid starts again from the saved hours unless it's mid-edit
+  checkAdmin();
+  S.v = 10;
+  ensureDates();
+  if (!boot) renderAll();
+}
+/* settings saved before Oct 2026 (v4) carried forecasts, a recipe lab and editable recipes. Recipes are fixed now; old menu
+   drinks that are a latte, matcha, chai or americano with a syrup become built specialty drinks, the rest are dropped. */
+function migrateV4(cfg){
+  const fixed = n => MENU.some(m => [m.name].concat(m.aliases || []).map(norm).includes(norm(n)));
+  const ingName = id => ((cfg.ingredients || []).find(g => g.id === id) || {}).name || "";
+  const live = new Set((cfg.drinks || []).map(d => norm(d.name))), seen = new Set();
+  [].concat(cfg.drinks || [], cfg.retired || []).forEach((d, k) => {   // recipe-lab drafts were ideas, never made; they're dropped
+    if (!d || !d.name || seen.has(norm(d.name)) || fixed(d.name)) return; seen.add(norm(d.name));
+    const ids = (d.recipe || []).map(r => r[0]), milkOz = (d.recipe || []).filter(r => r[0] === "milk" || r[0] === "oat").reduce((s,r) => s + (+r[1] || 0), 0);
+    const base = ids.includes("matcha") ? "matcha" : ids.includes("chai") ? "chai" : ids.includes("beans") && milkOz >= 4 ? "latte" : ids.includes("beans") ? "americano" : "";
+    if (!base) return;
+    const sy = (d.recipe || []).find(r => /syrup|sauce/i.test(ingName(r[0])));
+    S.specials.push({id:"sp" + k.toString(36) + norm(d.name).slice(0, 10), name:d.name, aliases:d.aliases || [], base, syrup: sy ? sy[0] : "",
+      pumps: sy ? Math.min(2, Math.max(1, Math.round((+sy[1] || 0.5) / PUMP_OZ))) : 0, foam: ids.includes("cream"),
+      serve: (+d.iced || 0) >= 100 ? "iced" : (+d.iced || 0) <= 0 ? "hot" : "both", price: Math.round((+d.price || 4.5) * 100) / 100, on: live.has(norm(d.name))});
+  });
+  const P = cfg.pilot && cfg.pilot.curve, tot = a => (a || []).reduce((s,h) => s + (+h.d || 0), 0);
+  if (P) S.track.perDay = Math.round((tot(P.sat) + tot(P.sun)) / 2) || 60;
+  delete S.track.useSales;
+}
+Store.addSale = async doc => {
+  if (Store.mode === "db"){ const ref = await Store.db.collection("sales").add(doc); return ref.id; }
+  const id = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  Store.sales.push({id, ...doc}); persistLocal(); recalc(); return id;
+};
+Store.delSale = async id => {
+  if (Store.mode === "db") return Store.db.doc("sales/" + id).delete();
+  Store.sales = Store.sales.filter(x => x.id !== id); persistLocal(); recalc();
+};
+Store.addStock = async doc => {
+  if (Store.mode === "db"){ const ref = await Store.db.collection("stock").add(doc); return ref.id; }
+  const id = "k" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  Store.stock.push({id, ...doc}); persistLocal(); recalc(); return id;
+};
+Store.delStock = async id => {
+  if (Store.mode === "db") return Store.db.doc("stock/" + id).delete();
+  Store.stock = Store.stock.filter(x => x.id !== id); persistLocal(); recalc();
+};
+Store.saveAvail = async doc => {
+  if (Store.mode === "db") return Store.db.doc("avail/" + doc.week + "_" + doc.pid).set(doc);
+  Store.avail = Store.avail.filter(a => !(a.week === doc.week && a.pid === doc.pid)).concat([doc]); persistLocal(); recalc();
+};
+async function getDb(){
+  /* Inside claude.ai the page gets its database from the host. Anywhere else (Vercel) it uses your Firebase project from firebase-config.js. */
+  try { if (window.claude && typeof window.claude.use === "function") return await window.claude.use("db"); } catch(e){}
+  try {
+    const c = window.FIREBASE_CONFIG;
+    if (window.firebase && c && c.projectId && c.apiKey && !/^PASTE/.test(c.apiKey)){
+      const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(c);
+      const fs = firebase.firestore(app);
+      try { fs.settings({ignoreUndefinedProperties:true}); } catch(e){}
+      return fs;
+    }
+  } catch(e){ console.error("Firebase failed to start", e); }
+  return null;
+}
+async function initStore(){
+  const db = await getDb();
+  if (db){
+    Store.mode = "db"; Store.db = db; setSave("Connecting to saved data…");
+    const fail = e => setSave(e && e.code === "revoked" ? "Saved data is no longer available on this page" : e && e.code === "permission-denied" ? "Saved data is locked. Check the Firestore rules." : "Saved data is reconnecting");
+    db.collection("sales").onSnapshot(snap => { Store.sales = snap.docs.map(x => ({id:x.id, ...x.data()})); recalc(); }, fail);
+    db.collection("stock").onSnapshot(snap => { Store.stock = snap.docs.map(x => ({id:x.id, ...x.data()})); recalc(); }, fail);
+    db.collection("avail").onSnapshot(snap => { Store.avail = snap.docs.map(x => ({id:x.id, ...x.data()})); recalc(); }, fail);
+    let seeded = false;
+    db.doc("config/main").onSnapshot(snap => {
+      if (!snap.exists){
+        Store.loaded = true; setSave("Changes save for everyone on this page");
+        /* First run on a fresh Firebase project: load seed-config.json (your exported settings) once, then save it. */
+        if (!seeded && !UI.availMode){ seeded = true;
+          fetch("seed-config.json", {cache:"no-store"}).then(r => r.ok ? r.json() : null)
+            .then(c => { if (c && typeof c === "object" && c.ingredients){ applyConfig(c); markDirty(); } }).catch(() => {}); }
+        renderAll(); return;
+      }
+      if (snap.metadata.hasPendingWrites) return;
+      const first = !Store.loaded; Store.loaded = true;
+      const j = snap.data().json;
+      if (j && j !== lastCfg){ lastCfg = j; try { applyConfig(JSON.parse(j)); } catch(e){ console.error(e); } }
+      else if (first) renderAll();
+      setSave("All changes saved for everyone");
+    }, fail);
+    return;
+  }
+  const saved = lsGet();
+  if (saved){ Store.sales = saved.sales || []; Store.stock = saved.stock || []; Store.avail = saved.avail || []; if (saved.cfg){ lastCfg = JSON.stringify(saved.cfg); applyConfig(saved.cfg, true); } }
+  Store.loaded = true;
+  Store.mode = lsSet(saved || {cfg:S, sales:[], stock:[], avail:[]}) ? "local" : "memory";
+  setSave(Store.mode === "local" ? "Saved in this browser" : "Not saved: data clears when you close the page");
+  renderAll();
+}
+
+/* ------------------------------------------------------------------ render */
+function renderShifts(){
+  renderWeekGrid(); renderCal(); renderTeam(); renderMatrix();
+  if (UI.dayPanel && !$("dayPanel").contains(document.activeElement)) renderDayPanel();
+  const people = new Set(team().map(p => p.name)); Object.values(S.days || {}).forEach(x => (x.names || []).forEach(v => namesIn(v).forEach(t => people.add(t))));
+  $("peopleList").innerHTML = [...people].sort().map(n => `<option value="${esc(n)}">`).join("");
+}
+function recalc(){
+  if (UI.availMode){ renderAvailView(); return; }
+  UI.SD = salesDays(); const T = UI.T = trackModel();
+  renderStock(T); renderRecent(); renderMenu(); renderBank(); renderAnalytics();
+  const ae = document.activeElement;
+  if (!($("pane-shifts").contains(ae) && (ae.tagName === "INPUT" || ae.tagName === "SELECT"))) renderShifts();
+  try { renderHome(); } catch(e){ console.error(e); }
+}
+function renderAll(){
+  if (UI.availMode){ renderAvailView(); return; }
+  applyRole();
+  renderDrinkGrid(); renderTicket(); renderWhen(); renderIngredients(); renderTrackSliders();
+  if (!$("gearPanel").hidden) renderGear();
+  if (UI.mod) renderMod();
+  syncFields(); recalc();
+}
+function syncFields(){ document.querySelectorAll("[data-bind]").forEach(el => { if (el === document.activeElement || el.type === "checkbox") return; const v = getPath(S, el.dataset.bind); if (v != null) el.value = v; }); }
+
+/* ------------------------------------------------------------------ events */
+function onEdit(e){
+  const el = e.target, path = el.dataset && el.dataset.bind; if (!path) return;
+  let v = el.value;
+  if (el.dataset.type === "num"){ v = parseFloat(v); if (!isFinite(v)) v = 0; }
+  if (el.dataset.type === "int"){ v = parseInt(v, 10); if (!isFinite(v)) v = 0; }
+  if (el.dataset.type === "bool") v = el.checked;
+  setPath(S, path, v);
+  markDirty();
+  if (/^(addons|pastry)\./.test(path)){ renderDrinkGrid(); if (UI.mod) renderMod(); }
+  recalc();
+}
+const ADMIN_BIND = /^(exp|fees|charges|addons|pastry|track)\./;
+const adminOnlyField = d => d.gprice != null || d.gname != null || d.gon != null || d.bkseason != null || d.syshow != null || ADMIN_BIND.test(d.bind || "");
+document.addEventListener("input", e => {
+  const t = e.target, d = t.dataset || {};
+  if (adminOnlyField(d) && !isAdmin()) return;
+  if (t.id === "bankQ"){ UI.bank.q = t.value; renderBank(); return; }
+  if (t.id === "wmQ"){ UI.wm.q = t.value; renderWmList(); return; }
+  if (d.gprice != null){ const x = drinkById(d.gprice), v = parseFloat(t.value); if (!x || !(v >= 0)) return;
+    if (x.sp){ x.sp.price = v; x.sp.ownPrice = true; } else S.prices[x.id] = v; markDirty(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); return; }
+  if (d.nb != null){ UI.nb[d.nb] = t.value; return; }
+  if (t.id === "bName"){ UI.bld.name = t.value; return; }
+  if (t.id === "bPrice"){ UI.bld.price = t.value; bldSum(); return; }
+  if (d.ns != null){ UI.ns[d.ns] = t.value; return; }
+  if (d.invpack != null){ const [vi, li] = d.invpack.split(":").map(Number), l = UI.inv && UI.inv[vi] && UI.inv[vi].lines[li]; if (l) l.pack = parseFloat(t.value) || 0; return; }
+  if (d.cnt != null){ UI.cnt[d.cnt] = t.value; return; }
+  if (d.impd != null){ const [i, k] = d.impd.split(":"), x = UI.imp && UI.imp[+i]; if (x) x[k] = t.value; return; }
+  if (d.ox != null){ const [i, f] = d.ox.split(":"), x = (buyOrder().extra || [])[+i]; if (!x) return; x[f] = f === "name" ? t.value : Math.max(0, parseFloat(t.value) || 0); markDirty(); return; }
+  if (d.oq != null){ const o = buyOrder(); if (!o) return; const v = parseInt(t.value, 10); o.qty[d.oq] = isFinite(v) ? Math.max(0, v) : 0; markDirty(); return; }
+  if (t.type !== "checkbox" && t.tagName !== "SELECT") onEdit(e);
+});
+document.addEventListener("focusout", e => { const d = e.target.dataset || {}; if (d.oq != null || d.ox != null) setTimeout(() => { if (!$("orderList").contains(document.activeElement)) renderBuyList(UI.T); }, 0); });
+document.addEventListener("change", e => {
+  const t = e.target, d = t.dataset || {};
+  if (adminOnlyField(d) && !isAdmin()) return;
+  if (d.bkseason != null){ const x = drinkById(d.bkseason); if (x){ setMeta(x, "season", t.value); markDirty(); renderBank(); } return; }
+  if (d.ostore != null){ const it = ingOf(d.ostore); if (it){ it.vendor = t.value; markDirty(); renderIngredients(); recalc(); } return; }
+  if (t.id === "useNow"){ UI.opt.now = t.checked; renderWhen(); renderDrinkGrid(); return; }
+  if (t.id === "logDate"){ renderDrinkGrid(); return; }
+  if (t.id === "mFoam"){ if (UI.mod){ UI.mod.fo = t.checked; renderMod(); } return; }
+  if (t.id === "bFoam"){ UI.bld.r.foam = t.checked ? {syrup:""} : null; renderBuilder(); return; }
+  if (t.id === "bMix"){ const r = UI.bld.r; if (t.checked){ const other = BUILDER_BASES.concat((S.bases || []).map(x => x.id)).find(id => id !== r.bases[0]); r.bases = [r.bases[0], other]; } else r.bases = [r.bases[0]]; renderBuilder(); return; }
+  if (t.id === "bShaken"){ UI.bld.r.shaken = t.checked; renderBuilder(); return; }
+  if (d.exing != null){ const x = UI.bld.r.extras[+d.exing]; if (x){ x.ing = t.value; renderBuilder(); } return; }
+  if (t.id === "bSeason"){ UI.bld.season = t.value; return; }
+  if (t.id === "impIn" && t.files && t.files.length){ readImports([...t.files]); return; }
+  if (t.id === "anFrom" || t.id === "anTo"){ const r = anRangeOf(); UI.an = {...UI.an, preset:"custom", from:r.from, to:r.to}; UI.an[t.id === "anFrom" ? "from" : "to"] = t.value; renderAnalytics(); return; }
+  if (t.id === "anCmp"){ UI.an.cmp = t.checked; renderAnalytics(); return; }
+  if (d.me != null){ UI.me = t.value; try { localStorage.setItem("gg-me", t.value); } catch(err){} renderHome(); return; }
+  if (d.cntu != null){ UI.cntU[d.cntu] = t.value; return; }
+  if (t.id === "cntDate"){ renderCount(UI.T); return; }   // the last open day of the week switches perishables to throw-out
+  if (d.cuname != null || d.cusize != null){ const g = ingOf(d.cuname || d.cusize); if (!g || !isAdmin()) return; const c = countUnit(g);
+    g.cu = {name: d.cuname != null ? (t.value.trim() || c.name) : c.name, size: d.cusize != null ? (+t.value > 0 ? +t.value : c.size) : c.size}; markDirty(); renderIngredients(); return; }
+  if (d.icat != null || d.iperish != null){ const g = S.ingredients.find(x => x.id === (d.icat || d.iperish)); if (!g || !isAdmin()) return;
+    if (d.icat != null) g.cat = t.value; else g.perish = t.checked; t.blur(); markDirty(); renderIngredients(); recalc(); return; }
+  if (t.id === "invIn" && t.files && t.files.length){ readInvoices([...t.files]); return; }
+  if (t.id === "avName"){ UI.av.pid = t.value; UI.av.sel = null; try { localStorage.setItem("gg-avail-pid", t.value); } catch(err){} renderAvailView(); return; }
+  if (t.id === "avNone"){ UI.av.none = t.checked; renderAvailView(); return; }
+  if (d.gname != null){ const x = drinkById(d.gname), n = t.value.trim(); if (!x || !x.sp) return;
+    if (!n || nameTaken(n, x.id)){ toast("gearToast", n ? `${n} is already a drink.` : "A drink needs a name."); t.value = x.name; return; }
+    if (n !== x.sp.name){ x.sp.aliases = [...new Set((x.sp.aliases || []).concat(x.sp.name))]; x.sp.name = n; }   // old name stays an alias so past sales still match
+    markDirty(); renderDrinkGrid(); renderMenu(); return; }
+  if (d.gon != null){ const x = drinkById(d.gon); if (!x) return;
+    setOn(x, t.checked); markDirty(); renderGear(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); return; }
+  if (d.syshow != null){ S.syrHide = t.checked ? S.syrHide.filter(id => id !== d.syshow) : [...new Set(S.syrHide.concat(d.syshow))]; markDirty(); return; }
+  if (d.invact != null){ const [vi, li] = d.invact.split(":").map(Number), l = UI.inv && UI.inv[vi] && UI.inv[vi].lines[li]; if (!l) return; l.act = t.value; l.pack = packFor(l, l.act); renderInvoices(); return; }
+  if (t.tagName === "SELECT" || t.type === "checkbox") onEdit(e);
+  if ($("pane-shifts").contains(t) && d.bind) setTimeout(renderShifts, 0);
+});
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-act]");
+  if (!t){ ["modDlg","diagDlg","admDlg","wmDlg","bldDlg","ckDlg","schDlg"].forEach(id => { if (e.target.id === id) $(id).close(); }); return; }
+  const a = t.dataset.act;
+  if (ADMIN_ACT.test(a) && !isAdmin()){ openAdm(); return; }
+  if (a === "tab"){ showTab(t.dataset.tab); window.scrollTo({top:0}); return; }
+  // admin
+  if (a === "admOpen"){ openAdm(); return; }
+  if (a === "admClose"){ $("admDlg").close(); return; }
+  if (a === "admLock"){ try { localStorage.removeItem("gg-admin"); } catch(err){} UI.admin = false; $("admDlg").close(); applyRole(); renderAll(); return; }
+  // drink bank
+  if (a === "bankSort"){ UI.bank.sort = t.dataset.v; renderBank(); return; }
+  if (a === "wmOpen"){ openWeekMenu(); return; }
+  if (a === "wmClose"){ $("wmDlg").close(); return; }
+  if (a === "wmWk"){ UI.wm.wk = addDays(UI.wm.wk, 7 * +t.dataset.v); UI.wm.day = ""; renderWeekMenu(); return; }
+  if (a === "wmDay"){ UI.wm.day = t.dataset.v; renderWeekMenu(); return; }
+  if (a === "wmAdd" || a === "wmDel"){ const id = t.dataset.id, days = weekDays(UI.wm.wk), tgt = UI.wm.day === "all" ? days : [UI.wm.day];
+    tgt.forEach(d => { const cur = wmIds(d); S.dayMenu[d] = a === "wmAdd" ? [...new Set(cur.concat(id))] : cur.filter(x => x !== id); }); menuChanged(); return; }
+  if (a === "wmReset"){ (UI.wm.day === "all" ? weekDays(UI.wm.wk) : [UI.wm.day]).forEach(d => delete S.dayMenu[d]); menuChanged(); return; }
+  if (a === "bankView"){ UI.bank.view = t.dataset.v; renderBank(); return; }
+  if (a === "bkDel"){ const x = drinkById(t.dataset.id); if (!x || !x.sp || !confirm(`Delete ${x.name}? It has no sales, so nothing else changes.`)) return;
+    S.specials = S.specials.filter(sp => sp !== x.sp); markDirty(); renderBank(); renderHome(); renderMenu(); if (!$("gearPanel").hidden) renderGear(); return; }
+  if (a === "bkSet"){ const x = drinkById(t.dataset.id); if (!x) return; const v = t.dataset.v;
+    setOn(x, v !== "off"); if (v !== "off") setMeta(x, "sec", v);
+    markDirty(); renderBank(); renderDrinkGrid(); renderMenu(); renderHome(); if (!$("gearPanel").hidden) renderGear(); return; }
+  // weekly hours
+  if (a === "wkPop"){ UI.wk.pop = {w:+t.dataset.w, k:+t.dataset.k}; renderWeekGrid(); const f = document.querySelector(".wk-pop [data-act=wkPopSeat]"); if (f) f.focus(); return; }
+  if (a === "wkPopSeat" || a === "wkPopDel"){ const P = UI.wk.pop, bs = P && UI.wk.rows[P.w], b = bs && bs[P.k]; if (!b) return; UI.wkDirty = true;
+    if (a === "wkPopDel"){ bs.splice(P.k, 1); UI.wk.pop = null; } else UI.wk.seats = b.seats = Math.max(1, Math.min(8, b.seats + +t.dataset.v));   // new shifts start with the last count used
+    renderWeekGrid(); const f = UI.wk.pop && document.querySelector(`.wk-pop [data-act=wkPopSeat][data-v="${t.dataset.v}"]`); if (f) f.focus(); return; }
+  if (a === "wkPopClose"){ UI.wk.pop = null; renderWeekGrid(); return; }
+  if (a === "wkDrop"){ const w = +t.dataset.w; if (confirm(`Stop opening on ${WDAY[w]}s from today? Past ${WDAY[w]}s keep their shifts.`)) dropWeekday(w); return; }
+  if (a === "wkClear"){ WK_ROWS.forEach(w => UI.wk.rows[w] = []); UI.wk.pop = null; UI.wkDirty = true; renderWeekGrid(); return; }
+  if (a === "wkReset"){ UI.wk = null; UI.wkDirty = false; renderWeekGrid(); return; }
+  if (a === "wkSave"){ saveWeekRule(); UI.wkDirty = false; return; }
+  // order checklist
+  if (a === "oOrd" || a === "oRec"){ orderTick(t.dataset.id, a === "oOrd" ? "o" : "r"); return; }
+  if (a === "impGuide"){ downloadGuide(); return; }
+  if (a === "oxAdd"){ const o = buyOrder(); (o.extra || (o.extra = [])).push({name:"", qty:1, price:0}); markDirty(); renderBuyList(UI.T);
+    const f = document.querySelector(`[data-ox="${o.extra.length - 1}:name"]`); if (f) f.focus(); return; }
+  if (a === "oxDel" || a === "oxTick"){ const o = buyOrder(), x = (o.extra || [])[+t.dataset.i]; if (!x) return;
+    if (a === "oxDel") o.extra.splice(+t.dataset.i, 1); else { const k = t.dataset.k; x[k] = x[k] ? "" : ymd(new Date()); if (k === "r" && x.r) x.o = x.o || x.r; }
+    markDirty(); renderBuyList(UI.T); recalc(); return; }
+  if (a === "pSafe"){ S.track.safety = t.dataset.v; markDirty(); recalc(); return; }
+  if (a === "oMore"){ const g = ingOf(t.dataset.id); if (!g) return; const n = parseFloat(prompt(`How many more ${packLabel(g)} of ${g.name} did you buy?`, "1")); if (!(n > 0)) return;
+    Store.addStock({type:"receive", item:g.id, qty:n * (+g.size || 0), ts:ymd(new Date()) + "T" + hm(new Date()), at:new Date().toISOString()}).then(() => toast("buyToast", `Added ${n} more to stock and to this week's perishables.`)).catch(e => toast("buyToast", saveError(e))); return; }
+  // log sales
+  if (a === "pick"){ openMod(t.dataset.id); return; }
+  if (a === "pastry"){ addPastry(); return; }
+  if (a === "modClose"){ $("modDlg").close(); UI.mod = null; return; }
+  if (UI.mod && ["mIce","mMilk","mSy","mPumps","mQ"].includes(a)){ const m = UI.mod, v = t.dataset.v;
+    if (a === "mIce") m.ice = v === "1"; if (a === "mMilk") m.milk = v; if (a === "mSy") m.sy = v; if (a === "mPumps") m.pumps = +v;
+    if (a === "mQ") m.q = Math.max(1, Math.min(20, m.q + +t.dataset.d)); renderMod(); return; }
+  if (a === "mAdd"){ addFromMod(); return; }
+  if (a === "tq"){ const l = UI.ticket[+t.dataset.i]; if (l){ l.q += +t.dataset.d; if (l.q <= 0) UI.ticket.splice(+t.dataset.i, 1); } renderTicket(); return; }
+  if (a === "tdel"){ UI.ticket.splice(+t.dataset.i, 1); renderTicket(); return; }
+  if (a === "clearTicket"){ UI.ticket = []; renderTicket(); return; }
+  if (a === "submitTicket"){ submitTicket(); return; }
+  if (a === "undo"){ if (UI.lastSale){ Store.delSale(UI.lastSale).catch(err => toast("toast", saveError(err))); UI.lastSale = null; toast("toast", "Removed that sale."); } return; }
+  if (a === "delSale"){ Store.delSale(t.dataset.id).catch(err => toast("toast", saveError(err))); return; }
+  if (a === "impAll"){ importAll(); return; }
+  if (a === "impCancel"){ UI.imp = null; $("impIn").value = ""; renderImports(); return; }
+  // gear
+  if (a === "gearOpen"){ openGear(); return; }
+  if (a === "gearClose"){ closeSheet("gearPanel"); return; }
+  if (a === "bldOpen"){ openBuilder(); return; }
+  if (a === "bldClose"){ $("bldDlg").close(); return; }
+  if (a === "bkEdit"){ openBuilder(t.dataset.id); return; }
+  if (["bBase","bBase2","bMilk","bSy","bPumps","bFoamSy","bExtra","bExDel","bServe","bOrd","bPrev","bVer"].includes(a)){ const b = UI.bld, r = b.r, v = t.dataset.v;
+    if (a === "bBase"){ r.bases[0] = v; if (r.bases[1] === v) r.bases.pop(); const bt = baseTemplate(v); if (bt && bt.custom && r.bases.length === 1) b.serve = "hot";
+      if (!r.bases.some(id => (baseTemplate(id) || {}).shot)) r.extras = r.extras.filter(x => x.t !== "shot"); }
+    if (a === "bBase2") r.bases[1] = v;
+    if (a === "bMilk") r.milk = v === "milk" ? "" : v;
+    if (a === "bSy"){ r.syrups = r.syrups.some(x => x.id === v) ? r.syrups.filter(x => x.id !== v) : r.syrups.concat({id:v, pumps:r.syrups.length ? 1 : 2}); }
+    if (a === "bPumps"){ const x = r.syrups.find(y => y.id === t.dataset.id); if (x) x.pumps = +v; }
+    if (a === "bFoamSy") r.foam.syrup = v;
+    if (a === "bExtra"){ if (v === "shot" && r.extras.some(x => x.t === "shot")) return; r.extras.push({t:v, ing: v === "shot" ? "" : ((extraItems(v)[0] || {}).id || "")}); }
+    if (a === "bExDel") r.extras.splice(+t.dataset.i, 1);
+    if (a === "bServe"){ b.serve = v; if (v === "hot") r.shaken = false; }
+    if (a === "bPrev") b.pv = v;
+    if (a === "bOrd"){ const keys = recipeSteps(r, b.pv).filter(x => !x.top && x.type !== "step").map(x => x.k), i = keys.indexOf(t.dataset.k), j = i + +v;
+      if (i < 0 || j < 0 || j >= keys.length) return; [keys[i], keys[j]] = [keys[j], keys[i]]; r.order = keys; }
+    if (a === "bVer"){ const sp = S.specials.find(x => x.id === b.edit), ver = sp && (sp.versions || [])[+t.dataset.i]; if (!ver) return;
+      Object.assign(b, {r:JSON.parse(JSON.stringify(ver.recipe)), name:ver.name, price:String(ver.price), serve:ver.serve || b.serve}); toast("bldToast", "Loaded that version. Save to use it."); }
+    renderBuilder(); if (a === "bVer") toast("bldToast", "Loaded that version. Save to use it."); return; }
+  if (a === "bNewBase"){ UI.nb = UI.nb ? null : {name:"", price:"", size:"", unit:"oz", oz:8}; renderBuilder(); return; }
+  if (a === "nbCancel"){ UI.nb = null; renderBuilder(); return; }
+  if (a === "nbSave"){ saveNewBase(); return; }
+  if (a === "bNewSy"){ UI.ns = UI.ns ? null : {name:"", price:"", size:"33.8"}; renderBuilder(); return; }
+  if (a === "nsCancel"){ UI.ns = null; renderBuilder(); return; }
+  if (a === "nsSave"){ saveNewSyrup(); return; }
+  if (a === "bAdd"){ saveRecipe(); return; }
+  // menu
+  if (a === "diagram"){ openDiagram(t.dataset.id); return; }
+  if (a === "diagClose"){ $("diagDlg").close(); return; }
+  // analytics
+  if (a === "anRange"){ UI.an.preset = t.dataset.v; renderAnalytics(); return; }
+  if (a === "ckTog"){ if (!UI.me){ const sel = document.querySelector("[data-me]"); if (sel){ sel.focus(); sel.classList.add("need"); } return; }
+    const C = S.checks[t.dataset.d] || (S.checks[t.dataset.d] = {}), L = C[t.dataset.k] || (C[t.dataset.k] = {d:{}}); L.d = L.d || {};
+    if (L.d[t.dataset.i]) delete L.d[t.dataset.i]; else L.d[t.dataset.i] = {by:UI.me, at:hm(new Date())};
+    markDirty(); renderHome(); const b = document.querySelector(`[data-act="ckTog"][data-i="${CSS.escape(t.dataset.i)}"][data-d="${t.dataset.d}"]`); if (b) b.focus(); return; }
+  if (a === "ckSkip"){ if (!UI.me){ const sel = document.querySelector("[data-me]"); if (sel){ sel.focus(); sel.classList.add("need"); } return; }
+    const why = prompt(`Skip the ${LIST_LBL[t.dataset.k].toLowerCase()} checklist? Say why, for the record.`); if (why == null) return;
+    const C = S.checks[t.dataset.d] || (S.checks[t.dataset.d] = {}); C[t.dataset.k] = Object.assign(C[t.dataset.k] || {d:{}}, {skip:{by:UI.me, at:hm(new Date()), why:why.trim()}}); markDirty(); renderHome(); return; }
+  if (a === "ckEdit"){ openCkEdit(); return; }
+  if (a === "ckSave"){ saveCkEdit(); return; }
+  if (a === "ckClose"){ $("ckDlg").close(); return; }
+  if (a === "anCurve"){ UI.curve = t.dataset.v; renderAnalytics(); return; }
+  if (a === "addCharge"){ S.charges.push({name:"", amount:0, date:ymd(new Date())}); markDirty(); renderCharges(); recalc(); const f = document.querySelector(`[data-bind="charges.${S.charges.length - 1}.name"]`); if (f) f.focus(); return; }
+  if (a === "delCharge"){ S.charges.splice(+t.dataset.i, 1); markDirty(); renderCharges(); recalc(); return; }
+  // inventory
+  if (a === "invCancel"){ UI.inv = null; $("invIn").value = ""; renderInvoices(); return; }
+  if (a === "invSave"){ saveInvoices(); return; }
+  if (a === "cntSave"){ saveCount(); return; }
+  if (a === "cntEdit"){ UI.cntEdit = !UI.cntEdit; if (document.activeElement) document.activeElement.blur(); renderCount(UI.T); return; }
+  if (a === "niAdd"){ addInvItem(); return; }
+  if (a === "cntItem"){ UI.cntItem = t.dataset.id || null; if (document.activeElement) document.activeElement.blur(); renderCount(UI.T); renderIngredients(); return; }
+  if (a === "cntDel"){ const id = t.dataset.id, pkg = S.packaging.some(x => x.id === id), list = pkg ? S.packaging : S.ingredients, i = list.findIndex(x => x.id === id), g = list[i]; if (!g) return;
+    list.splice(i, 1); UI.cntItem = null; UI.removed = {pkg, item:g, idx:i};
+    $("cntToast").innerHTML = `Deleted ${esc(g.name)}. <button data-act="undoRemove">Undo</button>`; markDirty(); renderIngredients(); renderDrinkGrid(); recalc(); return; }
+  if (a === "delStock"){ Store.delStock(t.dataset.id).catch(err => toast("cntToast", saveError(err))); return; }
+  if (a === "editRow"){ const list = t.dataset.kind === "ing" ? S.ingredients : S.packaging;
+    UI.editRow = t.dataset.kind + "-" + t.dataset.i; UI.rowBackup = JSON.stringify(list[+t.dataset.i]);
+    renderIngredients(); const f = document.querySelector("tr.editing .in"); if (f) f.focus(); return; }
+  if (a === "doneRow" || a === "cancelRow"){ const list = t.dataset.kind === "ing" ? S.ingredients : S.packaging, i = +t.dataset.i;
+    if (a === "cancelRow" && UI.rowBackup) list[i] = JSON.parse(UI.rowBackup); else if (list[i]) list[i].url = cleanUrl(list[i].url);
+    UI.editRow = null; UI.rowBackup = null; markDirty(); renderIngredients(); renderDrinkGrid(); recalc(); return; }
+  if (a === "addIng" || a === "addPkg"){ const pkg = a === "addPkg", list = pkg ? S.packaging : S.ingredients, id = "c" + Date.now().toString(36);
+    list.push(pkg ? {id, name:"New packaging", price:0, size:1000, kit:"both", vendor:"", url:""} : {id, kind:"core", name:"New ingredient", price:0, size:1, unit:"oz", vendor:"", url:"", vol:1, custom:true});
+    UI.editRow = (pkg ? "pkg-" : "ing-") + (list.length - 1); UI.rowBackup = null; markDirty(); renderIngredients();
+    setTimeout(() => { const f = document.querySelector("tr.editing .in"); if (f){ f.focus(); f.select(); } }, 0); return; }
+  if (a === "delIng" || a === "delPkg"){ const pkg = a === "delPkg", list = pkg ? S.packaging : S.ingredients, i = +t.dataset.i, g = list[i]; if (!g) return;
+    list.splice(i, 1); UI.editRow = null; UI.removed = {pkg, item:g, idx:i};
+    $("ingToast").innerHTML = `Removed ${esc(g.name)}. <button data-act="undoRemove">Undo</button>`; markDirty(); renderIngredients(); recalc(); return; }
+  if (a === "undoRemove"){ const r = UI.removed; if (!r) return; (r.pkg ? S.packaging : S.ingredients).splice(r.idx, 0, r.item);
+    $("ingToast").textContent = $("cntToast").textContent = `Restored ${r.item.name}.`; UI.removed = null; markDirty(); renderIngredients(); recalc(); return; }
+  if (a === "buyAll"){ UI.buyAll = t.dataset.v === "1"; renderBuyList(UI.T); return; }
+  if (a === "buyReset"){ const o = buyOrder(); Object.keys(o.qty).forEach(id => { if (!o.st[id]) delete o.qty[id]; }); markDirty(); renderBuyList(UI.T); toast("buyToast", "Quantities set back to the suggested amounts."); return; }
+  if (a === "availCopy"){ copyAvail(t.dataset.w); return; }
+  if (a === "avTog"){ const d = t.dataset.d, i = +t.dataset.i, s = UI.av.sel[d]; if (!s) return;
+    s[i] = s[i] ? false : shiftFull(UI.av.wk || nextAvailWeek(), d, i, shiftsOf(d)[i], UI.av.pid) ? "bk" : true; renderAvailView(); return; }
+  if (a === "schView"){ openSchedule(); return; }
+  if (a === "gAuto"){ const sp = S.specials.find(x => x.id === t.dataset.id); if (!sp) return; sp.ownPrice = false; sp.price = autoPrice(recipeOf(sp)); markDirty(); renderGear(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); return; }
+  if (a === "schCopy"){ copySchedule(); return; }
+  if (a === "schClose"){ $("schDlg").close(); return; }
+  if (a === "avSave"){ saveAvail(); return; }
+  if (a === "dpClose"){ closeDay(); return; }
+  if (a === "dpShow"){ openDay(t.dataset.d); return; }
+  if (a === "dpOpen"){ paintDates([UI.dayPanel], t.dataset.v); renderDayPanel(); return; }
+  if (a === "dpCloseDay"){ paintDates([UI.dayPanel], "closed"); renderDayPanel(); return; }
+  if (a === "dpAs"){ const n = t.dataset.n; setShiftNames(UI.dayPanel, +t.dataset.i, arr => arr.includes(n) ? arr : arr.concat(n)); return; }
+  if (a === "dpUn"){ const n = t.dataset.n; setShiftNames(UI.dayPanel, +t.dataset.i, arr => arr.filter(x => x !== n)); return; }
+  if (a === "dpAdd"){ const i = +t.dataset.i, inp = document.querySelector(`[data-dpname="${i}"]`), n = inp ? inp.value.trim() : ""; if (!n) return;
+    if (!person(n)) S.team.push({id:stableId(n), name:n, email:"", phone:""});
+    setShiftNames(UI.dayPanel, i, arr => arr.includes(n) ? arr : arr.concat(n)); return; }
+  if (a === "mxWk"){ const v = +t.dataset.v; UI.mxWk = v === 0 ? weekOf(ymd(new Date())) : addDays(UI.mxWk, 7 * v); renderMatrix(); return; }
+  if (a === "mxTog"){ const d = t.dataset.d, i = +t.dataset.i, n = t.dataset.n; if (d < ymd(new Date())) return;
+    const was = namesIn(ensureDay(d).names[i]).includes(n), q = shiftsOf(d)[i];
+    setShiftNames(d, i, arr => was ? arr.filter(x => x !== n) : arr.concat(n));
+    toast("staffToast", was ? `Took ${n} off ${fmtD(d)}.` : availFor(d, n, q) ? `Put ${n} on ${fmtD(d)}, ${tfmt(q.start)} to ${tfmt(q.end)}.` : `Put ${n} on ${fmtD(d)}, but they aren't marked available then.`);
+    const b = document.querySelector(`[data-act="mxTog"][data-d="${d}"][data-i="${i}"][data-n="${CSS.escape(n)}"]`); if (b) b.focus(); return; }
+  if (a === "pfOpen"){ openPf(t.dataset.id); return; }
+  if (a === "pfClose"){ closeSheet("pfPanel"); return; }
+  if (a === "pfSave"){ const p = pfPerson(); if (!p) return; const v = k => (document.querySelector(`[data-pf="${k}"]`).value || "").trim(), name = v("name"), email = v("email");
+    if (!name){ toast("pfToast", "Enter a name."); return; }
+    if (team().some(x => x !== p && x.name === name)){ toast("pfToast", "Someone on the team already has that name."); return; }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ toast("pfToast", "That email doesn't look right."); return; }
+    if (name !== p.name) Object.values(S.days || {}).forEach(x => { x.names = (x.names || []).map(v => namesIn(v).map(m => m === p.name ? name : m).join(", ")); });   // shifts are assigned by name
+    Object.assign(p, {name, email, phone:v("phone"), role:v("role"), year:v("year")});
+    saveStaff(p).then(() => { renderStaff(); toast("pfToast", "Saved."); }).catch(err => toast("pfToast", saveError(err))); return; }
+  if (a === "pfTrained"){ const p = pfPerson(); if (!p) return; p.trained = t.checked; saveStaff(p); renderMatrix(); renderTeam(); renderDayPanel(); renderHome(); return; }
+  if (a === "pfDel"){ const p = pfPerson(); if (!p || !confirm(`Remove ${p.name} from the team? Shifts they already worked stay.`)) return;
+    closeSheet("pfPanel"); delStaff(p).then(renderStaff); return; }
+  if (a === "teamImport"){ const rows = parseStaff($("impText").value); if (!rows.length){ toast("staffToast", "Nothing to import. Paste one person per line."); return; }
+    let added = 0, updated = 0;
+    rows.forEach(r => { const p = team().find(x => (r.email && x.email === r.email) || x.name === r.name);
+      if (p){ updated++; Object.assign(p, r, {email:r.email || p.email}); } else { added++; S.team.push(Object.assign({id:stableId(r.name), phone:""}, r)); } });
+    markDirty(); $("impText").value = ""; $("teamImport").open = false; renderStaff(); toast("staffToast", `Imported ${rows.length}: ${added} new, ${updated} updated.`); return; }
+  if (a === "teamAdd"){ const inp = $("teamName"), n = inp.value.trim(); if (!n) return;
+    if (person(n)){ toast("staffToast", `${n} is already on the team.`); return; }
+    const p = {id:stableId(n), name:n, email:"", phone:"", rule:{}, off:[]}; inp.value = "";
+    saveStaff(p).then(() => { renderStaff(); openPf(p.id); }); return; }
+  if (a === "calBrush"){ UI.brush = t.dataset.v; renderCal(); return; }
+  if (a === "calMove"){ UI.calOff = (UI.calOff || 0) + 3 * +t.dataset.v; renderCal(); return; }
+  if (a === "ruleDel"){ const rl = S.cal.rules.splice(+t.dataset.i, 1)[0]; if (!rl) return;
+    const still = new Set(S.cal.rules.flatMap(ruleDates)); S.cal.closed = S.cal.closed.filter(d => still.has(d));
+    syncCalDates(); markDirty(); recalc(); toast("calToast", "Removed the rule and the days it added."); return; }
+});
+document.addEventListener("mousedown", e => { if (e.target.id === "dayPanel") closeDay(); if (["pfPanel","gearPanel"].includes(e.target.id)) closeSheet(e.target.id); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !$("gearPanel").hidden){ closeSheet("gearPanel"); return; }
+  if (e.key === "Escape" && UI.pf){ closeSheet("pfPanel"); return; }
+  if (e.key === "Escape" && UI.dayPanel){ closeDay(); return; }
+  if (e.key === "Enter" && e.target.dataset && e.target.dataset.dpname != null){ const b = document.querySelector(`[data-act="dpAdd"][data-i="${e.target.dataset.dpname}"]`); if (b) b.click(); return; }
+  if (e.key === "Enter" && e.target.id === "teamName"){ const b = document.querySelector('[data-act="teamAdd"]'); if (b) b.click(); return; }
+  const tr = e.target.closest && e.target.closest("tr.editing"); if (!tr) return;
+  if (e.key === "Enter" && e.target.tagName === "INPUT"){ e.preventDefault(); const b = tr.querySelector("[data-act=doneRow]"); if (b) b.click(); }
+  if (e.key === "Escape"){ const b = tr.querySelector("[data-act=cancelRow]"); if (b) b.click(); }
+});
+$("modDlg").addEventListener("close", () => { UI.mod = null; });
+document.addEventListener("submit", e => { const k = e.target.dataset && e.target.dataset.adm; if (k){ e.preventDefault(); admSubmit(); } });
+const ADMIN_ACT = /^(gear|bld|ns[A-Z]|b[A-Z]|nb[A-Z]|bk[A-Z]|bank|mxTog|pf[A-Z]|team[A-Z]|wk[A-Z]|cal[A-Z]|rule[A-Z]|dp(Open|CloseDay|As|Un|Add)|addCharge|delCharge|anRange|ckEdit|ckSave|imp[A-Z]|wm[A-Z]|cntEdit|cntItem|cntDel|undoRemove|gAuto|oMore|pSafe)/;
+
+/* ------------------------------------------------------------------ init */
+{ const q = new URLSearchParams(location.search);
+  if (q.has("avail")){ UI.availMode = true; document.body.classList.add("avail-mode"); $("availView").hidden = false;
+    const w = q.get("avail"); let pid = ""; try { pid = localStorage.getItem("gg-avail-pid") || ""; } catch(e){}
+    UI.av = {wk: /^\d{4}-\d{2}-\d{2}$/.test(w || "") ? weekOf(w) : "", pid}; } }
+try { UI.me = localStorage.getItem("gg-me") || ""; } catch(e){ UI.me = ""; }
+{ let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if ($("pane-analytics").classList.contains("on")) renderAnalytics(); }, 150); }); }
+if (!UI.availMode) setInterval(() => { if (!document.hidden) renderHome(); }, 60000);
+applyConfig(CAFE_DATA, true);
+if (!UI.availMode) renderAll(); else renderAvailView();
+initStore();
+})();
