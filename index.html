@@ -956,6 +956,10 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
 .wk-drop:hover{opacity:1}
 .wkg .wk-r{grid-template-columns:58px minmax(0,1fr)}
 .wkg.ro .wk-r{grid-template-columns:52px minmax(0,1fr)}
+.cnt-pen{width:26px;height:26px;font-size:14px;color:var(--tint)}
+.cnt-item{padding:12px 0;border-bottom:.5px solid var(--sep)}
+.cnt-item .in{background:var(--tile)}
+.mxc.av{background:color-mix(in srgb, var(--green) 45%, var(--tile));color:#fff}
 
 </style>
 <meta name="robots" content="noindex, nofollow">
@@ -1067,7 +1071,7 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
   <div class="sec" style="margin-top:18px">
     <div class="tile-h"><div class="wknav"><button class="x" data-act="mxWk" data-v="-1" aria-label="Previous week">‹</button><h2 id="mxTitle">Staffing</h2><button class="x" data-act="mxWk" data-v="1" aria-label="Next week">›</button></div><button class="btn ghost sm" data-act="mxWk" data-v="0">This week</button></div>
     <div id="availBox"></div>
-    <p class="note-sm adm" style="margin:0 0 10px">Green is available: from the availability form for that week, otherwise each person's usual times minus their weeks off. Tap a cell to put someone on a shift and tap again to take them off. Bold names have finished barista training.</p>
+    <p class="note-sm adm" style="margin:0 0 10px">Green is available, from what each person put in that week's availability form. – means they said no, ? means they haven't answered yet. Tap a cell to put someone on a shift and tap again to take them off. Bold names have finished barista training.</p>
     <p class="note-sm staff" style="margin:0 0 10px">✓ marks who is on each shift. Use the link above to tell us when you can work.</p>
     <div id="mxGrid"></div>
     <p class="toast" id="staffToast" role="status"></p>
@@ -2229,9 +2233,19 @@ function renderCount(T){
             ${isIng ? `<select class="in txt" data-icat="${esc(r.id)}" aria-label="${esc(r.name)} category">${ING_CATS.map(([k,l]) => `<option value="${k}"${ingCat(g) === k ? " selected" : ""}>${l}</option>`).join("")}</select>` : `<span class="note-sm">Packaging</span>`}
             <label class="chk">${isIng ? `<input type="checkbox" data-iperish="${esc(r.id)}"${per ? " checked" : ""}> Perishable` : ""}</label>
             <span class="cuedit">Counted in <input class="in txt" data-cuname="${esc(r.id)}" value="${esc(c.name)}" aria-label="${esc(r.name)}, counted in"> holding <input class="in" type="number" min="0" step="any" data-cusize="${esc(r.id)}" value="${+c.size}" aria-label="${esc(r.name)}, one holds"> ${esc(g.unit || "each")}</span></div>`;
+        if (UI.cntItem === r.id && isAdmin()){ const L = isIng ? "ingredients" : "packaging", i = (isIng ? S.ingredients : S.packaging).findIndex(x => x.id === r.id);
+          return `<div class="cnt-item"><div class="ingform">
+            <label class="wide">Name<input class="in txt" data-bind="${L}.${i}.name" value="${esc(g.name)}"></label>
+            ${isIng ? `<label class="wide">Category<select class="in txt" data-icat="${esc(r.id)}">${ING_CATS.map(([k,l]) => `<option value="${k}"${ingCat(g) === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>` : ""}
+            <label>Counted in<input class="in txt" data-cuname="${esc(r.id)}" value="${esc(c.name)}"></label>
+            <label>One holds (${esc(g.unit || "each")})<input class="in" type="number" min="0" step="any" data-cusize="${esc(r.id)}" value="${+c.size}"></label>
+            <label>${isIng ? "Pack" : "Case"} price<input class="in" type="number" min="0" step="0.01" data-bind="${L}.${i}.price" data-type="num" value="${+g.price || 0}"></label>
+            <label>${isIng ? `Pack size (${esc(g.unit || "each")})` : "Count per case"}<input class="in" type="number" min="0" step="any" data-bind="${L}.${i}.size" data-type="num" value="${+g.size || 0}"></label>
+            ${isIng ? `<label class="chk wide"><input type="checkbox" data-iperish="${esc(r.id)}"${per ? " checked" : ""}> Perishable: weekly cost counts what was bought</label>` : ""}
+            </div><div class="lnk" style="margin-top:10px"><button class="btn sm" data-act="cntItem" data-id="">Done</button><button class="btn ghost sm" data-act="cntDel" data-id="${esc(r.id)}">Delete ${esc(r.name)}</button></div></div>`; }
         const u = UI.cntU[r.id] || "cu", n = c.size > 0 ? Math.max(0, r.oh) / c.size : 0, per2 = (+g.size || 0) / c.size;
         const have = r.oh > 1e-9 ? `${n >= 10 ? F.int(n) : (Math.round(n * 10) / 10)} ${unitPlural(c.name, Math.round(n * 10) / 10)} left` : "None left";
-        return `<div class="cnt"><div class="nm"><b>${esc(r.name)}</b><small>${esc(cuLabel(g))}</small></div>
+        return `<div class="cnt"><div class="nm"><b>${esc(r.name)}</b><button class="x cnt-pen adm" data-act="cntItem" data-id="${esc(r.id)}" title="Edit or delete ${esc(r.name)}" aria-label="Edit or delete ${esc(r.name)}">✎</button><small>${esc(cuLabel(g))}</small></div>
           <span class="have${warn(r) ? " " + r.cls : ""}">${have}${warn(r) ? ` · ${r.status.toLowerCase()}` : ""}</span>
           <input class="in" type="number" min="0" step="any" inputmode="decimal" data-cnt="${esc(r.id)}" value="${esc(UI.cnt[r.id] != null ? UI.cnt[r.id] : "")}" placeholder="Count" aria-label="${esc(r.name)}, how many ${unitPlural(c.name, 2)} left">
           <select class="in txt" data-cntu="${esc(r.id)}" aria-label="${esc(r.name)}, counted in"><option value="cu"${u === "cu" ? " selected" : ""}>${esc(unitPlural(c.name, 2))}</option>${per2 > 1.05 ? `<option value="pack"${u === "pack" ? " selected" : ""}>full cases (${F.int(per2)})</option>` : ""}<option value="units"${u === "units" ? " selected" : ""}>${esc(g.unit || "each")}</option></select></div>`; }).join("")
@@ -2608,7 +2622,7 @@ function paintDates(ds, brush){
 
 
 /* ------------------------------------------------ team, availability, day panel */
-// A profile is {id, name, email, phone, rule:{weekday:[{s,e}]}, off:[Mondays of weeks off]}. The rule repeats every week.
+// A profile is {id, name, email, phone, role, year, trained}. Availability comes only from each week's form (avail/<Monday>_<id>).
 // Profiles live in the shared settings as S.team, so everyone with the link sees and edits the whole team. No sign-in.
 const team = () => S.team;
 const isMgr = () => true;
@@ -2626,33 +2640,23 @@ function covers(r, q){   // back-to-back ranges join up, so 1-4 plus 4-7 covers 
   return e !== null && s <= q.start && q.end <= e;
 }
 function parseStaff(text){   // "Name  email  2028  Barista, Support  Saturday: 10:00 AM - 1:00 PM, Sunday: ..." per line
-  const hr = t => { const m = /(\d{1,2}):(\d{2})\s*([AP])M/i.exec(t); return m ? (+m[1] % 12) + (/p/i.test(m[3]) ? 12 : 0) + (+m[2]) / 60 : null; };
   return text.split(/\r?\n/).map(line => line.split(/\t|\s{2,}/).map(t => t.trim()).filter(Boolean)).filter(f => f.length).map(f => {
-    const at = f.findIndex(t => /@/.test(t)), p = {name:f.slice(0, Math.max(at, 1)).join(" "), email:at >= 0 ? f[at].toLowerCase() : "", year:"", role:"", rule:{}};
+    const at = f.findIndex(t => /@/.test(t)), p = {name:f.slice(0, Math.max(at, 1)).join(" "), email:at >= 0 ? f[at].toLowerCase() : "", year:"", role:""};
     f.slice(at + 1).forEach(t => {
       if (/^\d{4}$/.test(t)){ p.year = t; return; }
       if (/^trained$/i.test(t)){ p.trained = true; return; }
-      const slots = t.split(/,\s*(?=[A-Za-z]+day\s*:)/).map(x => /^\s*(\w+day)\s*:\s*(.+?)\s*[-–]\s*(.+)$/i.exec(x)).filter(Boolean);
-      if (!slots.length){ p.role = t; return; }
-      slots.forEach(m => { const w = WDAY.findIndex(d => d.toLowerCase() === m[1].toLowerCase()), a = hr(m[2]), b = hr(m[3]);
-        if (w >= 0 && a !== null && b !== null && b > a) (p.rule[w] || (p.rule[w] = [])).push({s:a, e:b}); }); });
+      if (!/^\w+day\s*:/i.test(t)) p.role = t; });   // availability columns are skipped: it comes from each week's form
     return p; }).filter(p => p.name);
 }
-function availFor(d, name, q){ const p = person(name); if (!p) return false;
-  const a = availDoc(weekOf(d), p.id); if (a) return !a.none && covers((a.days || {})[d], q);   // that week's form answer wins
-  return !(p.off || []).includes(weekOf(d)) && covers((p.rule || {})[toDate(d).getDay()], q); }
+function availFor(d, name, q){ const p = person(name), a = p && availDoc(weekOf(d), p.id); return !!a && !a.none && covers((a.days || {})[d], q); }   // only that week's form answer counts
+const answered = (d, name) => { const p = person(name); return !!(p && availDoc(weekOf(d), p.id)); };
 const availOn = (d, name) => shiftsOf(d).some(q => availFor(d, name, q));
-const offWeeks = () => { const w = weekOf(ymd(new Date())); return [0,1,2,3,4,5,6,7].map(i => addDays(w, 7 * i)); };   // this week and the next seven; past weeks are locked
-function ruleText(p){ const r = p.rule || {};
-  const parts = [1,2,3,4,5,6,0].filter(w => (r[w] || []).length).map(w => DOW[w] + " " + r[w].map(x => `${tfmt(x.s)}–${tfmt(x.e)}`).join(", "));
-  return parts.length ? parts.join(" · ") : "No usual availability yet"; }
 async function saveStaff(p){
   p.email = String(p.email || "").trim().toLowerCase();
   if (!p.id) p.id = newId();
   if (!S.team.includes(p)) S.team.push(p);
   markDirty();
 }
-async function saveOff(p){ markDirty(); }
 async function delStaff(p){ S.team = S.team.filter(x => x !== p); markDirty(); }
 function renderStaff(){ renderMatrix(); renderTeam(); if (UI.pf && !$("pfPanel").contains(document.activeElement && document.activeElement.tagName === "INPUT" ? document.activeElement : null)) renderPf(); renderDayPanel(); }
 function renderMatrix(){
@@ -2667,14 +2671,13 @@ function renderMatrix(){
   box.innerHTML = `<div class="scroll"><table class="mx"><thead><tr><th class="nm" rowspan="2">Name</th>${days.map(d => `<th class="d0" colspan="${shiftsOf(d).length}">${fmtD(d)}</th>`).join("")}</tr>
     <tr>${cols.map(c => `<th class="${c.first ? "d0" : ""}">${tfmt(c.q.start)}<br>${tfmt(c.q.end)}<div class="${c.on.length >= c.q.seats ? "status-ok" : "neg-t"}">${c.on.length}/${c.q.seats}</div></th>`).join("")}</tr></thead>
     <tbody>${people.map(n => `<tr><th class="nm" scope="row" title="${esc(n)}">${nameH(n)}</th>${cols.map(c => { const as = c.on.includes(n), av = availFor(c.d, n, c.q);
-      return `<td class="${c.first ? "d0" : ""}"><button class="mxc${as ? " as" : ""}${av ? " av" : " na"}" data-act="mxTog" data-d="${c.d}" data-i="${c.i}" data-n="${esc(n)}" aria-pressed="${as}" aria-label="${esc(n)}, ${fmtD(c.d)} ${tfmt(c.q.start)} to ${tfmt(c.q.end)}, ${as ? "on this shift" : av ? "available" : "not available"}"${c.d < today ? " disabled" : ""}>${as ? "✓" : av ? "" : "–"}</button></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
+      return `<td class="${c.first ? "d0" : ""}"><button class="mxc${as ? " as" : ""}${av ? " av" : " na"}" data-act="mxTog" data-d="${c.d}" data-i="${c.i}" data-n="${esc(n)}" aria-pressed="${as}" aria-label="${esc(n)}, ${fmtD(c.d)} ${tfmt(c.q.start)} to ${tfmt(c.q.end)}, ${as ? "on this shift" : av ? "available" : answered(c.d, n) ? "not available" : "hasn't sent availability for this week"}"${c.d < today ? " disabled" : ""}>${as ? "✓" : av ? "" : answered(c.d, n) ? "–" : "?"}</button></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 function renderTeam(){
   const box = $("teamList"); if (!box) return;
   $("teamAddRow").hidden = $("teamImport").hidden = !isMgr();
-  const cw = weekOf(ymd(new Date()));
-  box.innerHTML = team().length ? teamSorted().map(p => { const off = (p.off || []).filter(w => w >= cw).sort();
-    return `<button class="ptile${p.trained ? " tr" : ""}" data-act="pfOpen" data-id="${esc(p.id)}"><span class="pn">${esc(p.name)}</span>${p.trained ? `<span class="note-sm status-ok">Barista trained</span>` : ""}<span class="note-sm">${esc([p.role, p.year && "Class of " + p.year].filter(Boolean).join(" · "))}</span><span class="note-sm">${esc([p.email, p.phone].filter(Boolean).join(" · ") || "No contact details yet")}</span><span class="note-sm">${esc(ruleText(p))}</span>${off.length ? `<span class="note-sm neg-t">Off the week of ${off.map(fmtD).join(", ")}</span>` : ""}</button>`; }).join("")
+  box.innerHTML = team().length ? teamSorted().map(p => {
+    return `<button class="ptile${p.trained ? " tr" : ""}" data-act="pfOpen" data-id="${esc(p.id)}"><span class="pn">${esc(p.name)}</span>${p.trained ? `<span class="note-sm status-ok">Barista trained</span>` : ""}<span class="note-sm">${esc([p.role, p.year && "Class of " + p.year].filter(Boolean).join(" · "))}</span><span class="note-sm">${esc([p.email, p.phone].filter(Boolean).join(" · ") || "No contact details yet")}</span></button>`; }).join("")
     : `<p class="empty">No one yet. Add the people who work shifts.</p>`;
 }
 const pfPerson = () => team().find(x => x.id === UI.pf);
@@ -2684,12 +2687,7 @@ function renderPf(){
   const mgr = isMgr(), link = [p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : "", p.phone ? `<a href="tel:${esc(p.phone.replace(/[^\d+]/g, ""))}">${esc(p.phone)}</a>` : ""].filter(Boolean).join(" · ");
   box.innerHTML = `<div class="tile-h"><h2 id="pfTitle">${esc(p.name)}</h2><button class="x" data-act="pfClose" aria-label="Close">✕</button></div>${link ? `<p class="tw" style="margin:6px 0 0">${link}</p>` : ""}`
     + (mgr ? `<div class="pf-f"><label>Name<input class="in txt" data-pf="name" value="${esc(p.name)}"></label><label>Email<input class="in txt" type="email" data-pf="email" value="${esc(p.email || "")}" autocomplete="off"></label><label>Phone<input class="in txt" type="tel" data-pf="phone" value="${esc(p.phone || "")}" autocomplete="off"></label><label>Role<input class="in txt" data-pf="role" value="${esc(p.role || "")}" placeholder="Barista, Support"></label><label>Class year<input class="in txt" data-pf="year" value="${esc(p.year || "")}" inputmode="numeric"></label><label class="chk"><input type="checkbox" data-act="pfTrained"${p.trained ? " checked" : ""}> Completed barista training</label><div><button class="btn sm" data-act="pfSave">Save details</button></div></div>` : "")
-    + `<p class="toast" id="pfToast" role="status"></p><h3>Usual availability</h3>`
-    + (mgr ? `<p class="note-sm" style="margin:-4px 0 8px">Tap the shifts they can usually work. This repeats every week.</p>` + [1,2,3,4,5,6,0].map(w => { const r = (p.rule || {})[w];
-        return `<div class="sh-slot"><div class="top"><span>${WDAY[w]}</span></div><div class="pchips">${dowShifts(w).map((q,i) => { const on = covers(r, q); return `<button class="pc ${on ? "av" : "off"}" data-act="pfRule" data-w="${w}" data-i="${i}" aria-pressed="${on}">${tfmt(q.start)} to ${tfmt(q.end)}</button>`; }).join("")}</div></div>`; }).join("")
-      : `<p class="tw">${esc(ruleText(p))}</p><p class="note-sm">Ask a manager to change your usual days and times.</p><p class="tw">Barista training: ${p.trained ? "completed" : "not yet"}</p>`)
-    + `<h3>Weeks off</h3><p class="note-sm" style="margin:-4px 0 8px">Tap a week to take it off. Red weeks are off, so ${mgr ? "they" : "you"} won't show as available.</p>
-      <div class="pchips">${offWeeks().map(w => { const off = (p.off || []).includes(w); return `<button class="pc ${off ? "off" : "av"}" data-act="pfOff" data-w="${w}" aria-pressed="${off}">Week of ${fmtD(w)}</button>`; }).join("")}</div>`
+    + `<p class="toast" id="pfToast" role="status"></p>`
     + (mgr ? `<div style="margin-top:22px"><button class="btn ghost sm" data-act="pfDel">Remove ${esc(p.name)}</button></div>` : "");
 }
 function openSheet(id){ $(id).hidden = false; const f = $(id).querySelector("button"); if (f) f.focus(); }
@@ -2720,7 +2718,7 @@ function renderDayPanel(){
       <div class="pchips">${cand.map(n => `<button class="pc add${onShift[n] ? " busy" : ""}" data-act="dpAs" data-i="${i}" data-n="${esc(n)}"${onShift[n] ? ` title="Also on shift ${onShift[n].map(k => k + 1).join(" and ")}"` : ""}>${nameH(n)}${onShift[n] ? ` (shift ${onShift[n].map(k => k + 1).join(", ")})` : ""}</button>`).join("")}</div>
       <div class="row2" style="margin-top:8px"><input class="in txt" list="peopleList" data-dpname="${i}" placeholder="Someone else" aria-label="Add a name to shift ${i + 1}" style="font-size:14px"><button class="btn ghost sm" data-act="dpAdd" data-i="${i}">Add</button></div></div>`;
   }
-  h += `<h3>Who's available ${toDate(d).toLocaleDateString("en-US", {weekday:"long"})}</h3><p class="note-sm" style="margin:-4px 0 6px">From the availability form for this week, or each person's usual times and weeks off.</p>
+  h += `<h3>Who's available ${toDate(d).toLocaleDateString("en-US", {weekday:"long"})}</h3><p class="note-sm" style="margin:-4px 0 6px">From this week's availability form. People who haven't answered it show as unavailable.</p>
     <div class="pchips">${people.map(n => `<span class="pc ${availOn(d, n) ? "av" : "off"}">${nameH(n)}${onShift[n] ? ` · shift ${onShift[n].map(k => k + 1).join(", ")}` : ""}</span>`).join("") || `<span class="empty">${isMgr() ? "Add people to the team under Staffing first." : "Sign in as a manager to see who's available."}</span>`}</div>
     ${s ? `<div class="dsales"><b>${F.int(s.n)}</b> drinks, <b>${F.usd0(s.rev)}</b>, ${F.int(s.orders)} orders.</div>` : ""}`;
   box.innerHTML = h;
@@ -2732,7 +2730,7 @@ function setShiftNames(d, i, fn){ const x = ensureDay(d); x.names[i] = fn(namesI
 /* ------------------------------------------------------------------ availability link
    One link per week, posted in the group chat: ?avail=<Monday>. Each person picks their name and taps the shifts they can work.
    Answers save to their own document, avail/<Monday>_<person id>, so people filling it in at the same time never overwrite each other.
-   For that week an answer replaces the person's usual availability. */
+   These answers are the only availability the portal uses. */
 const availDoc = (wk, pid) => (Store.avail || []).find(a => a.week === wk && a.pid === pid) || null;
 const availUrl = wk => location.origin + location.pathname + "?avail=" + wk;
 const weekDays = wk => [0,1,2,3,4,5,6].map(i => addDays(wk, i)).filter(d => S.track.dates.includes(d));
@@ -2777,9 +2775,9 @@ function renderAvailView(){
   h += `<label class="pf-f" style="margin:0"><span class="note-sm">Your name</span><select class="in txt" id="avName" aria-label="Your name"><option value="">Choose your name</option>${teamSorted().map(p => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select></label>
     <p class="note-sm">Not on the list? Ask a manager to add you to the team.</p>`;
   if (pid){
-    if (!A.sel || A.selFor !== pid + wk){ const doc = availDoc(wk, pid), p = team().find(x => x.id === pid);
+    if (!A.sel || A.selFor !== pid + wk){ const doc = availDoc(wk, pid);
       A.selFor = pid + wk; A.none = !!(doc && doc.none);
-      A.sel = {}; days.forEach(d => A.sel[d] = shiftsOf(d).map(q => doc ? covers((doc.days || {})[d], q) : covers((p.rule || {})[toDate(d).getDay()], q)));
+      A.sel = {}; days.forEach(d => A.sel[d] = shiftsOf(d).map(q => !!doc && covers((doc.days || {})[d], q)));
       A.had = !!doc; }
     h += coverageGrid(wk, {pid, sel:A.sel, none:A.none})
       + `<label class="swrow"><span>I can't work this week</span><input type="checkbox" class="switch" id="avNone"${A.none ? " checked" : ""}></label>
@@ -3524,7 +3522,7 @@ function applyConfig(cfg, boot){
   if (!S.cal || typeof S.cal !== "object" || !cfg.cal) S.cal = {rules:[], open:(S.track.dates || []).slice(), closed:[]};
   ["rules","open","closed"].forEach(k => { if (!Array.isArray(S.cal[k])) S.cal[k] = []; });
   { const have = new Set(S.team.map(p => p.name)); Object.values(S.days).forEach(x => (x.names || []).forEach(v => namesIn(v).forEach(n => { if (!have.has(n)){ have.add(n); S.team.push({name:n, rule:{}, off:[]}); } }))); }
-  S.team.forEach(p => { if (!p.id) p.id = stableId(p.name); });   // stable, so the availability form and the portal agree on who's who
+  S.team.forEach(p => { if (!p.id) p.id = stableId(p.name); delete p.rule; delete p.off; });   // availability now comes only from each week's form   // stable, so the availability form and the portal agree on who's who
   if (!(cfg.v >= 5)){ migrateV4(cfg); if (!boot) markDirty(); }
   if (cfg.v === 5){ S.specials = S.specials.filter(sp => sp.on !== false); if (!boot) markDirty(); }
   if (!(cfg.v >= 7)) S.ingredients.forEach(g => { if (!g.cat || g.cat === "mixin") g.cat = guessCat(g); });   // v7 split fresh items out of mix-ins
@@ -3828,6 +3826,10 @@ document.addEventListener("click", e => {
   if (a === "cntSave"){ saveCount(); return; }
   if (a === "cntEdit"){ UI.cntEdit = !UI.cntEdit; if (document.activeElement) document.activeElement.blur(); renderCount(UI.T); return; }
   if (a === "niAdd"){ addInvItem(); return; }
+  if (a === "cntItem"){ UI.cntItem = t.dataset.id || null; if (document.activeElement) document.activeElement.blur(); renderCount(UI.T); renderIngredients(); return; }
+  if (a === "cntDel"){ const id = t.dataset.id, pkg = S.packaging.some(x => x.id === id), list = pkg ? S.packaging : S.ingredients, i = list.findIndex(x => x.id === id), g = list[i]; if (!g) return;
+    list.splice(i, 1); UI.cntItem = null; UI.removed = {pkg, item:g, idx:i};
+    $("cntToast").innerHTML = `Deleted ${esc(g.name)}. <button data-act="undoRemove">Undo</button>`; markDirty(); renderIngredients(); renderDrinkGrid(); recalc(); return; }
   if (a === "delStock"){ Store.delStock(t.dataset.id).catch(err => toast("cntToast", saveError(err))); return; }
   if (a === "editRow"){ const list = t.dataset.kind === "ing" ? S.ingredients : S.packaging;
     UI.editRow = t.dataset.kind + "-" + t.dataset.i; UI.rowBackup = JSON.stringify(list[+t.dataset.i]);
@@ -3843,7 +3845,7 @@ document.addEventListener("click", e => {
     list.splice(i, 1); UI.editRow = null; UI.removed = {pkg, item:g, idx:i};
     $("ingToast").innerHTML = `Removed ${esc(g.name)}. <button data-act="undoRemove">Undo</button>`; markDirty(); renderIngredients(); recalc(); return; }
   if (a === "undoRemove"){ const r = UI.removed; if (!r) return; (r.pkg ? S.packaging : S.ingredients).splice(r.idx, 0, r.item);
-    $("ingToast").textContent = `Restored ${r.item.name}.`; UI.removed = null; markDirty(); renderIngredients(); recalc(); return; }
+    $("ingToast").textContent = $("cntToast").textContent = `Restored ${r.item.name}.`; UI.removed = null; markDirty(); renderIngredients(); recalc(); return; }
   if (a === "buyAll"){ UI.buyAll = t.dataset.v === "1"; renderBuyList(UI.T); return; }
   if (a === "buyReset"){ const o = buyOrder(); Object.keys(o.qty).forEach(id => { if (!o.st[id]) delete o.qty[id]; }); markDirty(); renderBuyList(UI.T); toast("buyToast", "Quantities set back to the suggested amounts."); return; }
   if (a === "availCopy"){ copyAvail(t.dataset.w); return; }
@@ -3856,7 +3858,7 @@ document.addEventListener("click", e => {
   if (a === "dpAs"){ const n = t.dataset.n; setShiftNames(UI.dayPanel, +t.dataset.i, arr => arr.includes(n) ? arr : arr.concat(n)); return; }
   if (a === "dpUn"){ const n = t.dataset.n; setShiftNames(UI.dayPanel, +t.dataset.i, arr => arr.filter(x => x !== n)); return; }
   if (a === "dpAdd"){ const i = +t.dataset.i, inp = document.querySelector(`[data-dpname="${i}"]`), n = inp ? inp.value.trim() : ""; if (!n) return;
-    if (!person(n)) S.team.push({id:stableId(n), name:n, email:"", phone:"", rule:{}, off:[]});
+    if (!person(n)) S.team.push({id:stableId(n), name:n, email:"", phone:""});
     setShiftNames(UI.dayPanel, i, arr => arr.includes(n) ? arr : arr.concat(n)); return; }
   if (a === "mxWk"){ const v = +t.dataset.v; UI.mxWk = v === 0 ? weekOf(ymd(new Date())) : addDays(UI.mxWk, 7 * v); renderMatrix(); return; }
   if (a === "mxTog"){ const d = t.dataset.d, i = +t.dataset.i, n = t.dataset.n; if (d < ymd(new Date())) return;
@@ -3874,19 +3876,12 @@ document.addEventListener("click", e => {
     Object.assign(p, {name, email, phone:v("phone"), role:v("role"), year:v("year")});
     saveStaff(p).then(() => { renderStaff(); toast("pfToast", "Saved."); }).catch(err => toast("pfToast", saveError(err))); return; }
   if (a === "pfTrained"){ const p = pfPerson(); if (!p) return; p.trained = t.checked; saveStaff(p); renderMatrix(); renderTeam(); renderDayPanel(); renderHome(); return; }
-  if (a === "pfRule"){ const p = pfPerson(), w = +t.dataset.w, sh = dowShifts(w); if (!p) return;
-    const on = sh.map(q => covers((p.rule || {})[w], q)); on[+t.dataset.i] = !on[+t.dataset.i];
-    p.rule = Object.assign({}, p.rule, {[w]: sh.filter((q,j) => on[j]).map(q => ({s:q.start, e:q.end}))}); if (!p.rule[w].length) delete p.rule[w];
-    saveStaff(p); renderStaff(); return; }
-  if (a === "pfOff"){ const p = pfPerson(), w = t.dataset.w, cw = weekOf(ymd(new Date())); if (!p || w < cw) return;
-    p.off = ((p.off || []).includes(w) ? p.off.filter(x => x !== w) : (p.off || []).concat(w)).filter(x => x >= addDays(cw, -84)).sort();
-    markDirty(); renderStaff(); return; }
   if (a === "pfDel"){ const p = pfPerson(); if (!p || !confirm(`Remove ${p.name} from the team? Shifts they already worked stay.`)) return;
     closeSheet("pfPanel"); delStaff(p).then(renderStaff); return; }
   if (a === "teamImport"){ const rows = parseStaff($("impText").value); if (!rows.length){ toast("staffToast", "Nothing to import. Paste one person per line."); return; }
     let added = 0, updated = 0;
     rows.forEach(r => { const p = team().find(x => (r.email && x.email === r.email) || x.name === r.name);
-      if (p){ updated++; Object.assign(p, r, {email:r.email || p.email}); } else { added++; S.team.push(Object.assign({id:stableId(r.name), phone:"", off:[]}, r)); } });
+      if (p){ updated++; Object.assign(p, r, {email:r.email || p.email}); } else { added++; S.team.push(Object.assign({id:stableId(r.name), phone:""}, r)); } });
     markDirty(); $("impText").value = ""; $("teamImport").open = false; renderStaff(); toast("staffToast", `Imported ${rows.length}: ${added} new, ${updated} updated.`); return; }
   if (a === "teamAdd"){ const inp = $("teamName"), n = inp.value.trim(); if (!n) return;
     if (person(n)){ toast("staffToast", `${n} is already on the team.`); return; }
@@ -3911,7 +3906,7 @@ document.addEventListener("keydown", e => {
 });
 $("modDlg").addEventListener("close", () => { UI.mod = null; });
 document.addEventListener("submit", e => { const k = e.target.dataset && e.target.dataset.adm; if (k){ e.preventDefault(); admSubmit(); } });
-const ADMIN_ACT = /^(gear|bld|ns[A-Z]|b[A-Z]|nb[A-Z]|bk[A-Z]|bank|mxTog|pf[A-Z]|team[A-Z]|wk[A-Z]|cal[A-Z]|rule[A-Z]|dp(Open|CloseDay|As|Un|Add)|addCharge|delCharge|anRange|ckEdit|ckSave|imp[A-Z]|wm[A-Z]|cntEdit)/;
+const ADMIN_ACT = /^(gear|bld|ns[A-Z]|b[A-Z]|nb[A-Z]|bk[A-Z]|bank|mxTog|pf[A-Z]|team[A-Z]|wk[A-Z]|cal[A-Z]|rule[A-Z]|dp(Open|CloseDay|As|Un|Add)|addCharge|delCharge|anRange|ckEdit|ckSave|imp[A-Z]|wm[A-Z]|cntEdit|cntItem|cntDel|undoRemove)/;
 
 /* ------------------------------------------------------------------ init */
 { const q = new URLSearchParams(location.search);
