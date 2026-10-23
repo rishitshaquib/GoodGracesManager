@@ -951,6 +951,11 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
 .cuedit{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px;color:var(--label2)}
 .cuedit .in{width:auto;max-width:140px;background:var(--tile)}
 .cuedit .in[type=number]{max-width:90px}
+.wk-d{display:flex;align-items:center;gap:2px}
+.wk-drop{width:20px;height:20px;font-size:10px;opacity:.55}
+.wk-drop:hover{opacity:1}
+.wkg .wk-r{grid-template-columns:58px minmax(0,1fr)}
+.wkg.ro .wk-r{grid-template-columns:52px minmax(0,1fr)}
 
 </style>
 <meta name="robots" content="noindex, nofollow">
@@ -2479,11 +2484,13 @@ function renderWeekGrid(){
   const box = $("wkGrid"); if (!box) return; if (!UI.wk) wkInit(); const W = UI.wk;
   /* one row per weekday with an upcoming open day, plus any day with shifts drawn but not saved yet. A weekday opened on the
      calendar since starts from the shifts that day would get, once; after that it's yours to redraw or clear */
-  const today = ymd(new Date()), next = {}; S.track.dates.filter(d => d >= today).sort().forEach(d => { const w = toDate(d).getDay(); if (!next[w]) next[w] = d; });
+  const today = ymd(new Date()), horizon = addDays(today, 84), next = {};   // a weekday shows when it's open some day in the next 12 weeks
+  S.track.dates.filter(d => d >= today && d <= horizon).sort().forEach(d => { const w = toDate(d).getDay(); if (!next[w]) next[w] = d; });
+  WK_ROWS.forEach(w => { if (!next[w] && W.rows[w].length){ W.rows[w] = []; if (W.pop && W.pop.w === w) W.pop = null; } });   // shifts left on a weekday that's no longer open would be saved back in
   if (!W.seeded) W.seeded = new Set(WK_ROWS.filter(w => W.rows[w].length));
   WK_ROWS.forEach(w => { if (next[w] && !W.rows[w].length && !W.seeded.has(w)){ W.seeded.add(w);
     W.rows[w] = shiftsOf(next[w]).map(q => ({s:Math.max(0, slotOf(q.start)), e:Math.min(NSLOT, slotOf(q.end)), seats:q.seats})).filter(b => b.e > b.s); } });
-  const show = WK_ROWS.filter(w => next[w] || W.rows[w].length);
+  const show = WK_ROWS.filter(w => next[w]);
   if (!show.length){ box.innerHTML = `<p class="empty">No open days coming up. Open days on the calendar below, then draw their shifts here.</p>`; $("wkSum").innerHTML = ""; if (!$("wkFrom").value) $("wkFrom").value = W.from; renderRuleList(); return; }
   let h = wkHead(0, NSLOT);
   show.forEach((w, i) => {
@@ -2492,7 +2499,7 @@ function renderWeekGrid(){
     const bs = W.rows[w].map((b, k) => { const tm = `${DOW[w]} ${tfmt(slotT(b.s))} to ${tfmt(slotT(b.e))}`;
       return `<div class="wk-b${W.pop && W.pop.w === w && W.pop.k === k ? " sel" : ""}" style="grid-column:${b.s + 1}/${b.e + 1}" data-wb="${w}:${k}" title="${tm}, ${b.seats} ${b.seats === 1 ? "person" : "people"}">
         <span class="wk-g l" data-grip="l"></span><button class="wk-n" data-act="wkPop" data-w="${w}" data-k="${k}" aria-label="${tm}: ${b.seats} people. Change">${b.seats}</button><span class="wk-g r" data-grip="r"></span></div>`; });
-    h += wkRow(DOW[w], 0, NSLOT, bs.length ? bs : [`<span class="wk-hint" style="grid-column:1/-1">Drag to draw ${WDAY[w]}'s shifts</span>`], ` data-w="${w}"`);
+    h += wkRow(`${DOW[w]}<button class="x wk-drop" data-act="wkDrop" data-w="${w}" aria-label="Stop opening on ${WDAY[w]}s" title="Stop opening on ${WDAY[w]}s">✕</button>`, 0, NSLOT, bs.length ? bs : [`<span class="wk-hint" style="grid-column:1/-1">Drag to draw ${WDAY[w]}'s shifts</span>`], ` data-w="${w}"`);
     const P = W.pop, b = P && P.w === w && W.rows[w][P.k];
     if (b) h += `<div class="wk-pop" role="group" aria-label="Edit shift"><b>${DOW[w]} ${tfmt(slotT(b.s))} to ${tfmt(slotT(b.e))}</b>
         <span class="stepper"><button data-act="wkPopSeat" data-v="-1" aria-label="Fewer people">−</button><span>${b.seats}</span><button data-act="wkPopSeat" data-v="1" aria-label="More people">+</button></span><span class="muted">${b.seats === 1 ? "person" : "people"}</span>
@@ -2510,6 +2517,18 @@ function renderRuleList(){
   $("ruleList").innerHTML = S.cal.rules.length ? S.cal.rules.map((rl,i) => { const n = ruleDates(rl).filter(d => !S.cal.closed.includes(d)).length;
       return `<div class="rule"><span>${dn(rl.dows)} from ${fmtD(rl.from)}${rl.until ? " to " + fmtD(rl.until) : ", no end date"}. ${n} days</span><button class="x" data-act="ruleDel" data-i="${i}" aria-label="Remove this rule">✕</button></div>`; }).join("")
     : `<p class="empty">No saved hours yet.</p>`;
+}
+/* stop opening on a weekday from today: it leaves every rule from today on (older rules end the day before, so past days keep
+   their shifts) and single open days on it close */
+function dropWeekday(w){
+  const t = ymd(new Date());
+  S.cal.rules = S.cal.rules.flatMap(rl => { if (!(rl.dows || []).includes(w) || (rl.until && rl.until < t)) return [rl];
+    const out = rl.from < t ? [Object.assign({}, rl, {until:addDays(t, -1)})] : [], rest = rl.dows.filter(x => x !== w);
+    if (rest.length) out.push(Object.assign({}, rl, {from: rl.from < t ? t : rl.from, dows:rest, pattern: rl.pattern ? Object.fromEntries(Object.entries(rl.pattern).filter(([k]) => +k !== w)) : rl.pattern}));
+    return out; });
+  S.cal.open = S.cal.open.filter(d => d < t || toDate(d).getDay() !== w);
+  if (UI.wk){ UI.wk.rows[w] = []; if (UI.wk.pop && UI.wk.pop.w === w) UI.wk.pop = null; }
+  syncCalDates(); markDirty(); renderShifts(); toast("calToast", `The cafe no longer opens on ${WDAY[w]}s from ${fmtD(t)}. Past ${WDAY[w]}s keep their shifts.`);
 }
 function saveWeekRule(){
   const from = $("wkFrom").value || ymd(new Date()), until = $("wkUntil").value || "";
@@ -3734,6 +3753,7 @@ document.addEventListener("click", e => {
     if (a === "wkPopDel"){ bs.splice(P.k, 1); UI.wk.pop = null; } else UI.wk.seats = b.seats = Math.max(1, Math.min(8, b.seats + +t.dataset.v));   // new shifts start with the last count used
     renderWeekGrid(); const f = UI.wk.pop && document.querySelector(`.wk-pop [data-act=wkPopSeat][data-v="${t.dataset.v}"]`); if (f) f.focus(); return; }
   if (a === "wkPopClose"){ UI.wk.pop = null; renderWeekGrid(); return; }
+  if (a === "wkDrop"){ const w = +t.dataset.w; if (confirm(`Stop opening on ${WDAY[w]}s from today? Past ${WDAY[w]}s keep their shifts.`)) dropWeekday(w); return; }
   if (a === "wkClear"){ WK_ROWS.forEach(w => UI.wk.rows[w] = []); UI.wk.pop = null; UI.wkDirty = true; renderWeekGrid(); return; }
   if (a === "wkReset"){ UI.wk = null; UI.wkDirty = false; renderWeekGrid(); return; }
   if (a === "wkSave"){ saveWeekRule(); UI.wkDirty = false; return; }
