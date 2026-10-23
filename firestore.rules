@@ -35,10 +35,10 @@ service cloud.firestore {
       allow update: if false;
     }
 
-    // Stock events: deliveries and counts.
+    // Stock events: deliveries, counts, and perishables thrown out at the last close of the week.
     match /stock/{id} {
       allow read: if true;
-      allow create: if request.resource.data.type in ['receive', 'count']
+      allow create: if request.resource.data.type in ['receive', 'count', 'waste']
                     && request.resource.data.item is string
                     && request.resource.data.qty is number
                     && request.resource.data.at is string;

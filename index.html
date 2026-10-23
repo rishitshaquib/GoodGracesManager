@@ -967,6 +967,8 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
 .sch-s{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;padding:6px 0;border-top:.5px solid var(--sep);font-size:14px}
 .sch-t{color:var(--label2);font-variant-numeric:tabular-nums}
 #schDlg .mbody{overflow:auto;max-height:calc(100dvh - 24px)}
+.vendor.perish{box-shadow:inset 4px 0 0 var(--green);padding-left:12px}
+.cnt-toss{color:var(--orange-t)!important;margin:6px 0 2px}
 
 </style>
 <meta name="robots" content="noindex, nofollow">
@@ -1222,6 +1224,9 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
         <label>Additional fees, % of sales</label><input class="in" type="number" min="0" step="1" data-bind="fees.feePct" data-type="num" aria-label="Additional fees percent">
         <label>Charity, % of sales</label><input class="in" type="number" min="0" step="1" data-bind="fees.charityPct" data-type="num" aria-label="Charity percent">
       </div></details>
+    <details class="fold2" open><summary>Perishables by week</summary>
+      <div class="scroll" style="margin-top:6px"><table class="t" id="anPerish"></table></div>
+      <p class="note-sm" style="margin:6px 0 0">The forecast is the drinks per open day over the two weeks before, times that week's open days. Thrown out is counted at the last close of the week; over 15% shows red.</p></details>
     <details class="fold2"><summary>Cost of goods by week</summary>
       <div class="scroll" style="margin-top:6px"><table class="t" id="anCogs"></table></div>
       <p class="note-sm" id="anCogsNote" style="margin:6px 0 0"></p></details>
@@ -1357,11 +1362,22 @@ function baseDef(id){
 /* a built drink's syrups, [{id, pumps}]; older drinks have one syrup in sp.syrup and sp.pumps */
 const syrupsOf = sp => Array.isArray(sp.syrups) && sp.syrups.length ? sp.syrups : sp.syrup ? [{id:sp.syrup, pumps:+sp.pumps || 2}] : [];
 const pumpsText = sys => sys.map(x => `${+x.pumps === 1 ? "1 pump" : "2 pumps"} ${flavorName(x.id).toLowerCase()}`).join(" and ");
+/* a built drink's price from its recipe: the base drink's price (the higher one in a 50/50), one syrup charge per 2 pumps,
+   cold foam (a pump frothed in is included), the alt milk charge when the standard milk isn't 2% (cider counts as alt), an extra shot */
+const recipeHasMilk = r => ["iced","hot"].some(sv => recipeSteps(r, sv).some(s => s.lines.some(l => l[0] === (milkOf(r) || "milk"))));
+function priceParts(r){
+  const A = S.addons, base = r.bases.map(id => MENU.find(x => x.id === id && x.base)).map(m => m || MENU[0]).sort((a, b) => menuPrice(b) - menuPrice(a))[0] || MENU[0];
+  const pumps = r.syrups.reduce((s, x) => s + (+x.pumps || 2), 0), mk = milkOf(r), shots = (r.extras || []).filter(x => x.t === "shot").length, esp = MENU.find(x => x.id === "espresso");
+  return [[base.name, menuPrice(base)], pumps ? [`syrup, ${pumps} ${pumps === 1 ? "pump" : "pumps"}`, Math.ceil(pumps / 2) * (+A.syrupCharge || 0)] : null, r.foam ? ["cold foam", +A.foamCharge || 0] : null,
+    mk && recipeHasMilk(r) ? [milkName(mk), mk === "almond" ? +(A.almCharge ?? A.altCharge) || 0 : +A.altCharge || 0] : null, shots ? [shots === 1 ? "extra shot" : `${shots} extra shots`, shots * menuPrice(esp)] : null].filter(Boolean);
+}
+const autoPrice = r => Math.round(priceParts(r).reduce((s, [, v]) => s + v, 0) * 100) / 100;
+const priceText = r => priceParts(r).map(([l, v], i) => `${i ? l : l.replace(/ Latte$/, "")} ${F.usd2(v)}`).join(" + ") + ` = ${F.usd2(autoPrice(r))}`;
 function specialDef(sp){
   const r = recipeOf(sp), serve = ["iced","hot","both"].includes(sp.serve) ? sp.serve : "both", lines = sv => recipeSteps(r, sv).flatMap(st => st.lines);
   const iced = serve === "hot" ? null : lines("iced"), hot = serve === "iced" ? null : lines("hot");
   return {id:sp.id, name:sp.name, aliases:sp.aliases || [], sec: sp.sec === "signature" ? "signature" : "specialty", season: sp.season != null ? sp.season : guessSeason(sp.name),
-          price:+sp.price || 0, serve, milk:[].concat(iced || [], hot || []).some(l => l[0] === "milk"), sp, iced, hot};
+          price: sp.ownPrice === false ? autoPrice(r) : +sp.price || 0, serve, milk:[].concat(iced || [], hot || []).some(l => l[0] === "milk"), sp, iced, hot};
 }
 const fixedDef = m => { const a = m.sec !== "core" && S.assign[m.id] || {};
   return Object.assign({}, m, {price:menuPrice(m)}, m.sec === "core" ? {} : {sec: a.sec || m.sec, season: a.season != null ? a.season : m.season || ""}); };
@@ -1620,7 +1636,7 @@ const SYRUP_COLORS = [[/white chocolate/,"#EFE4CF"],[/vanilla/,"#E3C48A"],[/cara
   [/hazelnut/,"#A0703F"],[/lavender/,"#B49AD8"],[/peppermint|mint/,"#7FC8A9"],[/banana/,"#E6C25A"],[/maple/,"#B5651D"],[/cinnamon|spice|chai/,"#A0522D"],
   [/pistachio/,"#A8C47A"],[/honey/,"#E8B04B"],[/chocolate|mocha|cocoa/,"#5B3A29"],[/strawberr|raspberr|cherry/,"#E48A90"],[/coconut/,"#F2EDE4"],[/rose/,"#E7A1B0"]];
 const syrupColor = id => { const n = String(flavorName(id)).toLowerCase(), m = SYRUP_COLORS.find(([re]) => re.test(n)); return m ? m[1] : DC.syrup; };
-const ingColor = id => ({milk:DC.milk, wholemilk:DC.milk, oat:DC.oat, almond:DC.oat, matcha:DC.matcha, chai:DC.chaiIced, cream:"#FFF8EC"})[id]
+const ingColor = id => ({milk:DC.milk, wholemilk:DC.milk, oat:DC.oat, almond:DC.oat, matcha:DC.matcha, chai:DC.chaiIced, cream:"#FFF8EC", cider:"#C47A3A"})[id]
   || (/chocolate|cocoa/i.test((ingOf(id) || {}).name || "") ? "#6B4A3A" : DC.cider);
 const blendHex = parts => { const t = parts.reduce((s, [, w]) => s + w, 0) || 1, ch = i => Math.round(parts.reduce((s, [c, w]) => s + parseInt(c.slice(1 + 2 * i, 3 + 2 * i), 16) * w, 0) / t);
   return "#" + [0, 1, 2].map(i => ch(i).toString(16).padStart(2, "0")).join(""); };
@@ -1651,6 +1667,10 @@ function liquidSteps(bases, sv){
     lines, c, v:lines.reduce((s, [id, q]) => s + (id === "matcha" ? 1 : q), 0) + water, fv:lines.reduce((s, [id, q]) => s + (id === "milk" ? 0 : id === "matcha" ? 1 : q), 0), deco: sv === "hot"}];   // fv: the milk in a mix gives way, like milk to the line
 }
 const blankRecipe = base => ({bases:[base || "latte"], syrups:[], foam:null, extras:[], shaken:false, order:null});
+/* the recipe's standard milk: 2% unless it says oat, almond, or something poured like milk (cider makes a chai a chaider) */
+const milkOf = r => r && r.milk && r.milk !== "milk" ? r.milk : "";
+const milkName = id => id === "oat" ? "oat milk" : id === "almond" ? "almond milk" : String((ingOf(id) || {name:id}).name).toLowerCase().replace(/\s*\(.*?\)/g, "").replace(/,.*$/, "").trim();
+const milkChoices = () => [["milk","2%"],["oat","Oat"],["almond","Almond"]].concat(S.ingredients.filter(g => (S.bases || []).some(b => b.ing === g.id) || /cider/i.test(g.name)).map(g => [g.id, g.name.replace(/\s*\(.*?\)/g, "").replace(/,.*$/, "")]));
 /* older built drinks kept base, syrup(s) and foam on the drink itself */
 const recipeOf = sp => sp.recipe || {bases:[sp.base || "latte"], syrups:syrupsOf(sp).map(x => ({...x})), foam: sp.foam ? {syrup:""} : null, extras:[], shaken:false, order:null};
 const EXTRA_LBL = {drizzle:"Drizzle", puree:"Purée", topping:"Topping", shot:"Extra shot"};
@@ -1674,6 +1694,10 @@ function recipeSteps(r, sv){
   if (r.foam){ const fs = r.foam.syrup; st.push({k:"foam", type:"foam", top:true, text: fs ? `Froth 50 mL cold foam with 1 pump ${flavorName(fs).toLowerCase()} syrup in a pitcher, spoon on top` : "50 mL cold foam on top",
     lines:[["foam", FOAM_OZ]].concat(fs ? [["syrup", 1, fs]] : []), c:"#FFFFFF", foam:true}); }
   ex("drizzle").forEach((x, i) => st.push({k:"dr" + i, type:"drizzle", top:true, text:`Drizzle ${x.ing ? flavorName(x.ing).toLowerCase() : "syrup"} on top`, lines: x.ing ? [["syrup", .5, x.ing]] : [], c: x.ing ? syrupColor(x.ing) : DC.syrup, splash:true}));
+  const mk = milkOf(r);
+  if (mk){ const nm = milkName(mk); st.forEach(s => { if (!s.lines.some(l => l[0] === "milk")) return;
+    s.lines = s.lines.map(l => l[0] === "milk" ? [mk].concat(l.slice(1)) : l); s.text = s.text.replace(/\b([Mm])ilk\b/g, (m, c) => c === "M" ? nm[0].toUpperCase() + nm.slice(1) : nm);
+    if (s.type === "milk") s.c = ingColor(mk) || s.c; }); }
   ex("topping").forEach((x, i) => { const g = ingOf(x.ing); st.push({k:"tp" + i, type:"topping", top:true, text:`Dust ${g ? g.name.toLowerCase().replace(/^ground /, "").replace(/\s*\(.*\)/, "") : "a topping"} on top`, lines: x.ing ? [[x.ing, g && g.unit === "g" ? .5 : .02]] : [], c:"#A0522D", splash:true}); });
   return st;
 }
@@ -1709,7 +1733,7 @@ function recipeErrors(r, serve){
     if (fixed > cup + .3) e.push(`The ${sv} build is ${F.n1(fixed)} oz before any milk, more than the ${cup} oz cup holds.`); });
   return e;
 }
-const recipeSummary = (r, serve) => [r.bases.map(id => (baseTemplate(id) || {name:id}).name).join(" and ") + (r.bases.length > 1 ? ", 50/50" : ""), pumpsText(r.syrups),
+const recipeSummary = (r, serve) => [r.bases.map(id => (baseTemplate(id) || {name:id}).name).join(" and ") + (r.bases.length > 1 ? ", 50/50" : ""), milkOf(r) && recipeHasMilk(r) ? `${milkName(milkOf(r))} instead of milk` : "", pumpsText(r.syrups),
   r.foam ? (r.foam.syrup ? `${flavorName(r.foam.syrup).toLowerCase()} cold foam` : "cold foam") : "", ...(r.extras || []).map(x => x.t === "shot" ? "extra shot" : `${EXTRA_LBL[x.t].toLowerCase()}${x.ing ? " (" + (x.t === "drizzle" ? flavorName(x.ing) : ((ingOf(x.ing) || {}).name || "")).toLowerCase() + ")" : ""}`),
   r.shaken ? "shaken" : "", SERVE_TAG[serve || "both"].toLowerCase()].filter(Boolean).join(", ");
 
@@ -1718,13 +1742,13 @@ const recipeSummary = (r, serve) => [r.bases.map(id => (baseTemplate(id) || {nam
 UI.bld = {edit:"", r:blankRecipe(), serve:"iced", season:"", name:"", price:"", pv:"iced"};
 const bldSuggest = () => { const b = UI.bld, r = b.r, T = r.bases.map(baseTemplate).filter(Boolean), fs = r.foam && r.foam.syrup;
   return {name:[r.syrups.map(x => flavorName(x.id)).join(" "), fs ? `${flavorName(fs)} Cream` : "", T.map(t => t.name.replace(/ Latte$/, r.bases.length > 1 ? "" : " Latte")).join(" "), r.foam && !fs ? "with Cold Foam" : ""].filter(Boolean).join(" ").replace(/\s+/g, " ").trim() || "New drink",
-          price: Math.round((Math.max(4.5, ...T.map(t => t.price || 4.5)) + (r.syrups.length ? .5 : 0) + (r.foam ? .5 : 0)) * 100) / 100}; };
+          price: autoPrice(r)}; };
 const bldDraft = () => { const b = UI.bld, sg = bldSuggest();
   return {id:b.edit || "draft", name:b.name.trim() || sg.name, recipe:b.r, serve:b.serve, price:b.price === "" ? sg.price : +b.price, on:true, sec:"specialty", season:b.season}; };
 const nameTaken = (n, exceptId) => allDrinks().some(d => d.id !== exceptId && [d.name].concat(d.aliases || []).map(norm).includes(norm(n)));
 function openBuilder(editId){
   const sp = editId && S.specials.find(x => x.id === editId);
-  UI.bld = sp ? {edit:sp.id, r:JSON.parse(JSON.stringify(recipeOf(sp))), serve:sp.serve || "both", season:sp.season || "", name:sp.name, price:String(sp.price), pv: sp.serve === "hot" ? "hot" : "iced"}
+  UI.bld = sp ? {edit:sp.id, r:JSON.parse(JSON.stringify(recipeOf(sp))), serve:sp.serve || "both", season:sp.season || "", name:sp.name, price: sp.ownPrice === false ? "" : String(sp.price), pv: sp.serve === "hot" ? "hot" : "iced"}
               : {edit:"", r:blankRecipe(UI.bld.r.bases[0]), serve:UI.bld.serve || "iced", season:UI.bld.season || "", name:"", price:"", pv: UI.bld.serve === "hot" ? "hot" : "iced"};
   UI.nb = null; UI.ns = null; const dl = $("bldDlg"); if (!dl.open) dl.showModal(); renderBuilder();
 }
@@ -1742,6 +1766,8 @@ function renderBuilder(){
     <div><div class="lbl">Base, a fixed recipe</div><div class="pchips">${bases.map(([id, nm]) => chip("bBase", id, nm, r.bases[0] === id)).join("")}${chip("bNewBase", "", "+ New base", !!nb)}</div>
       <label class="swrow" style="margin:8px 0 0"><span>Mix two bases, 50/50</span><input type="checkbox" class="switch" id="bMix"${r.bases.length > 1 ? " checked" : ""}></label>
       ${r.bases.length > 1 ? `<div class="pchips" style="margin-top:8px">${bases.filter(([id]) => id !== r.bases[0]).map(([id, nm]) => chip("bBase2", id, nm, r.bases[1] === id)).join("")}</div>` : ""}</div>
+    ${recipeHasMilk(Object.assign({}, r, {milk:""})) ? `<div><div class="lbl">Milk in the standard recipe</div><div class="pchips">${milkChoices().map(([id, nm]) => chip("bMilk", id, nm, (milkOf(r) || "milk") === id)).join("")}</div>
+      ${milkOf(r) ? `<div class="note-sm" style="margin-top:6px">Customers can't swap the milk on this drink, and it isn't charged again.</div>` : ""}</div>` : ""}
     ${nb ? `<div class="nbase">
       <label class="wide">Base name<input class="in txt" data-nb="name" value="${esc(nb.name)}" placeholder="Hot chocolate, apple cider"></label>
       <label>Pack price<input class="in" type="number" min="0" step="0.01" data-nb="price" value="${esc(nb.price)}" placeholder="4.99"></label>
@@ -1765,7 +1791,8 @@ function renderBuilder(){
     ${b.serve !== "hot" ? `<label class="swrow" style="margin:0"><span>Shaken${b.serve === "both" ? " (the iced one)" : ""}</span><input type="checkbox" class="switch" id="bShaken"${r.shaken ? " checked" : ""}></label>` : ""}
     <div><div class="lbl">Build order${b.serve === "both" ? `, ${b.pv}` : ""}</div><ol class="bord">${pvSteps.map(s => { const i = body.indexOf(s);
       return `<li class="${s.shaker ? "shk" : ""}"><span>${esc(s.text)}${s.shaker && s.type !== "step" ? ` <small>in the shaker</small>` : ""}</span>${s.top || s.type === "step" ? `<span class="muted">${s.top ? "last" : ""}</span>` : `<span class="ordb"><button class="x" data-act="bOrd" data-k="${s.k}" data-v="-1" aria-label="Move up"${i <= 0 ? " disabled" : ""}>↑</button><button class="x" data-act="bOrd" data-k="${s.k}" data-v="1" aria-label="Move down"${i >= body.length - 1 ? " disabled" : ""}>↓</button></span>`}</li>`; }).join("")}</ol></div>
-    <div class="two"><input class="in txt" id="bName" value="${esc(b.name)}" placeholder="${esc(sg.name)}" aria-label="Drink name"><input class="in" id="bPrice" type="number" min="0" step="0.05" value="${esc(b.price)}" placeholder="${sg.price.toFixed(2)}" aria-label="Price"></div>
+    <div class="two"><input class="in txt" id="bName" value="${esc(b.name)}" placeholder="${esc(sg.name)}" aria-label="Drink name"><input class="in" id="bPrice" type="number" min="0" step="0.05" value="${esc(b.price)}" placeholder="${sg.price.toFixed(2)}" aria-label="Price, blank prices it from the recipe"></div>
+    <div class="note-sm" id="bPriceNote"></div>
     <div class="berr" id="bErr" role="alert"></div>
     <p class="toast" id="bldToast" role="status" style="margin:0"></p>
     <button class="btn big madd" data-act="bAdd" id="bAddBtn">${sp ? "Save changes" : "Add the drink"}</button>
@@ -1779,6 +1806,7 @@ function bldSum(){
   const el = $("bSum"); if (!el) return; const d = bldDraft(), dd = specialDef(Object.assign({}, d, {recipe:d.recipe})), errs = recipeErrors(d.recipe, d.serve);
   el.innerHTML = servesOf(dd).map(sv => { const c = costOf(dd, sv, "dairy"), mg = marginOf(d.price, c); return `${sv === "iced" ? "Iced" : "Hot"} costs <b>${F.usd2(c)}</b>, margin <b class="${mCls(mg)}">${F.frac(mg)}</b>`; }).join("<br>");
   $("bErr").innerHTML = errs.map(x => `<div>${esc(x)}</div>`).join(""); $("bAddBtn").disabled = !!errs.length;
+  $("bPriceNote").textContent = UI.bld.price === "" ? `Priced from the recipe: ${priceText(d.recipe)}. Type a price to set your own.` : `Your own price. Clear it to price from the recipe (${F.usd2(autoPrice(d.recipe))}).`;
   $("bPrevBody").innerHTML = cupSVG(recipeDiagram(d.recipe, UI.bld.pv), UI.bld.pv);
 }
 function saveRecipe(){
@@ -1791,8 +1819,8 @@ function saveRecipe(){
   let sp = b.edit && S.specials.find(x => x.id === b.edit);
   if (sp){ sp.versions = [{at:new Date().toISOString(), by:UI.me || "Admin", name:sp.name, price:sp.price, serve:sp.serve, recipe:recipeOf(sp)}].concat(sp.versions || []).slice(0, 10);
     if (d.name !== sp.name) sp.aliases = [...new Set((sp.aliases || []).concat(sp.name))];   // the old name still matches past sales
-    Object.assign(sp, legacy, {recipe:r, name:d.name, price, serve:d.serve, season:b.season || ""}); }
-  else { sp = Object.assign({id:"sp" + Date.now().toString(36), name:d.name, aliases:[], price, serve:d.serve, on:true, sec:"specialty", season:b.season || "", recipe:r}, legacy); S.specials.push(sp);
+    Object.assign(sp, legacy, {recipe:r, name:d.name, price, ownPrice: b.price !== "", serve:d.serve, season:b.season || ""}); }
+  else { sp = Object.assign({id:"sp" + Date.now().toString(36), name:d.name, aliases:[], price, ownPrice: b.price !== "", serve:d.serve, on:true, sec:"specialty", season:b.season || "", recipe:r}, legacy); S.specials.push(sp);
     if ($("wmDlg").open){ const days = weekDays(UI.wm.wk); (UI.wm.day === "all" ? days : [UI.wm.day]).forEach(x => { const cur = wmIds(x); if (!cur.includes(sp.id)) S.dayMenu[x] = cur.concat(sp.id); }); } }
   const was = b.edit; UI.bld = {edit:"", r:blankRecipe(r.bases[0]), serve:d.serve, season:b.season, name:"", price:"", pv:"iced"};
   markDirty(); $("bldDlg").close(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); renderWeekMenu(); if (!$("gearPanel").hidden) renderGear();
@@ -1825,7 +1853,7 @@ function renderGear(){
   let h = `<div class="tile-h"><h2 id="gearTitle">Menu settings</h2><span class="lnk"><button class="btn sm" data-act="bldOpen">New drink</button><button class="x" data-act="gearClose" aria-label="Close">✕</button></span></div>
     <p class="toast" id="gearToast" role="status" style="margin:6px 0 0"></p>`;
   const row = d => { const sp = d.sp, on = isOn(d);
-    return `<div class="grow"><div class="nm">${sp ? `<input class="in txt" data-gname="${esc(d.id)}" value="${esc(d.name)}" aria-label="Name">` : esc(d.name)}<small>${sp ? esc(specialSummary(sp)) : esc(SECS.find(s => s[0] === d.sec)[1])}</small></div>
+    return `<div class="grow"><div class="nm">${sp ? `<input class="in txt" data-gname="${esc(d.id)}" value="${esc(d.name)}" aria-label="Name">` : esc(d.name)}<small>${sp ? esc(specialSummary(sp)) : esc(SECS.find(s => s[0] === d.sec)[1])}</small>${sp ? (sp.ownPrice === false ? `<small class="status-ok">Priced from the recipe: ${esc(priceText(recipeOf(sp)))}</small>` : `<small>Your own price. <button class="linkbtn" data-act="gAuto" data-id="${esc(d.id)}">Price from the recipe, ${F.usd2(autoPrice(recipeOf(sp)))}</button></small>`) : ""}</div>
       <input class="in" type="number" min="0" step="0.05" data-gprice="${esc(d.id)}" value="${d.price.toFixed(2)}" aria-label="${esc(d.name)} price">
       <span style="display:flex;gap:4px;align-items:center;justify-content:flex-end"><input type="checkbox" class="switch" data-gon="${esc(d.id)}"${on ? " checked" : ""} aria-label="${esc(d.name)} on the menu"></span></div>`; };
   const A = allDrinks(), onL = A.filter(isOn), offL = A.filter(d => !isOn(d));
@@ -2179,7 +2207,7 @@ function trackModel(){
   const onHand = {};
   items.forEach(it => {
     let v = 0, baseTs = "";
-    ev.forEach(e => { if (e.item === it.id && e.type === "count"){ v = +e.qty || 0; baseTs = e.ts; } });
+    ev.forEach(e => { if (e.item === it.id && (e.type === "count" || e.type === "waste")){ v = e.type === "waste" ? 0 : +e.qty || 0; baseTs = e.ts; } });   // leftovers thrown out leave none
     ev.forEach(e => { if (e.item === it.id && e.type === "receive" && e.ts > baseTs) v += +e.qty || 0; });
     uses.forEach(u => { if (u.ts > baseTs && u.use[it.id]) v -= u.use[it.id]; });
     onHand[it.id] = v;
@@ -2191,7 +2219,11 @@ function trackModel(){
   const src = logged.length ? `the average of ${logged.length} logged ${logged.length === 1 ? "day" : "days"}` : cpd ? "the Clover days" : "the planning number";
   const wk = weekOf(remaining[0] || today), nextDates = remaining.filter(d => weekOf(d) === wk);   // the order covers the next open week
   const cover = Math.max(1, nextDates.length), buf = (S.track.buffer || 0) / 100;
+  const T0 = {items, per, byDay, dayDrinks, today, cal};
   const rows = items.map(it => {
+    if (perishId(it.id)){ const fc = perishFc(T0, it.id, onHand[it.id], nextDates), perDay = fc.rate * fc.perDay, oh = onHand[it.id];
+      const status = perDay <= 1e-9 ? "Not used" : fc.packs > 0 ? (oh <= 1e-9 ? "Out" : "Order now") : "OK", cls = status === "Not used" ? "hot" : fc.packs > 0 ? "neg" : "";
+      return {...it, oh, perDay, need:fc.need, short:fc.need - oh, packs:fc.packs, cost:fc.packs * it.price, daysLeft: perDay > 1e-9 ? Math.max(0, oh) / perDay : Infinity, runsOut:null, status, cls, fc}; }
     const perDay = (per[it.id] || 0) * dayDrinks, need = perDay * cover * (1 + buf), oh = onHand[it.id], short = need - oh;
     const packs = short > 1e-6 && it.size > 0 ? Math.ceil(short / it.size) : 0;
     const daysLeft = perDay > 1e-9 ? Math.max(0, oh) / perDay : Infinity;
@@ -2205,8 +2237,39 @@ function trackModel(){
     return {...it, oh, perDay, need, short, packs, cost:packs * it.price, daysLeft, runsOut, status, cls};
   });
   const orders = rows.filter(r => r.packs > 0);
-  return {items, rows, orders, logged, drinks, dayDrinks, src, cal, remaining, next:remaining[0] || null, wk, cover, buf, unknown:[...unknown], nextDates, today};
+  return {items, rows, orders, logged, drinks, dayDrinks, src, cal, remaining, next:remaining[0] || null, wk, cover, buf, unknown:[...unknown], nextDates, today, per, byDay};
 }
+/* ------------------------------------------------------------------ perishables
+   Ordered at the start of the week; whatever's left at the last close of the week is counted and thrown out (a "waste" entry).
+   A closed week tells us what each item really used per drink sold. The order for the days ahead is the moving average of the
+   last PERISH_WEEKS closed weeks: drinks sold per open day, times the open days ahead, times use per drink, plus a safety margin
+   from how much that use swings (at least 10%), minus what's on hand. It can drop up to a quarter pack, never more than the margin. */
+const PERISH_WEEKS = 2, SAFETY = {lean:.5, balanced:1, safe:1.5};
+const drinksOn = (T, d) => T.byDay[d] || (S.clover.orders[d] ? S.clover.orders[d].log.filter(([, v]) => v > 0).length : 0);   // Clover days count orders
+function weekDrinks(T, w){ let n = 0, days = 0; for (let i = 0; i < 7; i++){ const x = drinksOn(T, addDays(w, i)); if (x > 0){ n += x; days++; } } return {n, days}; }
+function perDayAvg(T, before){   // drinks per open day over the last PERISH_WEEKS weeks with sales, before that week
+  let n = 0, days = 0, k = 0; for (let w = addDays(before, -7), i = 0; i < 52 && k < PERISH_WEEKS; w = addDays(w, -7), i++){ const x = weekDrinks(T, w); if (x.days){ n += x.n; days += x.days; k++; } }
+  return days ? n / days : 0; }
+function perishWeeks(id){
+  const wks = {};
+  Store.stock.forEach(e => { if (e.item !== id || (e.type !== "receive" && e.type !== "waste")) return; const w = weekOf(String(e.ts).slice(0, 10)), x = wks[w] || (wks[w] = {w, got:0, left:0, closed:false});
+    if (e.type === "receive") x.got += +e.qty || 0; else { x.left += +e.qty || 0; x.closed = true; } });
+  return Object.values(wks).filter(x => x.closed && x.got > 0).map(x => ({...x, used:Math.max(0, x.got - x.left), out:x.left <= 1e-9})).sort((a, b) => a.w.localeCompare(b.w));
+}
+function perishFc(T, id, oh, ahead){
+  const it = T.items.find(i => i.id === id) || {size:0}, cw = weekOf(T.today);
+  const hist = perishWeeks(id).filter(x => x.w < cw).map(x => ({...x, n:weekDrinks(T, x.w).n})).filter(x => x.n > 0).slice(-PERISH_WEEKS);
+  const use = hist.some(x => !x.out) ? hist.filter(x => !x.out) : hist, rates = use.map(x => x.used / x.n);   // a week that ran out only shows a floor
+  const rate = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : T.per[id] || 0;
+  const sd = rates.length > 1 ? Math.sqrt(rates.reduce((a, v) => a + (v - rate) ** 2, 0) / (rates.length - 1)) : 0;
+  const perDay = perDayAvg(T, cw) || T.dayDrinks, drinks = perDay * ahead.length, last = hist[hist.length - 1];
+  const k = (SAFETY[S.track.safety] || 1) + (last && last.out ? .5 : 0), margin = k * Math.max(sd, rate * .1) * drinks, need = rate * drinks + margin;
+  const x = it.size > 0 ? (need - Math.max(0, oh)) / it.size : 0, packs = x > 0 ? Math.max(0, Math.ceil(x - Math.min(.25, margin / it.size))) : 0;
+  const got = hist.reduce((a, h) => a + h.got, 0), left = hist.reduce((a, h) => a + h.left, 0);
+  return {rate, perDay, drinks, need, margin, packs, hist, measured: rates.length > 0, waste: got ? left / got : 0, ranOut: !!(last && last.out)};
+}
+const fcWhy = (id, fc, days) => `About ${F.int(fc.drinks)} drinks over ${days} ${days === 1 ? "day" : "days"} (${F.int(fc.perDay)} a day, last ${PERISH_WEEKS} weeks), ${inUnits(id, fc.rate * 10)} per 10 drinks ${fc.measured ? "as measured" : "from the recipes"}. `
+  + (fc.ranOut ? "Ran out last week, so this orders more." : fc.hist.length ? `Last ${fc.hist.length === 1 ? "week" : fc.hist.length + " weeks"} threw out ${F.frac(fc.waste)}.` : "No closed week yet: count the leftovers at the last close to start measuring.");
 function renderStock(T){
   const out = T.rows.filter(r => r.status === "Out").map(r => r.name), now = T.rows.filter(r => r.status === "Order now").map(r => r.name), low = T.rows.filter(r => r.status === "Running low").map(r => r.name);
   const ib = $("inv-banner"), list = a => a.slice(0, 6).join(", ") + (a.length > 6 ? ` and ${a.length - 6} more` : "");
@@ -2219,7 +2282,7 @@ function renderStock(T){
   const itemName = id => trackedItems().find(i => i.id === id) || {name:id, unit:""};
   const evs = Store.stock.slice().sort((a,b) => String(b.ts).localeCompare(String(a.ts))).slice(0, 12);
   $("stkLog").innerHTML = evs.length ? evs.map(e => { const it = itemName(e.item);
-    return `<tr><td class="l">${e.type === "count" ? "Count" : "Delivery"}: ${esc(it.name)}, ${fmtQty(+e.qty || 0, it.unit)}, ${fmtD(String(e.ts).slice(0,10))}${e.inv ? `, invoice ${esc(e.inv)}` : ""}</td><td style="width:40px"><button class="x" data-act="delStock" data-id="${esc(e.id)}" title="Delete" aria-label="Delete">✕</button></td></tr>`; }).join("")
+    return `<tr><td class="l">${e.type === "count" ? "Count" : e.type === "waste" ? "Thrown out" : "Delivery"}: ${esc(it.name)}, ${fmtQty(+e.qty || 0, it.unit)}, ${fmtD(String(e.ts).slice(0,10))}${e.inv ? `, invoice ${esc(e.inv)}` : ""}</td><td style="width:40px"><button class="x" data-act="delStock" data-id="${esc(e.id)}" title="Delete" aria-label="Delete">✕</button></td></tr>`; }).join("")
     : `<tr><td class="l empty">None yet. Save a closing count or tick Received on the order.</td></tr>`;
 }
 /* ------------------------------------------------------------------ closing count: what's left in reserve
@@ -2231,12 +2294,15 @@ function renderCount(T){
   if (!$("cntDate").value) $("cntDate").value = ymd(new Date());
   const last = Store.stock.filter(e => e.type === "count").map(e => String(e.ts).slice(0, 10)).sort().pop(), warn = r => ["Out","Order now","Running low"].includes(r.status);
   set("resSum", `${T.rows.length} items${T.rows.filter(warn).length ? `, ${T.rows.filter(warn).length} low` : ""}. ${last ? `Last count ${fmtD(last)}` : "Not counted yet"}`);
+  const day = $("cntDate").value || ymd(new Date()), wkOpen = S.track.dates.filter(d => weekOf(d) === weekOf(day)).sort(), toss = wkOpen.length > 0 && wkOpen[wkOpen.length - 1] === day, rest = wkOpen.filter(d => d > day);
   const ed = !!UI.cntEdit && isAdmin(), eb = $("cntEditBtn"); if (eb) eb.textContent = ed ? "Done" : "Edit items";
   box.classList.toggle("editing", ed);
   box.innerHTML = CNT_GROUPS.map(([key, lbl]) => { const rs = T.rows.filter(r => cntGroup(r) === key).sort((a, b) => a.name.localeCompare(b.name)); if (!rs.length) return "";
     const low = rs.filter(warn).length;
-    return `<section class="cntcat${key === "perish" ? " perish" : ""}"><div class="cnth"><h3>${lbl}</h3><span class="note-sm">${rs.length} ${rs.length === 1 ? "item" : "items"}${low ? ` · <span class="neg-t">${low} low</span>` : ""}</span></div>`
-      + rs.map(r => { const g = ingOf(r.id), isIng = S.ingredients.some(x => x.id === r.id), c = countUnit(g), per = perishOf(isIng ? g : null);
+    const ph = key !== "perish" ? "" : toss ? `<p class="note-sm cnt-toss">Last close of the week: count what's left of each, save, then throw it all out. It's logged as thrown out and the shelf starts empty for next week's order.</p>`
+      : rest.length ? `<p class="note-sm">Checks what's here against ${rest.map(d => DOW[toDate(d).getDay()]).join(" and ")}.</p>` : "";
+    return `<section class="cntcat${key === "perish" ? " perish" : ""}"><div class="cnth"><h3>${key === "perish" && toss ? "Perishables, leftovers to throw out" : lbl}</h3><span class="note-sm">${rs.length} ${rs.length === 1 ? "item" : "items"}${low ? ` · <span class="neg-t">${low} low</span>` : ""}</span></div>`
+      + ph + rs.map(r => { const g = ingOf(r.id), isIng = S.ingredients.some(x => x.id === r.id), c = countUnit(g), per = perishOf(isIng ? g : null);
         if (ed) return `<div class="cnt ed"><b class="nm">${esc(r.name)}</b>
             ${isIng ? `<select class="in txt" data-icat="${esc(r.id)}" aria-label="${esc(r.name)} category">${ING_CATS.map(([k,l]) => `<option value="${k}"${ingCat(g) === k ? " selected" : ""}>${l}</option>`).join("")}</select>` : `<span class="note-sm">Packaging</span>`}
             <label class="chk">${isIng ? `<input type="checkbox" data-iperish="${esc(r.id)}"${per ? " checked" : ""}> Perishable` : ""}</label>
@@ -2253,20 +2319,23 @@ function renderCount(T){
             </div><div class="lnk" style="margin-top:10px"><button class="btn sm" data-act="cntItem" data-id="">Done</button><button class="btn ghost sm" data-act="cntDel" data-id="${esc(r.id)}">Delete ${esc(r.name)}</button></div></div>`; }
         const u = UI.cntU[r.id] || "cu", n = c.size > 0 ? Math.max(0, r.oh) / c.size : 0, per2 = (+g.size || 0) / c.size;
         const have = r.oh > 1e-9 ? `${n >= 10 ? F.int(n) : (Math.round(n * 10) / 10)} ${unitPlural(c.name, Math.round(n * 10) / 10)} left` : "None left";
-        return `<div class="cnt"><div class="nm"><b>${esc(r.name)}</b><button class="x cnt-pen adm" data-act="cntItem" data-id="${esc(r.id)}" title="Edit or delete ${esc(r.name)}" aria-label="Edit or delete ${esc(r.name)}">✎</button><small>${esc(cuLabel(g))}</small></div>
+        const chk = r.fc && !toss && rest.length && r.perDay > 1e-9 ? perishFc(T, r.id, r.oh, rest) : null;
+        const chkH = !chk ? "" : chk.packs > 0 ? `<small class="neg-t">Short for ${rest.map(d => DOW[toDate(d).getDay()]).join(" and ")}: buy about ${esc(inUnits(r.id, chk.packs * (+g.size || 0)))} more</small>` : `<small class="status-ok">Enough for ${rest.map(d => DOW[toDate(d).getDay()]).join(" and ")}</small>`;
+        return `<div class="cnt"><div class="nm"><b>${esc(r.name)}</b><button class="x cnt-pen adm" data-act="cntItem" data-id="${esc(r.id)}" title="Edit or delete ${esc(r.name)}" aria-label="Edit or delete ${esc(r.name)}">✎</button><small>${esc(cuLabel(g))}</small>${chkH}</div>
           <span class="have${warn(r) ? " " + r.cls : ""}">${have}${warn(r) ? ` · ${r.status.toLowerCase()}` : ""}</span>
           <input class="in" type="number" min="0" step="any" inputmode="decimal" data-cnt="${esc(r.id)}" value="${esc(UI.cnt[r.id] != null ? UI.cnt[r.id] : "")}" placeholder="Count" aria-label="${esc(r.name)}, how many ${unitPlural(c.name, 2)} left">
           <select class="in txt" data-cntu="${esc(r.id)}" aria-label="${esc(r.name)}, counted in"><option value="cu"${u === "cu" ? " selected" : ""}>${esc(unitPlural(c.name, 2))}</option>${per2 > 1.05 ? `<option value="pack"${u === "pack" ? " selected" : ""}>full cases (${F.int(per2)})</option>` : ""}<option value="units"${u === "units" ? " selected" : ""}>${esc(g.unit || "each")}</option></select></div>`; }).join("")
       + `</section>`; }).join("");
 }
 async function saveCount(){
-  const items = trackedItems(), day = $("cntDate").value || ymd(new Date()), ts = day + "T" + hm(new Date()), at = new Date().toISOString();
+  const items = trackedItems(), day = $("cntDate").value || ymd(new Date()), ts = day + "T" + hm(new Date()), at = new Date().toISOString(), wkOpen = S.track.dates.filter(d => weekOf(d) === weekOf(day)).sort(), toss = wkOpen[wkOpen.length - 1] === day;
   const evs = Object.entries(UI.cnt).filter(([, v]) => String(v).trim() !== "").map(([id, v]) => { const it = items.find(i => i.id === id), x = parseFloat(v);
     const u = UI.cntU[id] || "cu", g = ingOf(id), c = countUnit(g);
-    return it && isFinite(x) && x >= 0 ? {type:"count", item:id, qty: u === "units" ? x : u === "pack" ? x * it.size : x * c.size, ts, at} : null; }).filter(Boolean);
+    return it && isFinite(x) && x >= 0 ? {type: toss && perishId(id) ? "waste" : "count", item:id, qty: u === "units" ? x : u === "pack" ? x * it.size : x * c.size, ts, at} : null; }).filter(Boolean);
   if (!evs.length){ toast("cntToast", "Type a count next to at least one item."); return; }
   $("cntSave").disabled = true;
-  try { for (const e of evs) await Store.addStock(e); UI.cnt = {}; toast("cntToast", `Saved ${evs.length} ${evs.length === 1 ? "count" : "counts"} for ${fmtD(day)}.`); }
+  try { for (const e of evs) await Store.addStock(e); UI.cnt = {}; const w = evs.filter(e => e.type === "waste").length;
+    toast("cntToast", `Saved ${evs.length} ${evs.length === 1 ? "count" : "counts"} for ${fmtD(day)}.${w ? ` ${w} perishable ${w === 1 ? "item is" : "items are"} logged as thrown out: toss them now.` : ""}`); }
   catch(e){ toast("cntToast", saveError(e)); }
   $("cntSave").disabled = false; recalc();
 }
@@ -2298,7 +2367,7 @@ function buyItems(T){
   const wk = buyWeek(T), o = S.orders[wk] || {}, qty = o.qty || {}, st = o.st || {};
   const rows = (T.rows || []).map(r => { const s = st[r.id] || {}, q = qty[r.id] != null ? Math.max(0, +qty[r.id] || 0) : r.packs;
     return {id:r.id, name:r.name, store:storeOf(r.vendor), url:r.url, size:r.size, unit:r.unit, price:r.price, sug:r.packs, qty:q, cost:q * (r.price || 0), ordered:!!s.o, received:!!s.r,
-      why: r.perDay > 1e-9 ? `This week uses ${inUnits(r.id, r.perDay * T.cover)}, ${r.oh > 1e-9 ? inUnits(r.id, r.oh) : "none"} on hand` : "Not used by the menu"}; });
+      perish: !!r.fc, why: r.fc ? fcWhy(r.id, r.fc, (T.nextDates || []).length) : r.perDay > 1e-9 ? `This week uses ${inUnits(r.id, r.perDay * T.cover)}, ${r.oh > 1e-9 ? inUnits(r.id, r.oh) : "none"} on hand` : "Not used by the menu"}; });
   return {wk, rows};
 }
 function renderBuyList(T){
@@ -2310,13 +2379,19 @@ function renderBuyList(T){
   if (!vis.length){ box.innerHTML = `<p class="empty">Nothing to order this week. Switch to All items to add something.</p>`; return; }
   const want = vis.filter(r => r.qty > 0);
   let h = `<p class="note-sm" style="margin:0 0 4px">${want.filter(r => r.ordered).length} of ${want.length} ordered, ${want.filter(r => r.received).length} received.</p>`, tot = 0;
-  STORES.concat("").forEach(sto => { const rs = vis.filter(r => r.store === sto).sort((a,b) => a.name.localeCompare(b.name)); if (!rs.length) return;
-    const sub = rs.reduce((s,r) => s + r.cost, 0); tot += sub;
-    h += `<div class="vendor"><h3>${sto ? esc(sto) : "No store yet"} <span class="muted" style="font-weight:500">${F.usd2(sub)}</span></h3>${sto ? "" : `<p class="note-sm" style="margin:0">Pick a store for these in the full ordering list below.</p>`}`
-      + rs.map(r => `<div class="ordrow${r.received ? " done" : ""}${r.qty ? "" : " zero"}">
+  const rowH = r => `<div class="ordrow${r.received ? " done" : ""}${r.qty ? "" : " zero"}">
         <div class="nm"><b>${esc(r.name)}</b><small>${esc(r.why)}${r.qty !== r.sug ? `. Suggested ${r.sug}` : ""}</small></div>
         <div class="ock"><button class="pc${r.ordered ? " av" : ""}" data-act="oOrd" data-id="${esc(r.id)}" aria-pressed="${r.ordered}"${r.received ? " disabled" : ""}>Ordered</button><button class="pc${r.received ? " av" : ""}" data-act="oRec" data-id="${esc(r.id)}" aria-pressed="${r.received}"${r.qty > 0 || r.received ? "" : " disabled"}>Received</button></div>
-        <div class="ctl"><input class="in q" type="number" min="0" step="1" data-oq="${esc(r.id)}" value="${r.qty}" aria-label="Packs of ${esc(r.name)}"${r.received ? " disabled" : ""}><span class="muted nw">× ${esc(packLabel(ingOf(r.id) || {}))}, ${F.usd2(r.cost)}</span></div></div>`).join("") + `</div>`; });
+        <div class="ctl"><input class="in q" type="number" min="0" step="1" data-oq="${esc(r.id)}" value="${r.qty}" aria-label="Packs of ${esc(r.name)}"${r.received ? " disabled" : ""}><span class="muted nw">× ${esc(packLabel(ingOf(r.id) || {}))}, ${F.usd2(r.cost)}</span>${r.perish && r.received ? `<button class="linkbtn" data-act="oMore" data-id="${esc(r.id)}">Bought more</button>` : ""}</div></div>`;
+  const pr = vis.filter(r => r.perish).sort((a, b) => a.name.localeCompare(b.name)), safe = S.track.safety || "balanced";
+  if (pr.length){ const sub = pr.reduce((s, r) => s + r.cost, 0); tot += sub;
+    h += `<div class="vendor perish"><h3>Perishables <span class="muted" style="font-weight:500">${F.usd2(sub)}</span></h3><p class="note-sm" style="margin:0 0 6px">Order these at the start of the week. Everything left at the last close gets counted and thrown out, so the amounts aim to run out as the week ends.</p>
+      <div class="lnk" style="margin-bottom:4px"><span class="note-sm">Safety margin</span><div class="segc sm">${[["lean","Lean"],["balanced","Balanced"],["safe","Safe"]].map(([v, l]) => `<button class="${safe === v ? "on" : ""}" data-act="pSafe" data-v="${v}">${l}</button>`).join("")}</div></div>`
+      + pr.map(rowH).join("") + `</div>`; }
+  STORES.concat("").forEach(sto => { const rs = vis.filter(r => !r.perish && r.store === sto).sort((a,b) => a.name.localeCompare(b.name)); if (!rs.length) return;
+    const sub = rs.reduce((s,r) => s + r.cost, 0); tot += sub;
+    h += `<div class="vendor"><h3>${sto ? esc(sto) : "No store yet"} <span class="muted" style="font-weight:500">${F.usd2(sub)}</span></h3>${sto ? "" : `<p class="note-sm" style="margin:0">Pick a store for these in the full ordering list below.</p>`}`
+      + rs.map(rowH).join("") + `</div>`; });
   box.innerHTML = h + `<table class="t"><tr class="tot"><td class="l">Order total</td><td>${F.usd2(tot)}</td></tr></table>`;
 }
 async function orderTick(id, k){
@@ -2941,6 +3016,9 @@ function attention(){
   if (low.length) out.push({tone:"bad", text:`Low on ${low.slice(0, 4).map(r => r.name).join(", ")}${low.length > 4 ? ` and ${low.length - 4} more` : ""}`, tab:"inventory"});
   if (nx && (toDate(nx) - toDate(t)) / 864e5 <= 3){ const B = buyItems(T), left = B.rows.filter(r => r.qty > 0 && !r.ordered);
     if (left.length) out.push({tone:"warn", text:`This week's order isn't placed yet: ${left.length} ${left.length === 1 ? "item" : "items"}`, tab:"inventory"}); }
+  const wkOpen = ds.filter(d => weekOf(d) === weekOf(t)), shT = S.track.dates.includes(t) ? shiftsOf(t) : [];
+  if (wkOpen.length && wkOpen[wkOpen.length - 1] === t && shT.length && new Date().getHours() + new Date().getMinutes() / 60 >= Math.max(...shT.map(q => q.end)) - .5
+      && !Store.stock.some(e => e.type === "waste" && String(e.ts).slice(0, 10) === t)) out.push({tone:"warn", text:"Last close of the week: count the leftover perishables in the closing count, then throw them out", tab:"inventory"});
   const lastDay = past[past.length - 1];
   if (lastDay && !Store.stock.some(e => e.type === "count" && String(e.ts).slice(0, 10) >= lastDay)) out.push({tone:"warn", text:`No closing count since ${fmtD(lastDay)}`, tab:"inventory"});
   if (isAdmin() && nx){ const wk = ds.filter(d => d >= t && weekOf(d) === weekOf(nx)), open = wk.reduce((s, d) => { const x = ensureDay(d); return s + shiftsOf(d).reduce((a, q, i) => a + Math.max(0, q.seats - namesIn(x.names[i]).length), 0); }, 0);
@@ -3098,28 +3176,40 @@ function renderAnalytics(){
   // folded: how profit is worked out, cost of goods by week, days, spending
   const Fe = S.fees, card = (R.sales || 0) * (+Fe.cardPct || 0) / 100 + (R.orders || 0) * (+Fe.cardFix || 0), fee = (R.sales || 0) * (+Fe.feePct || 0) / 100, char = (R.sales || 0) * (+Fe.charityPct || 0) / 100;
   const mrow = (l, v, neg) => `<tr><td class="l">${l}</td><td>${neg ? "−" : ""}${F.usd2(v)}</td><td class="muted">${F.frac(R.sales ? v / R.sales : 0)}</td></tr>`;
-  $("anMoney").innerHTML = `<tr><td class="l">Sales</td><td>${F.usd2(R.sales || 0)}</td><td class="muted">100%</td></tr>` + mrow("Cost of goods, perishables at what was bought", R.cogs || 0, true)
+  $("anMoney").innerHTML = `<tr><td class="l">Sales</td><td>${F.usd2(R.sales || 0)}</td><td class="muted">100%</td></tr>` + mrow("Cost of goods, perishables at the full cost of what was bought", R.cogs || 0, true)
     + mrow("Card processing", card, true) + mrow(`Additional fees, ${F.pct(+Fe.feePct || 0)}`, fee, true) + mrow(`Charity, ${F.pct(+Fe.charityPct || 0)}`, char, true)
     + `<tr class="tot"><td class="l">Profit</td><td class="${(R.profit || 0) < 0 ? "neg-t" : ""}">${F.usd2(R.profit || 0)}</td><td>${F.frac(R.sales ? R.profit / R.sales : 0)}</td></tr>`
     + (R.spent ? `<tr><td class="l">One-off spending</td><td>−${F.usd2(R.spent)}</td><td></td></tr><tr class="tot"><td class="l">After one-off spending</td><td>${F.usd2(R.profit - R.spent)}</td><td></td></tr>` : "");
-  const wkC = {}; Object.entries(M).forEach(([d, x]) => { if (!inR(d)) return; const w = wkC[weekOf(d)] || (wkC[weekOf(d)] = {sales:0, other:0, p:0, cogs:0, bought:x.wkBought, used:0});
-    w.sales += x.sales; w.other += x.other; w.p += x.p; w.cogs += x.cogs; w.used += x.pUsed; });
+  const wkC = {}; Object.entries(M).forEach(([d, x]) => { if (!inR(d)) return; const w = wkC[weekOf(d)] || (wkC[weekOf(d)] = {sales:0, other:0, p:0, cogs:0, bought:x.wkBought, used:0, waste:0});
+    w.sales += x.sales; w.other += x.other; w.p += x.p; w.cogs += x.cogs; w.used += x.pUsed; w.waste += x.waste; });
   const wks = Object.keys(wkC).sort().reverse(), anyUsed = wks.some(w => !wkC[w].bought && wkC[w].used > 0);
-  $("anCogs").innerHTML = wks.length ? `<thead><tr><th class="l">Week of</th><th>Sales</th><th>Perishables</th><th>Everything else</th><th>Cost of goods</th><th>Of sales</th></tr></thead><tbody>`
-      + wks.map(w => { const x = wkC[w]; return `<tr><td class="l">${fmtD(w)}</td><td>${F.usd0(x.sales)}</td><td>${F.usd0(x.p)}${x.bought ? ` <span class="note-sm">bought</span>` : x.used > 0 ? "*" : ""}</td><td>${F.usd0(x.other)}</td><td><b>${F.usd0(x.cogs)}</b></td><td class="muted">${x.sales ? F.frac(x.cogs / x.sales) : ""}</td></tr>`; }).join("") + `</tbody>`
+  $("anCogs").innerHTML = wks.length ? `<thead><tr><th class="l">Week of</th><th>Sales</th><th>Perishables, sunk</th><th>Thrown out</th><th>Everything else</th><th>Cost of goods</th><th>Of sales</th></tr></thead><tbody>`
+      + wks.map(w => { const x = wkC[w]; return `<tr><td class="l">${fmtD(w)}</td><td>${F.usd0(x.sales)}</td><td>${F.usd0(x.p)}${x.bought ? ` <span class="note-sm">bought</span>` : x.used > 0 ? "*" : ""}</td><td>${x.waste ? F.usd0(x.waste) : x.bought ? "–" : ""}</td><td>${F.usd0(x.other)}</td><td><b>${F.usd0(x.cogs)}</b></td><td class="muted">${x.sales ? F.frac(x.cogs / x.sales) : ""}</td></tr>`; }).join("") + `</tbody>`
     : `<tbody><tr><td class="l empty">No sales or deliveries in this range.</td></tr></tbody>`;
-  set("anCogsNote", `Perishables (marked under Inventory, Edit categories) count at the full cost of what was received that week, since what's left gets thrown out. Everything else counts what the drinks used.${anyUsed ? " * No perishable deliveries were recorded that week, so it uses the recipe amounts." : ""}`);
+  set("anCogsNote", `Perishables are a sunk cost: each week counts the full cost of what was received, since what's left at the last close gets thrown out. Thrown out is what that was worth, already inside the perishables cost. Everything else counts what the drinks used.${anyUsed ? " * No perishable deliveries were recorded that week, so it uses the recipe amounts." : ""}`);
   const dl = Object.keys(M).filter(d => inR(d) && M[d].sales > 0).sort().reverse();
   $("dayBody").innerHTML = dl.length ? dl.map(d => { const x = M[d], dd = I.days[d], top = dd ? Object.entries(dd.drinks).sort((a, b) => b[1] - a[1])[0] : null;
       return `<tr><td class="l">${fmtD(d)}${S.clover.orders[d] ? ` <span class="note-sm">Clover</span>` : ""}</td><td>${F.int(x.orders)}</td><td>${dd && dd.n ? F.int(dd.n) : "–"}</td><td>${F.usd2(x.sales)}</td><td class="l">${top ? esc(top[0]) : ""}</td></tr>`; }).join("")
     : `<tr><td class="l empty" colspan="5">No sales in this range.</td></tr>`;
+  renderPerish(inR);
   renderCharges();
+}
+/* perishables by week: the drinks forecast against what sold, and what was bought, used and thrown out */
+function renderPerish(inR){
+  const el = $("anPerish"), T = UI.T; if (!el || !T) return;
+  const by = {}; Store.stock.forEach(e => { if ((e.type !== "receive" && e.type !== "waste") || !perishId(e.item)) return; const d = String(e.ts).slice(0, 10); if (!inR(d)) return;
+    const w = by[weekOf(d)] || (by[weekOf(d)] = {got:0, left:0, closed:false}), v = (+e.qty || 0) * perUnit(e.item); if (e.type === "receive") w.got += v; else { w.left += v; w.closed = true; } });
+  const wks = Object.keys(by).sort().reverse().slice(0, 12);
+  el.innerHTML = wks.length ? `<thead><tr><th class="l">Week of</th><th>Drinks forecast</th><th>Drinks sold</th><th>Bought</th><th>Used</th><th>Thrown out</th></tr></thead><tbody>`
+      + wks.map(w => { const x = by[w], days = S.track.dates.filter(d => weekOf(d) === w).length, fc = perDayAvg(T, w) * days, sold = weekDrinks(T, w).n;
+        return `<tr><td class="l">${fmtD(w)}</td><td>${fc ? F.int(fc) : "–"}</td><td>${sold ? F.int(sold) : "–"}</td><td>${F.usd0(x.got)}</td><td>${x.closed ? F.usd0(Math.max(0, x.got - x.left)) : "–"}</td><td class="${x.closed && x.got && x.left / x.got > .15 ? "neg-t" : ""}">${x.closed ? `${F.usd0(x.left)}${x.got ? ` <span class="muted">${F.frac(x.left / x.got)}</span>` : ""}` : `<span class="note-sm">not closed</span>`}</td></tr>`; }).join("") + `</tbody>`
+    : `<tbody><tr><td class="l empty">No perishables ordered in this range. Tick Received on the perishables order, then count leftovers at the last close of the week.</td></tr></tbody>`;
 }
 /* ---------- money by day: sales, cost of goods, fees, and cash in and out. The week, month and range views add these up.
    Cost of goods: what the drinks used, except perishables, which count at what was received that week when any was recorded.
    Cash out: deliveries (Received on the order, or an imported invoice, at today's price) plus one-off spending with a date. */
 function dayMoney(){
-  const C = S.clover, out = {}, D = d => out[d] || (out[d] = {sales:0, orders:0, other:0, pUsed:0, pBought:0, deliv:0, spent:0}), cset = new Set(Object.keys(C.orders));
+  const C = S.clover, out = {}, D = d => out[d] || (out[d] = {sales:0, orders:0, other:0, pUsed:0, pBought:0, deliv:0, spent:0, waste:0}), cset = new Set(Object.keys(C.orders));
   Store.sales.forEach(doc => { const ok = {};
     (doc.lines || []).forEach(l => { if (!(+l.q > 0) || !l.d || cset.has(l.d)) return; const d = lineDrink(l); if (!isFood(l) && !d) return;
       const q = +l.q, r = (l.p != null ? +l.p : lineRevenue(l, d)) * q, c = costSplit(l, d, q), x = D(l.d); x.sales += r; x.other += c.o; x.pUsed += c.p;
@@ -3128,7 +3218,7 @@ function dayMoney(){
   const ps = perishShare();
   Object.entries(C.orders).forEach(([d, o]) => { const dr = o.log.reduce((t, [, v]) => t + v, 0), cr = dr * (+C.cogsRate || 0), x = D(d);
     x.sales += dr; x.orders += o.log.filter(([, v]) => v > 0).length; x.other += cr * (1 - ps); x.pUsed += cr * ps; });
-  Store.stock.forEach(e => { if (e.type !== "receive") return; const d = String(e.ts).slice(0, 10), v = (+e.qty || 0) * perUnit(e.item), x = D(d); x.deliv += v; if (perishId(e.item)) x.pBought += v; });
+  Store.stock.forEach(e => { if (e.type === "waste"){ D(String(e.ts).slice(0, 10)).waste += (+e.qty || 0) * perUnit(e.item); return; } if (e.type !== "receive") return; const d = String(e.ts).slice(0, 10), v = (+e.qty || 0) * perUnit(e.item), x = D(d); x.deliv += v; if (perishId(e.item)) x.pBought += v; });
   (S.charges || []).forEach(c => { if (c.date) D(c.date).spent += +c.amount || 0; });
   const bought = {}, Fe = S.fees; Object.entries(out).forEach(([d, x]) => { if (x.pBought > 0) bought[weekOf(d)] = true; });
   Object.entries(out).forEach(([d, x]) => { x.wkBought = !!bought[weekOf(d)]; x.p = x.wkBought ? x.pBought : x.pUsed; x.cogs = x.other + x.p;
@@ -3136,7 +3226,7 @@ function dayMoney(){
     x.profit = x.sales - x.cogs - x.fees; x.in = x.sales - x.fees; x.out = x.deliv + x.spent; });
   return out;
 }
-const MONEY_KEYS = ["sales","orders","other","p","pUsed","pBought","cogs","fees","profit","in","out","deliv","spent"];
+const MONEY_KEYS = ["sales","orders","other","p","pUsed","pBought","cogs","fees","profit","in","out","deliv","spent","waste"];
 const sumDays = (M, keep) => Object.entries(M).filter(([d]) => keep(d)).reduce((a, [, x]) => { MONEY_KEYS.forEach(k => a[k] = (a[k] || 0) + (x[k] || 0)); return a; }, {});
 /* cost recuperation since the first money in or out: bars for each week's cash in (sales after fees and charity) and out
    (deliveries and one-off spending), and the running total, which crosses zero the week everything spent is earned back */
@@ -3565,12 +3655,13 @@ function applyConfig(cfg, boot){
   if (!(cfg.v >= 5)){ migrateV4(cfg); if (!boot) markDirty(); }
   if (cfg.v === 5){ S.specials = S.specials.filter(sp => sp.on !== false); if (!boot) markDirty(); }
   if (!(cfg.v >= 7)) S.ingredients.forEach(g => { if (!g.cat || g.cat === "mixin") g.cat = guessCat(g); });   // v7 split fresh items out of mix-ins
+  if (!(cfg.v >= 9)) S.specials.forEach(sp => { if (sp.ownPrice == null) sp.ownPrice = true; });   // v9: auto prices are for drinks built from now on
   if (!(cfg.v >= 8)) S.ingredients.forEach(g => { if (g.cat === "milk" && guessCat(g) === "alt") g.cat = "alt"; });   // v8: alt milk has its own category
   Object.keys(LIST_DEF).forEach(k => { if (!Array.isArray(S.lists[k])) S.lists[k] = LIST_DEF[k].map((t, i) => ({id:k + i, t})); });
   S.charges.forEach(c => { if (!c.date) c.date = (S.track.dates || []).slice().sort()[0] || ymd(new Date()); });   // undated spending counts from the first cafe day   // v5 carried every recipe-lab idea over, off the menu; only real drinks stay
   if (!UI.wkDirty) UI.wk = null;   // the weekly-hours grid starts again from the saved hours unless it's mid-edit
   checkAdmin();
-  S.v = 8;
+  S.v = 9;
   ensureDates();
   if (!boot) renderAll();
 }
@@ -3711,7 +3802,7 @@ document.addEventListener("input", e => {
   if (t.id === "bankQ"){ UI.bank.q = t.value; renderBank(); return; }
   if (t.id === "wmQ"){ UI.wm.q = t.value; renderWmList(); return; }
   if (d.gprice != null){ const x = drinkById(d.gprice), v = parseFloat(t.value); if (!x || !(v >= 0)) return;
-    if (x.sp) x.sp.price = v; else S.prices[x.id] = v; markDirty(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); return; }
+    if (x.sp){ x.sp.price = v; x.sp.ownPrice = true; } else S.prices[x.id] = v; markDirty(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); return; }
   if (d.nb != null){ UI.nb[d.nb] = t.value; return; }
   if (t.id === "bName"){ UI.bld.name = t.value; return; }
   if (t.id === "bPrice"){ UI.bld.price = t.value; bldSum(); return; }
@@ -3741,6 +3832,7 @@ document.addEventListener("change", e => {
   if (t.id === "anCmp"){ UI.an.cmp = t.checked; renderAnalytics(); return; }
   if (d.me != null){ UI.me = t.value; try { localStorage.setItem("gg-me", t.value); } catch(err){} renderHome(); return; }
   if (d.cntu != null){ UI.cntU[d.cntu] = t.value; return; }
+  if (t.id === "cntDate"){ renderCount(UI.T); return; }   // the last open day of the week switches perishables to throw-out
   if (d.cuname != null || d.cusize != null){ const g = ingOf(d.cuname || d.cusize); if (!g || !isAdmin()) return; const c = countUnit(g);
     g.cu = {name: d.cuname != null ? (t.value.trim() || c.name) : c.name, size: d.cusize != null ? (+t.value > 0 ? +t.value : c.size) : c.size}; markDirty(); renderIngredients(); return; }
   if (d.icat != null || d.iperish != null){ const g = S.ingredients.find(x => x.id === (d.icat || d.iperish)); if (!g || !isAdmin()) return;
@@ -3796,6 +3888,9 @@ document.addEventListener("click", e => {
   if (a === "wkSave"){ saveWeekRule(); UI.wkDirty = false; return; }
   // order checklist
   if (a === "oOrd" || a === "oRec"){ orderTick(t.dataset.id, a === "oOrd" ? "o" : "r"); return; }
+  if (a === "pSafe"){ S.track.safety = t.dataset.v; markDirty(); recalc(); return; }
+  if (a === "oMore"){ const g = ingOf(t.dataset.id); if (!g) return; const n = parseFloat(prompt(`How many more ${packLabel(g)} of ${g.name} did you buy?`, "1")); if (!(n > 0)) return;
+    Store.addStock({type:"receive", item:g.id, qty:n * (+g.size || 0), ts:ymd(new Date()) + "T" + hm(new Date()), at:new Date().toISOString()}).then(() => toast("buyToast", `Added ${n} more to stock and to this week's perishables.`)).catch(e => toast("buyToast", saveError(e))); return; }
   // log sales
   if (a === "pick"){ openMod(t.dataset.id); return; }
   if (a === "pastry"){ addPastry(); return; }
@@ -3818,10 +3913,11 @@ document.addEventListener("click", e => {
   if (a === "bldOpen"){ openBuilder(); return; }
   if (a === "bldClose"){ $("bldDlg").close(); return; }
   if (a === "bkEdit"){ openBuilder(t.dataset.id); return; }
-  if (["bBase","bBase2","bSy","bPumps","bFoamSy","bExtra","bExDel","bServe","bOrd","bPrev","bVer"].includes(a)){ const b = UI.bld, r = b.r, v = t.dataset.v;
+  if (["bBase","bBase2","bMilk","bSy","bPumps","bFoamSy","bExtra","bExDel","bServe","bOrd","bPrev","bVer"].includes(a)){ const b = UI.bld, r = b.r, v = t.dataset.v;
     if (a === "bBase"){ r.bases[0] = v; if (r.bases[1] === v) r.bases.pop(); const bt = baseTemplate(v); if (bt && bt.custom && r.bases.length === 1) b.serve = "hot";
       if (!r.bases.some(id => (baseTemplate(id) || {}).shot)) r.extras = r.extras.filter(x => x.t !== "shot"); }
     if (a === "bBase2") r.bases[1] = v;
+    if (a === "bMilk") r.milk = v === "milk" ? "" : v;
     if (a === "bSy"){ r.syrups = r.syrups.some(x => x.id === v) ? r.syrups.filter(x => x.id !== v) : r.syrups.concat({id:v, pumps:r.syrups.length ? 1 : 2}); }
     if (a === "bPumps"){ const x = r.syrups.find(y => y.id === t.dataset.id); if (x) x.pumps = +v; }
     if (a === "bFoamSy") r.foam.syrup = v;
@@ -3891,6 +3987,7 @@ document.addEventListener("click", e => {
   if (a === "avTog"){ const d = t.dataset.d, i = +t.dataset.i, s = UI.av.sel[d]; if (!s) return;
     s[i] = s[i] ? false : shiftFull(UI.av.wk || nextAvailWeek(), d, i, shiftsOf(d)[i], UI.av.pid) ? "bk" : true; renderAvailView(); return; }
   if (a === "schView"){ openSchedule(); return; }
+  if (a === "gAuto"){ const sp = S.specials.find(x => x.id === t.dataset.id); if (!sp) return; sp.ownPrice = false; sp.price = autoPrice(recipeOf(sp)); markDirty(); renderGear(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); return; }
   if (a === "schCopy"){ copySchedule(); return; }
   if (a === "schClose"){ $("schDlg").close(); return; }
   if (a === "avSave"){ saveAvail(); return; }
@@ -3949,7 +4046,7 @@ document.addEventListener("keydown", e => {
 });
 $("modDlg").addEventListener("close", () => { UI.mod = null; });
 document.addEventListener("submit", e => { const k = e.target.dataset && e.target.dataset.adm; if (k){ e.preventDefault(); admSubmit(); } });
-const ADMIN_ACT = /^(gear|bld|ns[A-Z]|b[A-Z]|nb[A-Z]|bk[A-Z]|bank|mxTog|pf[A-Z]|team[A-Z]|wk[A-Z]|cal[A-Z]|rule[A-Z]|dp(Open|CloseDay|As|Un|Add)|addCharge|delCharge|anRange|ckEdit|ckSave|imp[A-Z]|wm[A-Z]|cntEdit|cntItem|cntDel|undoRemove)/;
+const ADMIN_ACT = /^(gear|bld|ns[A-Z]|b[A-Z]|nb[A-Z]|bk[A-Z]|bank|mxTog|pf[A-Z]|team[A-Z]|wk[A-Z]|cal[A-Z]|rule[A-Z]|dp(Open|CloseDay|As|Un|Add)|addCharge|delCharge|anRange|ckEdit|ckSave|imp[A-Z]|wm[A-Z]|cntEdit|cntItem|cntDel|undoRemove|gAuto|oMore|pSafe)/;
 
 /* ------------------------------------------------------------------ init */
 { const q = new URLSearchParams(location.search);
