@@ -300,3 +300,9 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
 #schDlg .mbody{overflow:auto;max-height:calc(100dvh - 24px)}
 .vendor.perish{box-shadow:inset 4px 0 0 var(--green);padding-left:12px}
 .cnt-toss{color:var(--orange-t)!important;margin:6px 0 2px}
+
+.wk-b.av.need.hi{background:var(--red-bg);color:var(--red-t);box-shadow:inset 0 0 0 1.5px var(--red)}
+.mxn{margin-top:2px;border-radius:6px;padding:1px 0;font-weight:700}
+.mxn.hi{background:var(--red-bg);color:var(--red-t)}.mxn.md{background:var(--orange-bg);color:var(--orange-t)}.mxn.ok{color:var(--green-t)}
+.mxc.sg{background:transparent;color:var(--tint);box-shadow:inset 0 0 0 2px var(--tint);outline:1.5px dashed var(--tint);outline-offset:-5px}
+.mxbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin:0 0 10px}

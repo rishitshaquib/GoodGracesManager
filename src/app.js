@@ -24,7 +24,7 @@ const S = {
   charges: [ {name:"Reusable bar tools and cooler", amount:363.75} ],
   invoices: [],     // imported invoice numbers {order, date, at}
   cal:    {rules:[], open:[], closed:[]},
-  pattern:{}, orders:{}, team:[], days:{},
+  pattern:{}, orders:{}, team:[], days:{}, pub:{},   // pub: each week's published schedule
   track:  {dates:[], cover:2, buffer:25, perDay:60},
   exp:    {wage:16.94},
   clover: {orders:{}, items:[], cogsRate:0.232, card:{pct:0.023, fixed:0.10}}   // Clover days and item reports, from Import sales
@@ -1475,20 +1475,6 @@ async function saveStaff(p){
 }
 async function delStaff(p){ S.team = S.team.filter(x => x !== p); markDirty(); }
 function renderStaff(){ renderMatrix(); renderTeam(); if (UI.pf && !$("pfPanel").contains(document.activeElement && document.activeElement.tagName === "INPUT" ? document.activeElement : null)) renderPf(); renderDayPanel(); }
-function renderMatrix(){
-  const box = $("mxGrid"); if (!box) return; renderAvailBox();
-  const today = ymd(new Date()); if (!UI.mxWk) UI.mxWk = weekOf(today); const wk = UI.mxWk;
-  $("mxTitle").innerHTML = `Staffing<span class="wk-sub">${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</span>`;
-  const days = [0,1,2,3,4,5,6].map(i => addDays(wk, i)).filter(d => S.track.dates.includes(d));
-  if (!days.length){ box.innerHTML = `<p class="empty">The cafe is closed this week. Open days on the calendar.</p>`; return; }
-  const cols = []; days.forEach(d => { const x = ensureDay(d); shiftsOf(d).forEach((q,i) => cols.push({d, i, q, on:namesIn(x.names[i]), first:i === 0})); });
-  const people = [...new Set(teamSorted().map(p => p.name).concat(...cols.map(c => c.on)))];
-  if (!people.length){ box.innerHTML = `<p class="empty">Add people to the team below to start assigning shifts.</p>`; return; }
-  box.innerHTML = `<div class="scroll"><table class="mx"><thead><tr><th class="nm" rowspan="2">Name</th>${days.map(d => `<th class="d0" colspan="${shiftsOf(d).length}">${fmtD(d)}</th>`).join("")}</tr>
-    <tr>${cols.map(c => `<th class="${c.first ? "d0" : ""}">${tfmt(c.q.start)}<br>${tfmt(c.q.end)}<div class="${c.on.length >= c.q.seats ? "status-ok" : "neg-t"}">${c.on.length}/${c.q.seats}</div></th>`).join("")}</tr></thead>
-    <tbody>${people.map(n => `<tr><th class="nm" scope="row" title="${esc(n)}">${nameH(n)}</th>${cols.map(c => { const as = c.on.includes(n), av = availFor(c.d, n, c.q), bk = !av && bkFor(c.d, n, c.q);
-      return `<td class="${c.first ? "d0" : ""}"><button class="mxc${as ? " as" : ""}${av ? " av" : bk ? " bku" : " na"}" data-act="mxTog" data-d="${c.d}" data-i="${c.i}" data-n="${esc(n)}" aria-pressed="${as}" aria-label="${esc(n)}, ${fmtD(c.d)} ${tfmt(c.q.start)} to ${tfmt(c.q.end)}, ${as ? "on this shift" : av ? "available" : bk ? "backup" : answered(c.d, n) ? "not available" : "hasn't sent availability for this week"}"${c.d < today ? " disabled" : ""}>${as ? "✓" : av ? "" : bk ? "B" : answered(c.d, n) ? "–" : "?"}</button></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
-}
 function renderTeam(){
   const box = $("teamList"); if (!box) return;
   $("teamAddRow").hidden = $("teamImport").hidden = !isMgr();
@@ -1544,6 +1530,73 @@ function setShiftNames(d, i, fn){ const x = ensureDay(d); x.names[i] = fn(namesI
 
 
 
+/* ------------------------------------------------------ staffing: availability → suggested → approved → published
+   Staff say when they can work (the weekly form). Each shift is colored by need. The admin taps Suggest shifts for a draft built
+   from availability, approves picks (tap a ＋, or Approve all, or tap any cell by hand), then publishes. Publishing saves a
+   snapshot of the week in S.pub; staff only ever see the published schedule. */
+const needLvl = (have, seats) => have <= 0 || seats - have >= 2 ? "hi" : have < seats ? "md" : "ok";   // red, orange, green
+const shiftHrs = q => q.end - q.start;
+/* the published week: {at, days:{date: [names per shift]}}. Weeks from before publishing existed (up to this week) show as assigned */
+function pubOf(wk){
+  const P = (S.pub || {})[wk]; if (P) return P;
+  if (wk > weekOf(ymd(new Date()))) return null;
+  const days = {}; weekDays(wk).forEach(d => days[d] = ensureDay(d).names.slice(0, shiftsOf(d).length)); return {days, legacy:true};
+}
+const liveWeek = wk => { const o = {}; weekDays(wk).forEach(d => o[d] = ensureDay(d).names.slice(0, shiftsOf(d).length).map(v => namesIn(v).join(", "))); return o; };
+const pubState = wk => { const P = (S.pub || {})[wk]; if (!P) return "none"; const live = liveWeek(wk); return weekDays(wk).every(d => JSON.stringify(live[d]) === JSON.stringify((P.days[d] || []).map(v => namesIn(v).join(", ")))) ? "same" : "changed"; };
+/* who's on a shift as this viewer should see it: the draft for admins, the published schedule for everyone else */
+const shiftOn = (d, i) => { if (isAdmin()) return namesIn(ensureDay(d).names[i]); const P = pubOf(weekOf(d)); return P ? namesIn((P.days[d] || [])[i]) : []; };
+function publishWeek(wk){ (S.pub || (S.pub = {}))[wk] = {at:new Date().toISOString(), days:liveWeek(wk)}; markDirty(); }
+/* a draft from availability: the hardest shift to fill goes first (fewest people free for its open spots), and each spot goes to
+   whoever has the fewest hours so far, someone trained first when the shift has nobody trained. Never two overlapping shifts in a
+   day for one person; backups only when nobody else is free.
+   ponytail: greedy, not optimal; fine for a dozen people and a handful of shifts */
+function suggestWeek(wk){
+  const today = ymd(new Date()), slots = weekDays(wk).filter(d => d >= today).flatMap(d => shiftsOf(d).map((q, i) => ({d, i, q, on:namesIn(ensureDay(d).names[i]), add:[]})));
+  const all = s => s.on.concat(s.add), hrs = {};
+  weekDays(wk).forEach(d => shiftsOf(d).forEach((q, i) => namesIn(ensureDay(d).names[i]).forEach(n => hrs[n] = (hrs[n] || 0) + shiftHrs(q))));
+  const busy = (n, s) => slots.some(o => o !== s && o.d === s.d && all(o).includes(n) && o.q.start < s.q.end && s.q.start < o.q.end);
+  const cands = s => { const free = n => !all(s).includes(n) && !busy(n, s), names = teamSorted().map(p => p.name);
+    const a = names.filter(n => free(n) && availFor(s.d, n, s.q)); return a.length ? a : names.filter(n => free(n) && bkFor(s.d, n, s.q)); };
+  for (let k = 0; k < 300; k++){
+    const open = slots.map(s => ({s, gap:s.q.seats - all(s).length, c:cands(s)})).filter(x => x.gap > 0 && x.c.length);
+    if (!open.length) break;
+    const x = open.sort((a, b) => (a.c.length - a.gap) - (b.c.length - b.gap))[0], noTr = !all(x.s).some(n => (person(n) || {}).trained);
+    const n = x.c.sort((a, b) => ((hrs[a] || 0) + (noTr && !(person(a) || {}).trained ? 50 : 0)) - ((hrs[b] || 0) + (noTr && !(person(b) || {}).trained ? 50 : 0)) || a.localeCompare(b))[0];
+    x.s.add.push(n); hrs[n] = (hrs[n] || 0) + shiftHrs(x.s.q);
+  }
+  const picks = {}; slots.forEach(s => { if (s.add.length) picks[s.d + "|" + s.i] = s.add; }); return picks;
+}
+UI.sug = {wk:"", picks:{}};
+const sugOf = wk => UI.sug.wk === wk ? UI.sug.picks : {};
+const sugN = wk => Object.values(sugOf(wk)).reduce((t, a) => t + a.length, 0);
+function approveSug(wk, key, n){ const P = sugOf(wk), [d, i] = key.split("|");
+  (n ? [n] : (P[key] || []).slice()).forEach(m => setShiftNames(d, +i, arr => arr.includes(m) ? arr : arr.concat(m)));
+  if (n) P[key] = (P[key] || []).filter(m => m !== n); else delete P[key]; if (P[key] && !P[key].length) delete P[key]; }
+function renderMatrix(){
+  const box = $("mxGrid"); if (!box) return; renderAvailBox();
+  const today = ymd(new Date()); if (!UI.mxWk) UI.mxWk = weekOf(today); const wk = UI.mxWk, adm = isAdmin(), sg = adm ? sugOf(wk) : {};
+  $("mxTitle").innerHTML = `Staffing<span class="wk-sub">${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</span>`;
+  const days = weekDays(wk);
+  if (!days.length){ box.innerHTML = `<p class="empty">The cafe is closed this week. Open days on the calendar.</p>`; return; }
+  const P = pubOf(wk);
+  if (!adm && !P){ box.innerHTML = `<p class="empty">The schedule for this week isn't out yet. Put in your availability with the link above.</p>`; return; }
+  const cols = []; days.forEach(d => shiftsOf(d).forEach((q, i) => { const on = shiftOn(d, i), sug = sg[d + "|" + i] || [];
+    const cand = team().filter(p => !on.includes(p.name) && (availFor(d, p.name, q) || bkFor(d, p.name, q))).length, open = q.seats - on.length;
+    cols.push({d, i, q, on, sug, open, lvl: open <= 0 ? "ok" : cand < open ? "hi" : "md", first:i === 0}); }));
+  const people = [...new Set(teamSorted().map(p => p.name).concat(...cols.map(c => c.on)))];
+  if (!people.length){ box.innerHTML = `<p class="empty">Add people to the team below to start assigning shifts.</p>`; return; }
+  const ns = sugN(wk), st = pubState(wk), past = days[days.length - 1] < today;
+  const bar = !adm ? "" : `<div class="mxbar">
+      <span class="lnk">${past ? "" : `<button class="btn ghost sm" data-act="mxSug">${ns ? "Suggest again" : "Suggest shifts"}</button>`}${ns ? `<button class="btn sm" data-act="mxOk">Approve all ${ns}</button><button class="btn ghost sm" data-act="mxClr">Clear</button>` : ""}</span>
+      <span class="lnk"><span class="note-sm ${st === "changed" ? "neg-t" : st === "same" ? "status-ok" : ""}">${st === "none" ? "Not published" : st === "same" ? `Published ${fmtD(ymd(new Date(S.pub[wk].at)))}` : "Changed since publishing"}</span><button class="btn sm" data-act="schPub"${st === "same" ? " disabled" : ""}>${st === "changed" ? "Publish changes" : "Publish final schedule"}</button></span></div>
+    ${ns ? `<p class="note-sm" style="margin:0 0 8px">${ns} suggested, marked ＋. Tap one to approve it, or Approve all.</p>` : ""}`;
+  box.innerHTML = bar + `<div class="scroll"><table class="mx"><thead><tr><th class="nm" rowspan="2">Name</th>${days.map(d => `<th class="d0" colspan="${shiftsOf(d).length}">${fmtD(d)}</th>`).join("")}</tr>
+    <tr>${cols.map(c => `<th class="${c.first ? "d0" : ""}">${tfmt(c.q.start)}<br>${tfmt(c.q.end)}<div class="mxn ${c.lvl}" title="${c.lvl === "hi" ? "Not enough people available to fill it" : c.lvl === "md" ? "Open spots, people available" : "Full"}">${c.on.length}/${c.q.seats}</div></th>`).join("")}</tr></thead>
+    <tbody>${people.map(n => `<tr><th class="nm" scope="row" title="${esc(n)}">${nameH(n)}</th>${cols.map(c => { const as = c.on.includes(n), sgd = !as && c.sug.includes(n), av = availFor(c.d, n, c.q), bk = !av && bkFor(c.d, n, c.q);
+      return `<td class="${c.first ? "d0" : ""}"><button class="mxc${as ? " as" : ""}${sgd ? " sg" : ""}${av ? " av" : bk ? " bku" : " na"}" data-act="mxTog" data-d="${c.d}" data-i="${c.i}" data-n="${esc(n)}" aria-pressed="${as}" aria-label="${esc(n)}, ${fmtD(c.d)} ${tfmt(c.q.start)} to ${tfmt(c.q.end)}, ${as ? "on this shift" : sgd ? "suggested, tap to approve" : av ? "available" : bk ? "backup" : answered(c.d, n) ? "not available" : "hasn't sent availability for this week"}"${c.d < today || !adm ? " disabled" : ""}>${as ? "✓" : sgd ? "＋" : av ? "" : bk ? "B" : answered(c.d, n) ? "–" : "?"}</button></td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+
 /* ------------------------------------------------------------------ availability link
    One link per week, posted in the group chat: ?avail=<Monday>. Each person picks their name and taps the shifts they can work.
    Answers save to their own document, avail/<Monday>_<person id>, so people filling it in at the same time never overwrite each other.
@@ -1560,31 +1613,34 @@ const shiftFull = (wk, d, i, q, exceptPid) => Math.max(availCount(wk, d, q, exce
 function coverageGrid(wk, me){
   const days = weekDays(wk), all = days.flatMap(d => shiftsOf(d)); if (!all.length) return "";
   const s0 = Math.max(0, Math.floor(slotOf(Math.min(...all.map(q => q.start))) / 2) * 2), s1 = Math.min(NSLOT, Math.ceil(slotOf(Math.max(...all.map(q => q.end))) / 2) * 2), n = Math.max(2, s1 - s0);
-  let open = 0;
+  let open = 0; const most = [];
   const rows = days.map(d => wkRow(`${DOW[toDate(d).getDay()]} ${toDate(d).getDate()}`, s0, n, shiftsOf(d).map((q, i) => {
     const sel = me && !me.none && me.sel[d] ? me.sel[d][i] : false, mine = !!sel, bk = sel === "bk", pid = me && me.pid;
-    const have = availCount(wk, d, q, pid) + (mine && !bk ? 1 : 0), nb = availBk(wk, d, q, pid) + (bk ? 1 : 0), left = Math.max(0, q.seats - have), full = shiftFull(wk, d, i, q, pid); open += left;
+    const have = availCount(wk, d, q, pid) + (mine && !bk ? 1 : 0), nb = availBk(wk, d, q, pid) + (bk ? 1 : 0), left = Math.max(0, q.seats - have), full = shiftFull(wk, d, i, q, pid), lvl = needLvl(have, q.seats); open += left;
+    if (lvl === "hi") most.push({d, q, gap:q.seats - have});
     const lbl = `${toDate(d).toLocaleDateString("en-US", {weekday:"long"})} ${tfmt(q.start)} to ${tfmt(q.end)}: ${have} of ${q.seats} available${left ? `, needs ${left} more` : ""}${nb ? `, ${nb} ${nb === 1 ? "backup" : "backups"}` : ""}`;
     const tip = !me ? "" : bk ? ". You're a backup" : mine ? ". You're in" : full ? ". It's full. Tap to sign up as a backup" : ". Tap if you can work it";
-    return `<button class="wk-b av ${bk ? "mine bku" : mine ? "mine" : left ? "need" : "ok"}" style="grid-column:${slotOf(q.start) - s0 + 1}/${slotOf(q.end) - s0 + 1}" title="${lbl}${tip}" aria-label="${lbl}${tip}"${me && !me.none ? ` data-act="avTog" data-d="${d}" data-i="${i}" aria-pressed="${mine}"` : " disabled"}>${bk ? "Backup ✓" : `${have}/${q.seats}${mine ? " ✓" : !mine && me && full ? " · backup?" : ""}`}${nb && !bk ? ` +${nb}` : ""}</button>`; })));
+    return `<button class="wk-b av ${bk ? "mine bku" : mine ? "mine" : lvl === "ok" ? "ok" : "need" + (lvl === "hi" ? " hi" : "")}" style="grid-column:${slotOf(q.start) - s0 + 1}/${slotOf(q.end) - s0 + 1}" title="${lbl}${tip}" aria-label="${lbl}${tip}"${me && !me.none ? ` data-act="avTog" data-d="${d}" data-i="${i}" aria-pressed="${mine}"` : " disabled"}>${bk ? "Backup ✓" : `${have}/${q.seats}${mine ? " ✓" : !mine && me && full ? " · backup?" : ""}`}${nb && !bk ? ` +${nb}` : ""}</button>`; })));
   return `<div class="wkg ro">${wkHead(s0, n)}${rows.join("")}</div>
-    <p class="note-sm" style="margin:4px 0 0">${open ? `<b class="neg-t">${open} ${open === 1 ? "spot still needs" : "spots still need"} someone.</b> ` : `<b class="status-ok">Every shift is covered.</b> `}Each shift shows people available so far out of people needed: orange still needs people, green is covered${me ? ", blue is you, purple means you're a backup. Tap a full shift to sign up as its backup" : ". +1 means one backup"}.</p>`;
+    <p class="note-sm" style="margin:4px 0 0">${open ? `<b class="neg-t">${open} ${open === 1 ? "spot still needs" : "spots still need"} someone.</b> ` : `<b class="status-ok">Every shift is covered.</b> `}${most.length ? `Most needed: <b>${most.sort((a, b) => b.gap - a.gap).slice(0, 3).map(x => `${DOW[toDate(x.d).getDay()]} ${tfmt(x.q.start)}–${tfmt(x.q.end)}`).join(", ")}</b>. ` : ""}Each shift shows people available so far out of people needed: red needs people most, orange is one short, green is covered${me ? ", blue is you, purple means you're a backup. Tap a full shift to sign up as its backup" : ". +1 means one backup"}.</p>`;
 }
-/* the week's schedule as it stands, to screenshot or copy into the group chat */
+/* the week's schedule, to screenshot or copy into the group chat: the draft for admins, the published one for everyone else */
 function scheduleOf(wk){
   const short = n => { const f = n.split(" ")[0]; return team().filter(p => p.name.split(" ")[0] === f).length > 1 ? n : f; };
-  return weekDays(wk).map(d => { const x = ensureDay(d);
-    return {d, shifts: shiftsOf(d).map((q, i) => { const on = namesIn(x.names[i]);
-      return {q, on:on.map(short), open:Math.max(0, q.seats - on.length), bk:team().filter(p => !on.includes(p.name) && bkFor(d, p.name, q)).map(p => short(p.name))}; })}; });
+  return weekDays(wk).map(d => ({d, shifts: shiftsOf(d).map((q, i) => { const on = shiftOn(d, i);
+      return {q, on:on.map(short), open:Math.max(0, q.seats - on.length), bk:team().filter(p => !on.includes(p.name) && bkFor(d, p.name, q)).map(p => short(p.name))}; })}));
 }
 const schDay = d => toDate(d).toLocaleDateString("en-US", {weekday:"long", month:"short", day:"numeric"});
+const schHTML = days => days.map(x => `<section class="sch-d"><h3>${schDay(x.d)}</h3>${x.shifts.map(s => `<div class="sch-s"><span class="sch-t">${tfmt(s.q.start)}–${tfmt(s.q.end)}</span><span>${s.on.map(esc).join(", ")}${s.open ? `${s.on.length ? ", " : ""}<span class="neg-t">${s.open} open ${s.open === 1 ? "spot" : "spots"}</span>` : ""}${s.bk.length ? `<br><span class="note-sm">Backup: ${s.bk.map(esc).join(", ")}</span>` : ""}</span></div>`).join("")}</section>`).join("");
 function openSchedule(){
-  const wk = UI.mxWk || weekOf(ymd(new Date())), days = scheduleOf(wk);
-  $("schBody").innerHTML = `<div class="mh"><div><h2 id="schTitle">Schedule</h2><div class="p">Week of ${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</div></div><button class="x" data-act="schClose" aria-label="Close">✕</button></div>`
-    + (days.length ? days.map(x => `<section class="sch-d"><h3>${schDay(x.d)}</h3>${x.shifts.map(s => `<div class="sch-s"><span class="sch-t">${tfmt(s.q.start)}–${tfmt(s.q.end)}</span><span>${s.on.map(esc).join(", ")}${s.open ? `${s.on.length ? ", " : ""}<span class="neg-t">${s.open} open ${s.open === 1 ? "spot" : "spots"}</span>` : ""}${s.bk.length ? `<br><span class="note-sm">Backup: ${s.bk.map(esc).join(", ")}</span>` : ""}</span></div>`).join("")}</section>`).join("")
-      + `<button class="btn big madd" data-act="schCopy">Copy for the group chat</button><p class="toast" id="schToast" role="status"></p>`
-      : `<p class="empty">The cafe is closed this week.</p>`);
-  $("schDlg").showModal();
+  const wk = UI.mxWk || weekOf(ymd(new Date())), days = scheduleOf(wk), adm = isAdmin(), st = pubState(wk), ok = adm || pubOf(wk);
+  $("schBody").innerHTML = `<div class="mh"><div><h2 id="schTitle">${adm && st !== "same" ? "Draft schedule" : "Final schedule"}</h2><div class="p">Week of ${fmtD(wk)} to ${fmtD(addDays(wk, 6))}</div></div><button class="x" data-act="schClose" aria-label="Close">✕</button></div>`
+    + (!days.length ? `<p class="empty">The cafe is closed this week.</p>` : !ok ? `<p class="empty">The schedule for this week isn't out yet.</p>`
+      : (adm ? `<p class="${st === "same" ? "status-ok" : "neg-t"}" style="margin:0 0 8px;font-size:14px">${st === "same" ? `Published ${new Date(S.pub[wk].at).toLocaleString("en-US", {weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})}. Staff see this.` : st === "changed" ? "Changed since it was published. Staff still see the old version until you publish." : "Not published yet. Staff can't see it until you publish."}</p>` : "")
+      + schHTML(days)
+      + (adm && st !== "same" ? `<button class="btn big madd" data-act="schPub">${st === "changed" ? "Publish changes" : "Publish final schedule"}</button>` : "")
+      + `<button class="btn big ${adm && st !== "same" ? "ghost " : ""}madd" data-act="schCopy">Copy for the group chat</button><p class="toast" id="schToast" role="status"></p>`);
+  if (!$("schDlg").open) $("schDlg").showModal();
 }
 async function copySchedule(){
   const wk = UI.mxWk || weekOf(ymd(new Date()));
@@ -1630,6 +1686,10 @@ function renderAvailView(){
       <p class="toast" id="avToast" role="status"></p>`;
   }
   else h += coverageGrid(wk, null);
+  const P = (S.pub || {})[wk];
+  if (P){ const me = (team().find(p => p.id === pid) || {}).name, mine = weekDays(wk).flatMap(d => shiftsOf(d).map((q, i) => ({d, q, on:namesIn((P.days[d] || [])[i])})).filter(x => me && x.on.includes(me)));
+    h += `<h3 style="margin-top:22px">The schedule is out</h3>${me ? `<p class="hint">${mine.length ? `You're on ${mine.map(x => `${schDay(x.d)}, ${tfmt(x.q.start)}–${tfmt(x.q.end)}`).join("; ")}.` : "You're not on any shifts this week."}</p>` : ""}`
+      + schHTML(weekDays(wk).map(d => ({d, shifts:shiftsOf(d).map((q, i) => { const on = namesIn((P.days[d] || [])[i]); return {q, on, open:Math.max(0, q.seats - on.length), bk:[]}; })}))); }
   box.innerHTML = h + `</div>`;
 }
 async function saveAvail(){
@@ -1791,8 +1851,9 @@ function renderHomeShifts(){
   const today = ymd(new Date()), dates = S.track.dates.slice().sort(), isToday = dates.includes(today), nx = dates.find(d => d >= today);
   const days = isToday ? [today] : nx ? dates.filter(d => d >= today && weekOf(d) === weekOf(nx)) : [];
   $("homeShiftTitle").innerHTML = isToday ? `Today's shifts<span class="wk-sub">${fmtD(today)}</span>` : days.length ? `${weekOf(nx) === weekOf(today) ? "This weekend" : "Next cafe days"}<span class="wk-sub">${days.map(fmtD).join(" and ")}</span>` : "Shifts";
-  $("homeShifts").innerHTML = days.length ? `<div class="hd-days">${days.map(d => { const x = ensureDay(d);
-      return `<div class="hd-day">${days.length > 1 ? `<h3>${fmtD(d)}</h3>` : ""}${shiftsOf(d).map((q, i) => { const ns = namesIn(x.names[i]), open = Math.max(0, q.seats - ns.length);
+  $("homeShifts").innerHTML = days.length && !isAdmin() && !pubOf(weekOf(days[0])) ? `<p class="empty">The schedule for ${days.map(fmtD).join(" and ")} isn't out yet.</p>`
+    : days.length ? `<div class="hd-days">${days.map(d => {
+      return `<div class="hd-day">${days.length > 1 ? `<h3>${fmtD(d)}</h3>` : ""}${shiftsOf(d).map((q, i) => { const ns = shiftOn(d, i), open = Math.max(0, q.seats - ns.length);
           return `<div class="hsh"><span class="t">${tfmt(q.start)}–${tfmt(q.end)}</span><span>${ns.length ? ns.map(nameH).join(", ") : `<span class="muted">Nobody yet</span>`}${open ? ` <span class="neg-t">${open} open</span>` : ""}</span></div>`; }).join("")}
         <button class="linkbtn adm" data-act="dpShow" data-d="${d}">Edit shifts</button></div>`; }).join("")}</div>`
     : `<p class="empty">No cafe days coming up.${isAdmin() ? " Set the hours under Weeks and shifts." : ""}</p>`;
@@ -2636,7 +2697,7 @@ function applyConfig(cfg, boot){
   const D = JSON.parse(S_DEF);
   Object.keys(D).forEach(k => { S[k] = cfg[k] !== undefined && cfg[k] !== null ? cfg[k] : D[k]; });
   ["ingredients","packaging","specials","bases","off","syrHide","charges","invoices","team"].forEach(k => { if (!Array.isArray(S[k])) S[k] = D[k]; });
-  ["prices","assign","dayMenu","lists","checks","pattern","orders","days"].forEach(k => { if (!S[k] || typeof S[k] !== "object" || Array.isArray(S[k])) S[k] = D[k]; });
+  ["prices","assign","dayMenu","lists","checks","pattern","orders","days","pub"].forEach(k => { if (!S[k] || typeof S[k] !== "object" || Array.isArray(S[k])) S[k] = D[k]; });
   ["addons","pastry","fees","track","clover"].forEach(k => { S[k] = Object.assign({}, D[k], S[k] && typeof S[k] === "object" ? S[k] : {}); });
   if (!S.clover.orders || typeof S.clover.orders !== "object" || Array.isArray(S.clover.orders)) S.clover.orders = {};
   if (!Array.isArray(S.clover.items)) S.clover.items = [];
@@ -2992,6 +3053,11 @@ document.addEventListener("click", e => {
   if (a === "schView"){ openSchedule(); return; }
   if (a === "gAuto"){ const sp = S.specials.find(x => x.id === t.dataset.id); if (!sp) return; sp.ownPrice = false; sp.price = autoPrice(recipeOf(sp)); markDirty(); renderGear(); renderDrinkGrid(); renderMenu(); renderBank(); renderHome(); return; }
   if (a === "schCopy"){ copySchedule(); return; }
+  if (a === "schPub"){ const wk = UI.mxWk || weekOf(ymd(new Date())); publishWeek(wk); UI.sug = {wk:"", picks:{}}; renderMatrix(); renderHome(); openSchedule(); return; }
+  if (a === "mxSug"){ const wk = UI.mxWk; UI.sug = {wk, picks:suggestWeek(wk)}; renderMatrix(); const n = sugN(wk);
+    toast("staffToast", n ? `Suggested ${n} ${n === 1 ? "pick" : "picks"} from availability, hardest shifts first.` : "Nothing to suggest: every shift is full, or nobody available is free for the open spots."); return; }
+  if (a === "mxOk"){ const wk = UI.mxWk, n = sugN(wk); Object.keys(sugOf(wk)).forEach(k => approveSug(wk, k)); renderMatrix(); toast("staffToast", `Approved ${n}. Publish when the week looks right.`); return; }
+  if (a === "mxClr"){ UI.sug = {wk:"", picks:{}}; renderMatrix(); return; }
   if (a === "schClose"){ $("schDlg").close(); return; }
   if (a === "avSave"){ saveAvail(); return; }
   if (a === "dpClose"){ closeDay(); return; }
@@ -3006,7 +3072,8 @@ document.addEventListener("click", e => {
   if (a === "mxWk"){ const v = +t.dataset.v; UI.mxWk = v === 0 ? weekOf(ymd(new Date())) : addDays(UI.mxWk, 7 * v); renderMatrix(); return; }
   if (a === "mxTog"){ const d = t.dataset.d, i = +t.dataset.i, n = t.dataset.n; if (d < ymd(new Date())) return;
     const was = namesIn(ensureDay(d).names[i]).includes(n), q = shiftsOf(d)[i];
-    setShiftNames(d, i, arr => was ? arr.filter(x => x !== n) : arr.concat(n));
+    if (!was && (sugOf(UI.mxWk)[d + "|" + i] || []).includes(n)) approveSug(UI.mxWk, d + "|" + i, n);   // approving a suggestion
+    else setShiftNames(d, i, arr => was ? arr.filter(x => x !== n) : arr.concat(n));
     toast("staffToast", was ? `Took ${n} off ${fmtD(d)}.` : availFor(d, n, q) ? `Put ${n} on ${fmtD(d)}, ${tfmt(q.start)} to ${tfmt(q.end)}.` : `Put ${n} on ${fmtD(d)}, but they aren't marked available then.`);
     const b = document.querySelector(`[data-act="mxTog"][data-d="${d}"][data-i="${i}"][data-n="${CSS.escape(n)}"]`); if (b) b.focus(); return; }
   if (a === "pfOpen"){ openPf(t.dataset.id); return; }
@@ -3049,7 +3116,7 @@ document.addEventListener("keydown", e => {
 });
 $("modDlg").addEventListener("close", () => { UI.mod = null; });
 document.addEventListener("submit", e => { const k = e.target.dataset && e.target.dataset.adm; if (k){ e.preventDefault(); admSubmit(); } });
-const ADMIN_ACT = /^(gear|bld|ns[A-Z]|b[A-Z]|nb[A-Z]|bk[A-Z]|bank|mxTog|pf[A-Z]|team[A-Z]|wk[A-Z]|cal[A-Z]|rule[A-Z]|dp(Open|CloseDay|As|Un|Add)|addCharge|delCharge|anRange|ckEdit|ckSave|imp[A-Z]|wm[A-Z]|cntEdit|cntItem|cntDel|undoRemove|gAuto|oMore|pSafe)/;
+const ADMIN_ACT = /^(gear|bld|ns[A-Z]|b[A-Z]|nb[A-Z]|bk[A-Z]|bank|mxTog|pf[A-Z]|team[A-Z]|wk[A-Z]|cal[A-Z]|rule[A-Z]|dp(Open|CloseDay|As|Un|Add)|addCharge|delCharge|anRange|ckEdit|ckSave|imp[A-Z]|wm[A-Z]|cntEdit|cntItem|cntDel|undoRemove|gAuto|oMore|pSafe|mxSug|mxOk|mxClr|schPub)/;
 
 /* ------------------------------------------------------------------ init */
 { const q = new URLSearchParams(location.search);
