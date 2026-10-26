@@ -1233,7 +1233,7 @@ function renderInvoices(){
     + `<optgroup label="Packaging">${S.packaging.map(p => `<option value="pkg:${esc(p.id)}"${sel === "pkg:" + p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</optgroup>`;
   const unitOf = l => { const it = actItem(l.act); return l.act.startsWith("pkg") || l.act === "newPkg" ? "each" : it ? it.unit : l.act === "newIng" ? newUnit(l.desc) : ""; };
   box.innerHTML = invs.map((v, vi) => v.error ? `<p class="res-bad">${esc(v.file)}: ${esc(v.error)}</p>`
-    : `<h3 style="margin-top:6px">Order ${esc(v.order || v.file)}${v.date ? `, ${esc(v.date)}` : ""}, ${F.usd2(v.total)}</h3><p class="note-sm" style="margin:0 0 6px">The whole ${F.usd2(v.total)}${v.ship || v.tax ? `, with ${[v.ship ? F.usd2(v.ship) + " shipping" : "", v.tax ? F.usd2(v.tax) + " tax" : ""].filter(Boolean).join(" and ")},` : ""} counts as costs on the day it was received, skipped lines included. It shows under Analytics, Money spent.</p>${v.dup ? `<p class="res-bad" style="margin:0 0 6px">This invoice was already imported. Saving it again adds the delivery twice.</p>` : ""}
+    : `<h3 style="margin-top:6px">Order ${esc(v.order || v.file)}${v.date ? `, ${esc(v.date)}` : ""}, ${F.usd2(v.total)}</h3><p class="note-sm" style="margin:0 0 6px">The whole ${F.usd2(v.total)}${v.ship || v.tax ? `, with ${[v.ship ? F.usd2(v.ship) + " shipping" : "", v.tax ? F.usd2(v.tax) + " tax" : ""].filter(Boolean).join(" and ")},` : ""} counts as costs on its invoice date, skipped lines included. It shows under Analytics, Expenses.</p>${v.dup ? `<p class="res-bad" style="margin:0 0 6px">This invoice was already imported. Saving it again adds the delivery twice.</p>` : ""}
       <div class="scroll"><table class="t invrow"><thead><tr><th class="l">Line</th><th>Qty</th><th>Price</th><th>Pack</th><th class="l">Goes to</th></tr></thead><tbody>`
       + v.lines.map((l, li) => `<tr class="${l.act === "skip" ? "zero" : ""}"><td class="l">${esc(l.desc)}<small>${esc(l.sku)}</small></td><td>${l.qty}</td><td>${F.usd2(l.price)}</td>
         <td class="nw">${l.act === "skip" ? "" : `<input class="in w-sm" type="number" min="0" step="any" data-invpack="${vi}:${li}" value="${l.pack}" aria-label="Pack size"> ${esc(unitOf(l))}`}</td>
@@ -1258,7 +1258,8 @@ async function saveInvoices(){
     } else { it.price = l.price; if (pack > 0) it.size = pack; it.sku = l.sku; if (!it.url) it.url = url; it.vendor = "WebstaurantStore"; upd++; }
     if (pack > 0) evs.push({type:"receive", item:it.id, qty:pack * l.qty, ts, at, inv:v.order || ""});
   }); S.invoices.push({order:v.order, date:v.date, at});
-    if (v.total > 0) S.charges.push({date:day, name:`WebstaurantStore order ${v.order || v.file}`, amount:v.total, inv:v.order || v.file}); });   // the invoice's full total is the cost
+    const desc = [...new Set(v.lines.filter(l => l.act !== "skip").map(l => l.desc.replace(/\s*-\s*[\d,]+\/Case$/i, "").trim()))].join(", ");
+    if (v.total > 0) S.charges.push({date:parseDateVal(v.date) || day, dated:true, name:`WebstaurantStore order ${v.order || v.file}`, amount:v.total, inv:v.order || v.file, desc}); });   // the invoice's full total is the cost
   markDirty(); renderIngredients(); recalc();
   try { for (const e of evs) await Store.addStock(e); } catch(e){ toast("invResult", saveError(e)); return; }
   UI.inv = null; $("invIn").value = "";
@@ -2030,7 +2031,7 @@ function renderPerish(inR){
 }
 /* ---------- money by day: gross revenue and gross costs. The week, month and range views add these up.
    Revenue: everything customers paid, matched to a drink or not. Costs: every bulk order at what it actually cost (an imported
-   invoice counts its full total, unmatched lines, tax and shipping included, as a Money spent row on the day it was received; a delivery ticked
+   invoice counts its full total, unmatched lines, tax and shipping included, as an Expenses row dated by the invoice; a delivery ticked
    Received counts at the price when it was ticked), extra order items, one-off spending, and card fees and charity. */
 const feesOf = (sales, orders) => { const Fe = S.fees; return sales * ((+Fe.cardPct || 0) + (+Fe.feePct || 0) + (+Fe.charityPct || 0)) / 100 + orders * (+Fe.cardFix || 0); };
 function dayMoney(){
@@ -2121,13 +2122,29 @@ function lastCafeWeek(){
 /* one-off spending (equipment, supplies bought outside the order list, fees): each has a date so it lands in its week and month */
 function renderCharges(){
   const box = $("chargeBody"); if (!box || box.contains(document.activeElement)) return;
-  const L = (S.charges || []).map((x, i) => ({x, i})).sort((a, b) => String(b.x.date || "").localeCompare(String(a.x.date || "")));
-  box.innerHTML = L.map(({x, i}) => `<tr>
+  if (fillInvoiceCharges()) markDirty();
+  const L = (S.charges || []).map((x, i) => ({x, i})).sort((a, b) => String(b.x.date || "").localeCompare(String(a.x.date || "")) || b.i - a.i);
+  const tot = L.reduce((t, {x}) => t + (+x.amount || 0), 0);
+  box.innerHTML = L.length ? `<thead><tr><th class="l">Date</th><th class="l">Invoice</th><th class="l">Description</th><th>Amount</th><th></th></tr></thead><tbody>`
+    + L.map(({x, i}) => `<tr>
     <td style="width:150px"><input class="in txt" type="date" data-bind="charges.${i}.date" value="${esc(x.date || "")}" aria-label="Date"></td>
-    <td class="l"><input class="in txt" data-bind="charges.${i}.name" value="${esc(x.name)}" aria-label="What it was"></td>
+    <td class="l" style="width:130px">${x.inv ? esc(x.inv) : `<input class="in txt" data-bind="charges.${i}.ref" value="${esc(x.ref || "")}" placeholder="None" aria-label="Invoice or receipt number">`}</td>
+    <td class="l">${x.inv ? `${esc(x.name)}${x.desc ? `<div class="note-sm">${esc(x.desc)}</div>` : ""}` : `<input class="in txt" data-bind="charges.${i}.name" value="${esc(x.name)}" aria-label="What it was">`}</td>
     <td style="width:120px"><input class="in" type="number" min="0" step="0.01" data-bind="charges.${i}.amount" data-type="num" value="${+x.amount || 0}" aria-label="Amount"></td>
     <td style="width:40px"><button class="x" data-act="delCharge" data-i="${i}" aria-label="Remove">✕</button></td></tr>`).join("")
-    || `<tr><td class="l empty" colspan="4">Nothing yet. Add equipment and anything bought outside the order list.</td></tr>`;
+    + `<tr class="tot"><td class="l" colspan="3">Total</td><td>${F.usd2(tot)}</td><td></td></tr></tbody>`
+    : `<tbody><tr><td class="l empty">Nothing yet. Add equipment and anything bought outside the order list.</td></tr></tbody>`;
+}
+/* an imported WebstaurantStore order: dated by its invoice, described by what came in on it. Fills in orders imported before
+   these were kept (dated the day they were uploaded); returns true if anything changed */
+function fillInvoiceCharges(){
+  let ch = false;
+  (S.charges || []).forEach(c => { if (!c.inv) return;
+    const iv = (S.invoices || []).find(v => v.order && v.order === c.inv), d = iv && parseDateVal(iv.date);
+    if (!c.dated && d){ c.date = d; c.dated = true; ch = true; }
+    if (!c.desc){ const by = {}; Store.stock.forEach(e => { if (e.type === "receive" && e.inv === c.inv){ const g = ingOf(e.item); if (g) by[g.name] = 1; } });
+      const ns = Object.keys(by); if (ns.length){ c.desc = ns.join(", "); ch = true; } } });
+  return ch;
 }
 
 /* ---------- Clover analytics: sales curves, order sizes, peaks, top drinks (Good-Graces-Sales-Analytics.md)
