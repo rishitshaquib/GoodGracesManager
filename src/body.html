@@ -209,7 +209,7 @@
 
   <div class="sec">
     <div class="tile-h"><h2><span class="ic" style="--c:#34C759" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></span>Cost recuperation</h2><span class="segc sm" id="anRecoupMode"></span></div>
-    <p class="hint" style="margin-top:4px">Each week since the start: green is revenue, red is costs (every order and invoice, spending, fees and charity). Each day splits the week's revenue into a bar per day the cafe was open. The line is the running total; above zero, everything spent has been earned back.</p>
+    <p class="hint" style="margin-top:4px">Each week since the start: green is revenue, red is costs: only what's recorded, every invoice, delivery and expense, each listed under Expenses below. Each day splits the week's revenue into a bar per day the cafe was open. The line is the running total; above zero, everything spent has been earned back.</p>
     <svg class="chart" id="anRecoup" viewBox="0 0 640 260"></svg>
     <p class="note-sm" id="anRecoupNote" style="margin:6px 0 0"></p>
     <details class="fold2" open><summary>Expenses: invoices, equipment and anything off the order list</summary>
@@ -245,13 +245,7 @@
   <div class="sec details" style="margin-top:18px">
     <h2><span class="ic" style="--c:#8E8E93" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Details</h2>
     <details class="fold2"><summary>How the net is worked out, for this range</summary><table class="t" id="anMoney" style="margin-top:6px"></table>
-      <h3>Fees and charity</h3>
-      <div class="fields" style="margin-top:6px;max-width:520px">
-        <label>Card processing, %</label><input class="in" type="number" min="0" step="0.1" data-bind="fees.cardPct" data-type="num" aria-label="Card processing percent">
-        <label>Card fee per swipe</label><input class="in" type="number" min="0" step="0.01" data-bind="fees.cardFix" data-type="num" aria-label="Card fee per swipe">
-        <label>Additional fees, % of sales</label><input class="in" type="number" min="0" step="1" data-bind="fees.feePct" data-type="num" aria-label="Additional fees percent">
-        <label>Charity, % of sales</label><input class="in" type="number" min="0" step="1" data-bind="fees.charityPct" data-type="num" aria-label="Charity percent">
-      </div></details>
+</details>
     <details class="fold2" open><summary>Perishables by week</summary>
       <div class="scroll" style="margin-top:6px"><table class="t" id="anPerish"></table></div>
       <p class="note-sm" style="margin:6px 0 0">The forecast is the drinks per open day over the two weeks before, times that week's open days. Thrown out is counted at the last close of the week; over 15% shows red.</p></details>
