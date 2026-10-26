@@ -17,7 +17,7 @@ const S = {
   lists: {},        // prep / open / close -> [{id, t}], the checklists on Home
   checks: {},       // date -> list -> {d:{item id:{by, at}}, skip:{by, at, why}}
   bases: [],        // {id, name, ing: ingredient id, oz per drink}
-  addons: {altCharge:0.50, almCharge:0.50, syrupCharge:0.25, foamCharge:0.50, wholePct:85},
+  addons: {altCharge:0.50, almCharge:0.50, syrupCharge:0.25, foamCharge:0.50, shotCharge:1.00, wholePct:85},
   pastry: {price:3.00, cost:1.25},
   syrHide: [],      // syrup ingredient ids hidden on the log
   fees:   {cardPct:2.7, cardFix:0.10, feePct:30, charityPct:10},
@@ -142,7 +142,7 @@ const flavorName = f => { const g = S.ingredients.find(i => i.id === flavorId(f)
 function expand(lines, milk){
   const out = [], wf = wholeF(), sp = stdPump();
   const push = (id, q, cost) => { if (q > 0) out.push({id, q, cost: cost != null ? cost : q * perUnit(id)}); };
-  const dairy = q => { if (milk === "oat") push("oat", q); else if (milk === "almond") push("almond", q); else { push("wholemilk", q * wf); push("milk", q * (1 - wf)); } };
+  const dairy = q => { if (milk === "oat" || milk === "alt") push("oat", q); else if (milk === "almond") push("almond", q); else { push("wholemilk", q * wf); push("milk", q * (1 - wf)); } };
   (lines || []).forEach(([id, q, x]) => {
     q = +q || 0;
     if (id === "milk") dairy(q);
@@ -229,31 +229,38 @@ function syncCalDates(){
 
 /* ------------------------------------------------------------------ sales lines
    A sales document {kind:"tap"|"upload", at, lines}. A line is one drink or food item:
-   {d:"YYYY-MM-DD", tm:"HH:MM", k:name, id, q, ice, milk:"dairy|oat|almond", sy:syrup ingredient id or false, pumps, fo, p:unit revenue}
-   Food lines carry food:"pastry". Older lines may have sy:true (house syrup) and no id. */
+   {d:"YYYY-MM-DD", tm:"HH:MM", k:name, id, q, ice, milk:"dairy|oat|almond|alt", sy:syrup ingredient id or false, pumps, fo, sh, p:unit revenue}
+   milk "alt" is alt milk of an unknown kind (costed as oat). sy "-" is an added syrup with no flavor recorded (costed at the
+   average pump). sh is extra espresso shots per drink. An imported line can instead carry n:{alt, sy, fo, sh}, how many of its
+   q had each add-on (shots: how many in all), as the source gave them, so its lines aren't split on a guess.
+   Food lines carry food:"pastry" and their own name in k. A line that matches no drink is a drink off the menu (counts as a
+   drink, uses no stock); nd marks one that isn't a drink at all, un the "Unspecified drink" (counts, but in no ranking).
+   Older lines may have sy:true (house syrup) and no id. */
 const isFood = l => !!(l && l.food);
 const lineDrink = l => isFood(l) ? null : findDrink(l.k, l.id);
-const syOf = l => !l || !l.sy ? "" : l.sy === true ? flavorId("vanilla") : String(l.sy);
+const syOf = l => !l || !l.sy || l.sy === "-" ? "" : l.sy === true ? flavorId("vanilla") : String(l.sy);
 const serveOfLine = (l, d) => d.serve === "both" ? (l.ice ? "iced" : "hot") : d.serve;
+const SHOT = [["beans", 18]];   // one extra espresso shot
+/* the share of a line's cups with an add-on, from its counts (shots: extra shots per cup) */
+const addOn = (l, k) => !l.n || !(+l.q > 0) ? 0 : (k === "sh" ? +l.n.sh || 0 : Math.min(+l.n[k] || 0, +l.q)) / +l.q;
 function lineRevenue(l, d){
   if (isFood(l)) return +S.pastry.price || 0;
-  const A = S.addons, milkSwap = d.milk && (l.milk === "oat" || l.milk === "almond");
-  return d.price + (milkSwap ? (l.milk === "oat" ? +A.altCharge : +(A.almCharge ?? A.altCharge)) || 0 : 0) + (l.sy ? +A.syrupCharge || 0 : 0) + (l.fo ? +A.foamCharge || 0 : 0);
+  const A = S.addons, milkSwap = d.milk && ["oat","almond","alt"].includes(l.milk);
+  return d.price + (milkSwap ? (l.milk === "almond" ? +(A.almCharge ?? A.altCharge) : +A.altCharge) || 0 : 0) + (l.sy ? +A.syrupCharge || 0 : 0) + (l.fo ? +A.foamCharge || 0 : 0)
+    + addOn(l, "alt") * (+A.altCharge || 0) + addOn(l, "sy") * (+A.syrupCharge || 0) + addOn(l, "fo") * (+A.foamCharge || 0) + ((+l.sh || 0) + addOn(l, "sh")) * (+A.shotCharge || 0);
 }
-/* stock used by q of this line: the build, the customer's milk, added syrup and foam, and the cup kit */
+/* stock used by q of this line: the build, the customer's milk, added syrup, foam and shots, and the cup kit */
 function lineUsage(l, d, q, add){
-  const sv = serveOfLine(l, d), milk = d.milk ? l.milk : "dairy";
-  expand(d[buildOf(d, sv)], milk).forEach(x => add(x.id, x.q * q));
-  if (l.sy) add(syOf(l), (+l.pumps || 2) * PUMP_OZ * q);
-  if (l.fo) expand([["foam", FOAM_OZ]]).forEach(x => add(x.id, x.q * q));
+  const sv = serveOfLine(l, d), b = d[buildOf(d, sv)], alt = d.milk ? addOn(l, "alt") : 0;
+  expand(b, d.milk ? l.milk : "dairy").forEach(x => add(x.id, x.q * q * (1 - alt)));
+  if (alt) expand(b, "oat").forEach(x => add(x.id, x.q * q * alt));
+  const sy = (l.sy ? 1 : 0) + addOn(l, "sy"), fo = (l.fo ? 1 : 0) + addOn(l, "fo"), sh = (+l.sh || 0) + addOn(l, "sh");
+  if (sy) add(syOf(l), (+l.pumps || 2) * PUMP_OZ * q * sy);   // no flavor recorded: no stock to take it from
+  if (fo) expand([["foam", FOAM_OZ]]).forEach(x => add(x.id, x.q * q * fo));
+  if (sh) expand(SHOT).forEach(x => add(x.id, x.q * q * sh));
   kitOf(buildOf(d, sv)).forEach(p => add(p.id, q));
 }
-function lineCost(l, d){
-  if (isFood(l)) return +S.pastry.cost || 0;
-  const sv = serveOfLine(l, d);
-  return costOf(d, sv, d.milk ? l.milk : "dairy") + (l.sy ? (+l.pumps || 2) * stdPump() : 0) + (l.fo ? foamCost() : 0);
-}
-const lineDesc = l => isFood(l) ? esc(l.k || "Pastry") : `${esc(l.k)}${l.ice ? ", iced" : ""}${l.milk && l.milk !== "dairy" ? ", " + l.milk : ""}${l.sy ? `, ${+l.pumps === 1 ? "1 pump" : (+l.pumps || 2) + " pumps"} ${esc(flavorName(syOf(l)).toLowerCase())}` : ""}${l.fo ? ", cold foam" : ""}`;
+const lineDesc = l => isFood(l) ? esc(l.k || "Pastry") : `${esc(l.k)}${l.ice ? ", iced" : ""}${l.milk && l.milk !== "dairy" ? ", " + l.milk : ""}${l.sy ? `, ${+l.pumps === 1 ? "1 pump" : (+l.pumps || 2) + " pumps"} ${esc(flavorName(syOf(l)).toLowerCase())}` : ""}${l.fo ? ", cold foam" : ""}${+l.sh ? `, ${+l.sh === 1 ? "extra shot" : l.sh + " extra shots"}` : ""}`;
 const allLines = () => { const out = []; Store.sales.forEach(doc => (doc.lines || []).forEach(l => { if (+l.q > 0) out.push({l, doc}); })); return out; };
 
 /* ------------------------------------------------------------------ log sales */
@@ -272,12 +279,12 @@ function renderDrinkGrid(){
 /* the modifier sheet: one drink, its options, then Add */
 function openMod(id){
   const d = drinkById(id); if (!d) return;
-  UI.mod = {id, ice: d.serve !== "hot", milk:"dairy", sy:"", pumps:2, fo:false, q:1};
+  UI.mod = {id, ice: d.serve !== "hot", milk:"dairy", sy:"", pumps:2, fo:false, sh:false, q:1};
   renderMod(); const dl = $("modDlg"); if (!dl.open) dl.showModal();
 }
 function renderMod(){
   const m = UI.mod, d = m && drinkById(m.id); if (!d) return;
-  const line = {k:d.name, id:d.id, ice:m.ice, milk:m.milk, sy:m.sy || false, pumps:m.pumps, fo:m.fo};
+  const line = {k:d.name, id:d.id, ice:m.ice, milk:m.milk, sy:m.sy || false, pumps:m.pumps, fo:m.fo, sh:m.sh ? 1 : 0};
   const each = lineRevenue(line, d), hidden = new Set(S.syrHide || []);
   const seg = (act, opts, cur) => `<div class="segc">${opts.map(([l,v]) => `<button class="${cur === v ? "on" : ""}" data-act="${act}" data-v="${v}" aria-pressed="${cur === v}">${l}</button>`).join("")}</div>`;
   $("modBody").innerHTML = `<div class="mh"><div><h2 id="modTitle">${esc(d.name)}</h2><div class="p">${F.usd2(d.price)}${d.sp ? "" : d.code ? ` · ${esc(d.code)}` : ""}</div></div><button class="x" data-act="modClose" aria-label="Close">✕</button></div>`
@@ -286,12 +293,13 @@ function renderMod(){
     + `<div class="mrow"><span class="ol">Add syrup, +${F.usd2(S.addons.syrupCharge)}</span><div class="spsy"><button class="tog${m.sy ? "" : " on"}" data-act="mSy" data-v="">None</button>${syrupItems().filter(i => !hidden.has(i.id) || i.id === m.sy).map(i => `<button class="tog${m.sy === i.id ? " on" : ""}" data-act="mSy" data-v="${esc(i.id)}" title="${esc(i.name)}">${esc(syrupShort(i))}</button>`).join("")}</div>
         ${m.sy ? `<div style="margin-top:8px">${seg("mPumps", [["1 pump","1"],["2 pumps","2"]], String(m.pumps))}</div>` : ""}</div>`
     + `<div class="mrow inl"><span class="ol">Cold foam, +${F.usd2(S.addons.foamCharge)}<br><span class="note-sm">Contains dairy</span></span><input type="checkbox" class="switch" id="mFoam"${m.fo ? " checked" : ""} aria-label="Cold foam"></div>`
+    + `<div class="mrow inl"><span class="ol">Extra shot, +${F.usd2(+S.addons.shotCharge || 0)}</span><input type="checkbox" class="switch" id="mShot"${m.sh ? " checked" : ""} aria-label="Extra shot"></div>`
     + `<div class="mrow inl"><span class="ol">Quantity</span><div class="stepper"><button data-act="mQ" data-d="-1" aria-label="Fewer">−</button><span>${m.q}</span><button data-act="mQ" data-d="1" aria-label="More">+</button></div></div>`
     + `<button class="btn big madd" data-act="mAdd">Add ${m.q > 1 ? m.q + " · " : ""}${F.usd2(each * m.q)}</button>`;
 }
 function addLine(line, d){
   line.p = Math.round(lineRevenue(line, d) * 100) / 100;
-  const key = x => [x.id, x.ice, x.milk, x.sy, x.pumps, x.fo, x.food].join("|");
+  const key = x => [x.id, x.ice, x.milk, x.sy, x.pumps, x.fo, x.sh, x.food].join("|");
   const same = UI.ticket.find(x => key(x) === key(line));
   if (same) same.q += line.q; else UI.ticket.push(line);
   renderTicket(); set("toast", "");
@@ -299,7 +307,7 @@ function addLine(line, d){
 function addFromMod(){
   const m = UI.mod, d = m && drinkById(m.id); if (!d) return;
   const line = {k:d.name, id:d.id, q:m.q, ice: d.serve === "both" ? m.ice : d.serve === "iced", milk: d.milk ? m.milk : "dairy", sy:m.sy || false, fo:m.fo};
-  if (m.sy) line.pumps = m.pumps;
+  if (m.sy) line.pumps = m.pumps; if (m.sh) line.sh = 1;
   addLine(line, d);
   $("modDlg").close(); UI.mod = null;
   const b = document.querySelector(`[data-act=pick][data-id="${CSS.escape(d.id)}"]`); if (b){ b.classList.add("flash"); setTimeout(() => b.classList.remove("flash"), 300); }
@@ -583,7 +591,7 @@ function renderGear(){
   h += `<div class="gsec"><h3>On the menu</h3><p class="note-sm" style="margin:-4px 0 6px">Prices and names save as you type. Switch a drink off to take it off the log and the menu; its sales stay counted.</p>${onL.map(row).join("")}
     ${offL.length ? `<details class="fold2"><summary>Off the menu, ${offL.length}</summary>${offL.map(row).join("")}</details>` : ""}</div>`;
   const num = (path, label) => `<div class="grow"><div class="nm">${label}</div><input class="in" type="number" min="0" step="0.05" data-bind="${path}" data-type="num" value="${(+getPath(S, path) || 0).toFixed(2)}" aria-label="${esc(label)}"><span></span></div>`;
-  h += `<div class="gsec"><h3>Add-ons and pastry</h3>${num("addons.altCharge", "Oat milk")}${num("addons.almCharge", "Almond milk")}${num("addons.syrupCharge", "Added syrup")}${num("addons.foamCharge", "Cold foam")}${num("pastry.price", "Pastry price")}${num("pastry.cost", "Pastry cost to us")}</div>`;
+  h += `<div class="gsec"><h3>Add-ons and pastry</h3>${num("addons.altCharge", "Oat milk")}${num("addons.almCharge", "Almond milk")}${num("addons.syrupCharge", "Added syrup")}${num("addons.foamCharge", "Cold foam")}${num("addons.shotCharge", "Extra shot")}${num("pastry.price", "Pastry price")}${num("pastry.cost", "Pastry cost to us")}</div>`;
   const hid = new Set(S.syrHide || []);
   h += `<div class="gsec"><h3>Syrups on the log</h3><p class="note-sm" style="margin:-4px 0 8px">Untick the flavors you're out of.</p><div class="pchips">${syrupItems().map(i => `<label class="chk" style="font-size:14px;margin-right:10px"><input type="checkbox" data-syshow="${esc(i.id)}"${hid.has(i.id) ? "" : " checked"}> ${esc(syrupShort(i))}</label>`).join("")}</div></div>`;
   box.innerHTML = h;
@@ -607,6 +615,7 @@ function renderMenu(){
     + addon("Almond milk", +(S.addons.almCharge ?? S.addons.altCharge), alt8("almond"), "8 oz instead of 2%, cost over dairy")
     + addon("Added syrup", +S.addons.syrupCharge, 2 * stdPump(), `2 pumps at the standard ${F.usd2(stdPump())} a pump`)
     + addon("Cold foam", +S.addons.foamCharge, foamCost(), "50 mL from the batch. Contains dairy")
+    + addon("Extra shot", +S.addons.shotCharge || 0, expand(SHOT).reduce((t, x) => t + x.cost, 0), "18 g of beans")
     + addon("Pastry", +S.pastry.price, +S.pastry.cost, "Price and cost set in the gear");
   box.innerHTML = h;
 }
@@ -1703,18 +1712,25 @@ async function saveAvail(){
 
 /* ------------------------------------------------------------------ sales by day (home, day panel, analytics) */
 function salesDays(){
-  const out = {}, get = d => out[d] || (out[d] = {n:0, food:0, rev:0, orders:0, drinks:{}});
+  const out = {}, get = d => out[d] || (out[d] = {n:0, food:0, rev:0, orders:0, drinks:{}}), stated = statedDays();
   Store.sales.forEach(doc => {
-    const ls = (doc.lines || []).filter(l => +l.q > 0 && l.d && (isFood(l) || lineDrink(l) || l.p != null)); if (!ls.length) return;
-    const ok = {};
-    ls.forEach(l => { const q = +l.q, o = get(l.d), d = lineDrink(l);
-      o.rev += (l.p != null ? +l.p : lineRevenue(l, d)) * q;
-      if (isFood(l)) o.food += q; else if (d){ o.n += q; o.drinks[d.name] = (o.drinks[d.name] || 0) + q; }
-      (ok[l.d] || (ok[l.d] = new Set())).add(doc.kind === "upload" ? (l.o ? "o:" + l.o : l.d + " " + l.tm) : "doc"); });
-    Object.entries(ok).forEach(([d, s]) => get(d).orders += doc.dayOrders && doc.dayOrders[d] != null ? +doc.dayOrders[d] : s.size);
+    const ok = dayOrderKeys(doc);
+    (doc.lines || []).forEach(l => { if (!(+l.q > 0) || !l.d) return; const q = +l.q, d = lineDrink(l); if (!isFood(l) && !d && l.p == null) return; const o = get(l.d);
+      if (!(l.d in stated)) o.rev += (l.p != null ? +l.p : lineRevenue(l, d)) * q;
+      if (isFood(l)) o.food += q; else if (d || !l.nd){ o.n += q; if (!l.un){ const nm = d ? d.name : l.k; o.drinks[nm] = (o.drinks[nm] || 0) + q; } } });
+    Object.entries(ok).forEach(([d, n]) => get(d).orders += n);
   });
+  Object.entries(stated).forEach(([d, v]) => get(d).rev += v);
   return out;
 }
+/* a saved sales entry's orders by day: its stated count, or one per order ID or time it holds (an entry logged in the portal is
+   one order). Item counts with no order IDs or times say nothing about orders */
+function dayOrderKeys(doc){
+  const ok = {}; (doc.lines || []).forEach(l => { if (!(+l.q > 0) || !l.d) return; const s = ok[l.d] || (ok[l.d] = new Set()), k = doc.kind !== "upload" ? "doc" : l.o ? "o:" + l.o : l.tm || ""; if (k) s.add(k); });
+  const out = {}; Object.entries(ok).forEach(([d, st]) => out[d] = st.size); Object.entries(doc.dayOrders || {}).forEach(([d, n]) => out[d] = +n || 0); return out;
+}
+/* days with a stated day total from an import: revenue takes the total, not the item prices */
+const statedDays = () => { const o = {}; Store.sales.forEach(doc => Object.entries(doc.daySales || {}).forEach(([d, v]) => o[d] = (o[d] || 0) + (+v || 0))); return o; };
 
 /* ------------------------------------------------------------------ this week's menu: which drinks run which day */
 /* a small window: the week's day tabs, that day's drinks on top, and the drink bank below to search and add from.
@@ -1901,24 +1917,30 @@ function anRangeOf(){
 function itemStats(from, to){
   const inR = d => !!d && d >= (from || "") && d <= (to || "9999-12-31"), C = S.clover;
   const reps = C.items.filter(r => r.from && r.to ? inR(r.from) && inR(r.to) : r.undated && !from && !to), inRep = d => C.items.some(r => r.from && d >= r.from && d <= r.to);
-  const by = {}, H = {both:0, iced:0, milkD:0, oat:0, alm:0, sy:0, fo:0}, syr = {}, unknown = new Set(), days = {};
+  const by = {}, H = {both:0, iced:0, milkD:0, alt:0, sy:0, fo:0}, syr = {}, unknown = new Set(), days = {};
   let n = 0, food = 0;
   const add = (id, name, sec, q, r) => { const x = by[id] || (by[id] = {id, name, sec, n:0, rev:0}); x.n += q; x.rev += r; };
+  // sec: core, signature, specialty; off (a drink off the menu), unspec (a drink with no name), other (not a drink), food
   Store.sales.forEach(doc => (doc.lines || []).forEach(l => {
     if (!(+l.q > 0) || !inR(l.d)) return; const q = +l.q, d = lineDrink(l);
-    if (!isFood(l) && !d){ if (l.p != null && !inRep(l.d)) add("x:" + norm(l.k), l.k, "other", q, +l.p * q); else unknown.add(l.k); return; }   // off the menu: its money counts, not as a drink
-    const day = days[l.d] || (days[l.d] = {n:0, food:0, drinks:{}}), r = (l.p != null ? +l.p : lineRevenue(l, d)) * q;
+    if (!isFood(l) && !d && l.p == null){ unknown.add(l.k); return; }
     if (inRep(l.d)) return;
-    if (isFood(l)){ food += q; day.food += q; add("pastry", "Pastry", "food", q, r); return; }
-    n += q; day.n += q; day.drinks[d.name] = (day.drinks[d.name] || 0) + q; add(d.id, d.name, d.sec, q, r);
-    if (d.serve === "both"){ H.both += q; if (l.ice) H.iced += q; }
-    if (d.milk){ H.milkD += q; if (l.milk === "oat") H.oat += q; if (l.milk === "almond") H.alm += q; }
-    if (l.sy){ H.sy += q; const k = syOf(l); syr[k] = (syr[k] || 0) + q; }
-    if (l.fo) H.fo += q; }));
-  reps.forEach(rp => (rp.rows || []).forEach(r => { const u = +r.units || 0; if (!(u > 0)) return; const d = r.cat === "drink" && findDrink(r.name);
-    if (d){ n += u; add(d.id, d.name, d.sec, u, +r.revenue || 0); if (d.milk || (d.iced || d.hot || []).some(x => x[0] === "oat")){ H.milkD += u; H.oat += +r.alt || 0; } H.sy += +r.syrup || 0; H.fo += +r.foam || 0; }
-    else if (r.cat === "other") add("x:" + norm(r.name), r.name, "other", u, +r.revenue || 0);
-    else { food += u; add(r.cat === "pastry" && /^pastry$/i.test(r.name) ? "pastry" : "cl:" + norm(r.name), r.name, "food", u, +r.revenue || 0); } }));
+    const day = days[l.d] || (days[l.d] = {n:0, food:0, drinks:{}}), r = (l.p != null ? +l.p : lineRevenue(l, d)) * q;
+    if (isFood(l)){ food += q; day.food += q; add("pastry:" + norm(l.k || "Pastry"), l.k || "Pastry", "food", q, r); return; }
+    if (!d && l.nd){ add("x:" + norm(l.k), l.k, "other", q, r); return; }
+    n += q; day.n += q;
+    if (l.un) add("unspec", "Unspecified drink", "unspec", q, r);
+    else { const nm = d ? d.name : l.k; day.drinks[nm] = (day.drinks[nm] || 0) + q; if (d) add(d.id, d.name, d.sec, q, r); else add("x:" + norm(l.k), l.k, "off", q, r); }
+    if (d && d.serve === "both"){ H.both += q; if (l.ice) H.iced += q; }
+    if (d && d.milk){ H.milkD += q; H.alt += (["oat","almond","alt"].includes(l.milk) ? q : 0) + q * addOn(l, "alt"); }
+    const sy = q * ((l.sy ? 1 : 0) + addOn(l, "sy")); if (sy){ H.sy += sy; const k = syOf(l); syr[k] = (syr[k] || 0) + sy; }
+    H.fo += q * ((l.fo ? 1 : 0) + addOn(l, "fo")); }));
+  reps.forEach(rp => (rp.rows || []).forEach(r => { const u = +r.units || 0, v = +r.revenue || 0; if (!(u > 0)) return; const d = r.cat === "drink" && findDrink(r.name);
+    if (r.cat === "drink" || r.cat === "unspec"){ n += u; H.sy += +r.syrup || 0; H.fo += +r.foam || 0;
+      if (d){ add(d.id, d.name, d.sec, u, v); if (d.milk || (d.iced || d.hot || []).some(x => x[0] === "oat")){ H.milkD += u; H.alt += +r.alt || 0; } }
+      else if (r.cat === "unspec") add("unspec", "Unspecified drink", "unspec", u, v); else add("x:" + norm(r.name), r.name, "off", u, v); }
+    else if (r.cat === "other") add("x:" + norm(r.name), r.name, "other", u, v);
+    else { food += u; add("pastry:" + norm(r.name), r.name, "food", u, v); } }));
   return {by, H, syr, unknown, days, n, food, reps, cdays:Object.keys(C.orders).filter(inR).sort()};
 }
 function renderAnalytics(){
@@ -1937,39 +1959,40 @@ function renderAnalytics(){
   $("anCmp").checked = !!A.cmp; $("anCmpLbl").textContent = len ? `Compare with ${cmpName}` : "Compare with the period before"; $("anCmpLbl").title = len ? `${fmtD(pf)} to ${fmtD(pt)}` : "";
   // numbers
   const R = sumDays(M, inR), P = cmp ? sumDays(M, inP) : null, I = itemStats(from, to), IP = cmp ? itemStats(pf, pt) : null;
-  if (!from && !to) undatedReps().forEach(r => { const v = repSales(r), o = +r.orders || 0, f = feesOf(v, o); R.sales += v; R.orders += o; R.fees += f; R.costs += f; R.net += v - f; });
+  if (!from && !to) undatedReps().forEach(r => { const v = repSales(r), o = +r.orders || 0, f = feesOf(v, o); R.sales += v; R.orders += o; if (o) R.osales += v; R.fees += f; R.costs += f; R.net += v - f; });
   const bn = $("t-banner");
   if (I.unknown.size){ bn.className = "banner warn"; bn.textContent = `Sales for ${[...I.unknown].slice(0, 4).join(", ")} don't match a drink, so they aren't counted. Rebuild that drink with New drink under the same name.`; }
   else { bn.className = "banner"; bn.textContent = ""; }
   const delta = (cur, prev, good) => { if (!cmp) return ""; if (!prev) return `<span class="muted">Nothing ${cmpShort === "before" ? "the period before" : cmpShort}</span>`; const d = (cur - prev) / Math.abs(prev), up = d >= 0;
     return `<span class="${up === (good !== false) ? "up" : "down"}">${up ? "▲" : "▼"} ${F.frac(Math.abs(d))}</span> <span class="muted">vs ${cmpShort}</span>`; };
   const kpi = (l, v, d, s) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${[d, s].filter(Boolean).join(" · ")}</div></div>`;
-  const aov = R.orders ? R.sales / R.orders : 0;
+  const aov = R.orders ? R.osales / R.orders : 0;   // days with item counts but no order count are left out
+  const sDays = Object.keys(M).filter(d => inR(d) && M[d].sales > 0), oDays = sDays.filter(d => M[d].orders > 0);
   const noItems = !I.n && !I.food && R.orders > 0;   // Clover order totals, but no item report covering these days
-  $("anKpis").innerHTML = kpi("Revenue", F.usd0(R.sales), delta(R.sales, P && P.sales), R.orders ? `${F.int(R.orders)} orders` : "No sales in this range")
+  $("anKpis").innerHTML = kpi("Revenue", F.usd0(R.sales), delta(R.sales, P && P.sales), R.orders ? `${F.int(R.orders)} orders${oDays.length < sDays.length ? `, counted on ${oDays.length} of ${plural(sDays.length, "day")}` : ""}` : R.sales ? "No order counts for these days" : "No sales in this range")
     + kpi("Costs", F.usd0(R.costs), delta(R.costs, P && P.costs, false), R.costs ? `${F.usd0(R.supplies)} on supplies` : "Nothing bought in this range")
     + kpi("Net", F.usd0(R.net), delta(R.net, P && P.net), R.sales ? `${F.frac(R.net / R.sales)} of revenue` : "")
     + (noItems ? kpi("Drinks sold", "–", "", "No drink counts for these days yet: import the Clover item report or log sales")
-               : kpi("Drinks sold", F.int(I.n), delta(I.n, IP && IP.n), [`${F.int(I.food)} ${I.food === 1 ? "pastry" : "pastries"}`, aov ? `${F.usd2(aov)} average order` : ""].filter(Boolean).join(", ")));
+               : kpi("Drinks sold", F.int(I.n), delta(I.n, IP && IP.n), [`${F.int(I.food)} ${I.food === 1 ? "pastry" : "pastries"}`, aov ? `${F.usd2(aov)} average order${oDays.length < sDays.length ? ` on ${plural(oDays.length, "day")} with order counts` : ""}` : ""].filter(Boolean).join(", ")));
   // primary chart, then demand and the top drinks
   renderRecoup(M);
   renderClover(I.cdays, I.reps);
-  const X = Object.values(I.by), drinks = X.filter(x => x.sec !== "food").sort((a, b) => b.n - a.n), top = drinks.slice(0, 10), mx = Math.max(1, ...top.map(x => x.n));
+  const X = Object.values(I.by), drinks = X.filter(x => !["food","other","unspec"].includes(x.sec)).sort((a, b) => b.n - a.n), top = drinks.slice(0, 10), mx = Math.max(1, ...top.map(x => x.n));
   $("anTop10").innerHTML = top.length ? top.map(x => `<div class="t10"><span class="nm">${esc(x.name)}</span><span class="bar"><i class="${x.sec}" style="width:${x.n / mx * 100}%"></i></span><b>${F.int(x.n)}</b></div>`).join("")
-    + `<div class="t10-k"><span><i class="signature"></i>Signature</span><span><i class="specialty"></i>Specialty</span><span><i class="core"></i>Core</span></div>`
+    + `<div class="t10-k"><span><i class="signature"></i>Signature</span><span><i class="specialty"></i>Specialty</span><span><i class="core"></i>Core</span>${top.some(x => x.sec === "off") ? `<span><i class="off"></i>Off the menu</span>` : ""}</div>`
     : `<p class="empty">${noItems ? "Clover has these days' order totals but not which drinks sold. Import the Clover item report for them, or log sales here." : "No drinks sold in this range."}</p>`;
   // tables
   const tot = X.reduce((s, x) => s + x.rev, 0), prevN = id => IP && IP.by[id] ? IP.by[id].n : 0;
   $("anItems").innerHTML = X.length ? `<thead><tr><th class="l">Item</th><th>Sold</th>${cmp ? "<th>Change</th>" : ""}<th>Sales</th><th>Share</th></tr></thead><tbody>`
       + X.sort((a, b) => b.n - a.n).map(x => { const p = prevN(x.id), ch = !cmp ? "" : p ? `<td class="${x.n >= p ? "up" : "down"}">${x.n >= p ? "▲" : "▼"} ${F.frac(Math.abs(x.n - p) / p)}</td>` : `<td class="muted">New</td>`;
-        return `<tr><td class="l">${esc(x.name)}${x.sec !== "core" ? ` <span class="note-sm">${x.sec === "food" ? "food" : x.sec}</span>` : ""}</td><td>${F.int(x.n)}</td>${ch}<td>${F.usd0(x.rev)}</td><td class="muted">${F.frac(tot ? x.rev / tot : 0)}</td></tr>`; }).join("") + `</tbody>`
+        return `<tr><td class="l">${esc(x.name)}${x.sec !== "core" ? ` <span class="note-sm">${{food:"pastry", off:"off the menu", unspec:"no drink name", other:"not a drink"}[x.sec] || x.sec}</span>` : ""}</td><td>${F.int(x.n)}</td>${ch}<td>${F.usd0(x.rev)}</td><td class="muted">${F.frac(tot ? x.rev / tot : 0)}</td></tr>`; }).join("") + `</tbody>`
     : `<tbody><tr><td class="l empty">${noItems ? "No drink counts for these days yet." : "Nothing sold in this range."}</td></tr></tbody>`;
   const H = I.H, pct = (a, b) => b ? F.frac(a / b) : "None";
   $("anHabits").hidden = !I.n;   // no drink counts, no ordering habits to show
-  $("anHabits").innerHTML = [["Alt milk", pct(H.oat + H.alm, H.milkD)], ["Added syrup", pct(H.sy, I.n)], ["Cold foam", pct(H.fo, I.n)], ["Iced, given the choice", pct(H.iced, H.both)]]
+  $("anHabits").innerHTML = [["Alt milk", pct(H.alt, H.milkD)], ["Added syrup", pct(H.sy, I.n)], ["Cold foam", pct(H.fo, I.n)], ["Iced, given the choice", pct(H.iced, H.both)]]
     .map(([l, v]) => `<div><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
   const st = Object.values(I.syr).reduce((s, v) => s + v, 0);
-  $("anSyr").innerHTML = st ? Object.entries(I.syr).sort((a, b) => b[1] - a[1]).map(([id, q]) => `<tr><td class="l">${esc(flavorName(id))}</td><td>${F.int(q)}</td><td class="muted">${F.frac(q / st)}</td></tr>`).join("")
+  $("anSyr").innerHTML = st ? Object.entries(I.syr).sort((a, b) => b[1] - a[1]).map(([id, q]) => `<tr><td class="l">${id ? esc(flavorName(id)) : "Flavor not recorded"}</td><td>${F.int(q)}</td><td class="muted">${F.frac(q / st)}</td></tr>`).join("")
     : `<tr><td class="l empty">No syrups added in logged sales yet.</td></tr>`;
   renderMonths(M);
   // folded: how the net is worked out, then week by week
@@ -1987,7 +2010,7 @@ function renderAnalytics(){
     : `<tbody><tr><td class="l empty">No sales or spending in this range.</td></tr></tbody>`;
   const dl = Object.keys(M).filter(d => inR(d) && M[d].sales > 0).sort().reverse();
   $("dayBody").innerHTML = dl.length ? dl.map(d => { const x = M[d], dd = I.days[d], top = dd ? Object.entries(dd.drinks).sort((a, b) => b[1] - a[1])[0] : null;
-      return `<tr><td class="l">${fmtD(d)}${S.clover.orders[d] ? ` <span class="note-sm">Clover</span>` : ""}</td><td>${F.int(x.orders)}</td><td>${dd && dd.n ? F.int(dd.n) : "–"}</td><td>${F.usd2(x.sales)}</td><td class="l">${top ? esc(top[0]) : ""}</td></tr>`; }).join("")
+      return `<tr><td class="l">${x.per ? `${x.per} <span class="note-sm">not split by day</span>` : fmtD(d)}${S.clover.orders[d] ? ` <span class="note-sm">Clover</span>` : ""}</td><td>${x.orders ? F.int(x.orders) : "–"}</td><td>${dd && dd.n ? F.int(dd.n) : "–"}</td><td>${F.usd2(x.sales)}</td><td class="l">${top ? esc(top[0]) : ""}</td></tr>`; }).join("")
     : `<tr><td class="l empty" colspan="5">No sales in this range.</td></tr>`;
   renderPerish(inR);
   renderCharges();
@@ -2011,44 +2034,57 @@ function renderPerish(inR){
    Received counts at the price when it was ticked), extra order items, one-off spending, and card fees and charity. */
 const feesOf = (sales, orders) => { const Fe = S.fees; return sales * ((+Fe.cardPct || 0) + (+Fe.feePct || 0) + (+Fe.charityPct || 0)) / 100 + orders * (+Fe.cardFix || 0); };
 function dayMoney(){
-  const C = S.clover, out = {}, D = d => out[d] || (out[d] = {sales:0, orders:0, supplies:0, spent:0, waste:0}), cset = new Set(Object.keys(C.orders));
-  Store.sales.forEach(doc => { const ok = {};
-    (doc.lines || []).forEach(l => { if (!(+l.q > 0) || !l.d || cset.has(l.d)) return; const d = lineDrink(l); if (!isFood(l) && !d && l.p == null) return;
-      D(l.d).sales += (l.p != null ? +l.p : lineRevenue(l, d)) * +l.q;
-      (ok[l.d] || (ok[l.d] = new Set())).add(doc.kind === "upload" ? (l.o ? "o:" + l.o : l.tm) : "doc"); });
-    Object.entries(ok).forEach(([d, st]) => D(d).orders += doc.dayOrders && doc.dayOrders[d] != null ? +doc.dayOrders[d] : st.size); });
-  Object.entries(C.orders).forEach(([d, o]) => { const x = D(d); x.sales += o.log.reduce((t, [, v]) => t + v, 0); x.orders += o.log.filter(([, v]) => v > 0).length; });
+  const C = S.clover, out = {}, D = d => out[d] || (out[d] = {sales:0, orders:0, supplies:0, spent:0, waste:0}), cset = new Set(Object.keys(C.orders)), stated = statedDays();
+  Store.sales.forEach(doc => {
+    (doc.lines || []).forEach(l => { if (!(+l.q > 0) || !l.d || cset.has(l.d) || l.d in stated) return; const d = lineDrink(l); if (!isFood(l) && !d && l.p == null) return;
+      D(l.d).sales += (l.p != null ? +l.p : lineRevenue(l, d)) * +l.q; });
+    Object.entries(dayOrderKeys(doc)).forEach(([d, n]) => { if (!cset.has(d)) D(d).orders += n; }); });
+  Object.entries(stated).forEach(([d, v]) => { if (!cset.has(d)) D(d).sales += v; });
+  Object.entries(C.orders).forEach(([d, o]) => { const x = D(d); x.sales += o.log.reduce((t, [, v]) => t + v, 0); x.orders += o.log.filter(([, v]) => v > 0).length; });   // refunds come off sales
+  // a period that can't be split by day (its own sales and orders): on its last day, so it lands in that week and month
+  C.items.forEach(r => { if (r.undated || !r.to || r.sales == null) return; const x = D(r.to); x.sales += +r.sales || 0; x.orders += +r.orders || 0; x.per = r.from !== r.to ? `${fmtD(r.from)} to ${fmtD(r.to)}` : ""; });
   const invT = new Set((S.charges || []).filter(c => c.inv).map(c => c.inv));
   Store.stock.forEach(e => { const d = String(e.ts).slice(0, 10), v = e.cost != null ? +e.cost : (+e.qty || 0) * perUnit(e.item);
     if (e.type === "waste") D(d).waste += (+e.qty || 0) * perUnit(e.item);
     else if (e.type === "receive" && !(e.inv && invT.has(e.inv))) D(d).supplies += v; });   // invoice lines are inside the invoice total
   Object.values(S.orders || {}).forEach(o => (o.extra || []).forEach(x => { if (x.r) D(x.r).supplies += (+x.qty || 0) * (+x.price || 0); }));   // extra order items, the day they arrived
   (S.charges || []).forEach(c => { if (c.date) D(c.date)[c.inv ? "supplies" : "spent"] += +c.amount || 0; });   // an imported invoice is supplies
-  Object.values(out).forEach(x => { x.fees = feesOf(x.sales, x.orders); x.costs = x.supplies + x.spent + x.fees; x.net = x.sales - x.costs; });
+  // osales: sales on days with an order count, so the average order leaves out days that only have item counts
+  Object.values(out).forEach(x => { x.fees = feesOf(x.sales, x.orders); x.costs = x.supplies + x.spent + x.fees; x.net = x.sales - x.costs; x.osales = x.orders > 0 ? x.sales : 0; });
   return out;
 }
-const MONEY_KEYS = ["sales","orders","supplies","spent","fees","costs","net","waste"];
+const MONEY_KEYS = ["sales","orders","osales","supplies","spent","fees","costs","net","waste"];
 const sumDays = (M, keep) => Object.entries(M).filter(([d]) => keep(d)).reduce((a, [, x]) => { MONEY_KEYS.forEach(k => a[k] += x[k] || 0); return a; }, Object.fromEntries(MONEY_KEYS.map(k => [k, 0])));
 /* sales imported without a date (item counts or a total): they count in All time only */
 const undatedReps = () => S.clover.items.filter(r => r.undated);
 const repSales = r => r.sales != null ? +r.sales : (r.rows || []).reduce((t, x) => t + (+x.revenue || 0), 0);
 /* cost recuperation since the first money in or out: bars for each week's revenue and costs, and the running total,
    which crosses zero the week everything spent is earned back */
+UI.recoup = "week";   // week: a revenue bar a week; day: a revenue bar for each day open, grouped by week
 function renderRecoup(M){
   const el = $("anRecoup"); if (!el) return;
-  const ds = Object.keys(M).filter(d => M[d].sales || M[d].costs).sort(), cw = weekOf(ymd(new Date())), W = chartW(el), Hh = 260;
+  const segEl = $("anRecoupMode"); if (segEl) segEl.innerHTML = [["week","By week"],["day","Each day"]].map(([v,l]) => `<button class="${UI.recoup === v ? "on" : ""}" data-act="anRecoup" data-v="${v}">${l}</button>`).join("");
+  const byDay = UI.recoup === "day", ds = Object.keys(M).filter(d => M[d].sales || M[d].costs).sort(), cw = weekOf(ymd(new Date())), W = chartW(el), Hh = byDay ? 272 : 260;
   el.setAttribute("viewBox", `0 0 ${W} ${Hh}`);
   if (!ds.length){ el.innerHTML = `<text class="ax" x="${W / 2}" y="120" text-anchor="middle">Nothing in or out yet. Add what you've spent below, and import sales.</text>`; set("anRecoupNote", ""); return; }
-  const by = {}; ds.forEach(d => { const w = weekOf(d), b = by[w] || (by[w] = {in:0, out:0}); b.in += M[d].sales; b.out += M[d].costs; });
+  const by = {}; ds.forEach(d => { const w = weekOf(d), b = by[w] || (by[w] = {in:0, out:0, days:[]}); b.in += M[d].sales; b.out += M[d].costs; if (M[d].sales > 0) b.days.push(d); });
   const last = weekOf(ds[ds.length - 1]) > cw ? weekOf(ds[ds.length - 1]) : cw, all = []; let cum = 0;
-  for (let w = weekOf(ds[0]); w <= last && all.length < 520; w = addDays(w, 7)){ const b = by[w] || {in:0, out:0}; cum += b.in - b.out; all.push({w, in:b.in, out:b.out, cum}); }
-  const show = all.slice(-Math.max(8, Math.min(52, Math.floor(W / 34)))), m = {l:56, r:12, t:16, b:44}, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
-  const hi = Math.max(50, ...show.map(p => Math.max(p.in, p.cum))) * 1.08, lo = Math.min(-50, ...show.map(p => Math.min(-p.out, p.cum))) * 1.08;
+  for (let w = weekOf(ds[0]); w <= last && all.length < 520; w = addDays(w, 7)){ const b = by[w] || {in:0, out:0, days:[]}; cum += b.in - b.out; all.push({w, in:b.in, out:b.out, days:b.days, cum}); }
+  const show = all.slice(-Math.max(byDay ? 4 : 8, Math.min(52, Math.floor(W / (byDay ? 64 : 34))))), m = {l:56, r:12, t:16, b: byDay ? 56 : 44}, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+  const hi = Math.max(50, ...show.map(p => Math.max(byDay ? Math.max(0, ...p.days.map(d => M[d].sales)) : p.in, p.cum))) * 1.08, lo = Math.min(-50, ...show.map(p => Math.min(-p.out, p.cum))) * 1.08;
   const y = v => m.t + (hi - v) / (hi - lo) * ih, bw = Math.min(iw / show.length, 90), x0w = m.l + (iw - bw * show.length) / 2, cx = i => x0w + (i + .5) * bw;
   let g = "";
   [hi, hi / 2, 0, lo / 2, lo].forEach(v => g += `<line class="gl" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"${v === 0 ? ' style="stroke:var(--label3);stroke-width:1.4"' : ""}/><text class="ax" x="${m.l - 5}" y="${y(v) + 4}" text-anchor="end">${v < 0 ? "−" : ""}${F.usd0(Math.abs(v))}</text>`);
   const every = Math.ceil(show.length / Math.max(3, Math.floor(iw / 70)));
-  show.forEach((p, i) => { const x0 = x0w + i * bw + bw * .14, w = bw * .34;
+  // each day: the week's open days side by side, then the week's costs
+  const dayTag = d => M[d].per ? M[d].per.replace(/ \w+ \d+/g, "").replace(" to ", "–") : DOW[toDate(d).getDay()];
+  if (byDay) show.forEach((p, i) => { const k = p.days.length + 1, sw = bw * .84 / k, x0 = x0w + i * bw + bw * .08;
+    p.days.forEach((d, j) => { const v = M[d].sales, x = x0 + j * sw;
+      g += `<rect class="b-pos" x="${x + sw * .08}" y="${y(v)}" width="${sw * .84}" height="${y(0) - y(v)}" rx="2"><title>${M[d].per || fmtD(d)}: ${F.usd2(v)} revenue</title></rect>`;
+      if (sw >= 18) g += `<text class="ax" x="${x + sw / 2}" y="${Hh - 38}" text-anchor="middle" style="font-size:10px">${esc(dayTag(d))}</text>`; });
+    if (p.out > 0) g += `<rect class="b-neg" x="${x0 + p.days.length * sw + sw * .08}" y="${y(0)}" width="${sw * .84}" height="${y(-p.out) - y(0)}" rx="2"><title>Week of ${fmtD(p.w)}: ${F.usd2(p.out)} costs</title></rect>`;
+    if (i % every === 0) g += `<text class="ax" x="${cx(i)}" y="${Hh - 24}" text-anchor="middle">${fmtD(p.w).replace(/^\w+ /, "")}</text>`; });
+  else show.forEach((p, i) => { const x0 = x0w + i * bw + bw * .14, w = bw * .34;
     if (p.in > 0) g += `<rect class="b-pos" x="${x0}" y="${y(p.in)}" width="${w}" height="${y(0) - y(p.in)}" rx="2"><title>Week of ${fmtD(p.w)}: ${F.usd2(p.in)} revenue</title></rect>`;
     if (p.out > 0) g += `<rect class="b-neg" x="${x0 + w + bw * .04}" y="${y(0)}" width="${w}" height="${y(-p.out) - y(0)}" rx="2"><title>Week of ${fmtD(p.w)}: ${F.usd2(p.out)} costs</title></rect>`;
     if (i % every === 0) g += `<text class="ax" x="${cx(i)}" y="${Hh - 26}" text-anchor="middle">${fmtD(p.w).replace(/^\w+ /, "")}</text>`; });
@@ -2120,13 +2156,15 @@ function cloverDays(dates){
 /* orders per half hour. Average day: the mean of every Clover day in the range, the demand to plan shifts around. By weekday:
    the same mean for each weekday (an average Saturday next to an average Sunday). Each day: one line per day. */
 UI.curve = "avg";
+/* the days a curve covers, by name: only days with order times are in it */
+const dayNames = ds => ds.length > 4 ? `${fmtD(ds[0].date)} to ${fmtD(ds[ds.length - 1].date)}` : ds.map(d => fmtD(d.date)).join(", ");
 function curveSeries(D){
   const mean = (ds, label, color) => { const bins = {}; ds.forEach(d => Object.entries(d.bins).forEach(([k, b]) => { const x = bins[k] || (bins[k] = {n:0, rev:0}); x.n += b.n / ds.length; x.rev += b.rev / ds.length; }));
     return {label, color, bins, open:Math.min(...ds.map(d => Math.min(d.open, d.first))), close:Math.max(...ds.map(d => Math.max(d.close, d.last + 1))), days:ds.length}; };
   if (UI.curve === "each") return D.map(d => ({label:d.label, color:d.color, bins:d.bins, open:Math.min(d.open, d.first), close:Math.max(d.close, d.last + 1), days:1}));
   if (UI.curve === "dow"){ const by = {}; D.forEach(d => (by[toDate(d.date).getDay()] = by[toDate(d.date).getDay()] || []).push(d));
-    return [1,2,3,4,5,6,0].filter(w => by[w]).map((w, i) => mean(by[w], `Average ${WDAY[w]}, ${by[w].length} ${by[w].length === 1 ? "day" : "days"}`, CLR[i % CLR.length])); }
-  return [mean(D, `Average of ${D.length} ${D.length === 1 ? "day" : "days"}`, "var(--orange)")];
+    return [1,2,3,4,5,6,0].filter(w => by[w]).map((w, i) => mean(by[w], `Average ${WDAY[w]} (${dayNames(by[w])})`, CLR[i % CLR.length])); }
+  return [mean(D, D.length === 1 ? fmtD(D[0].date) : `Average of ${D.length} days (${dayNames(D)})`, "var(--orange)")];
 }
 function renderSalesCurve(D){
   const el = $("anCurve"); if (!el) return;
@@ -2256,7 +2294,7 @@ function renderImports(){
   const box = $("impResult"), L = UI.imp || []; if (!L.length){ box.innerHTML = ""; return; }
   const ok = L.filter(x => !x.error).length;
   box.innerHTML = L.map((x, i) => x.error ? `<div class="impf bad"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.error)}</div></div>`
-    : `<div class="impf"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.text)}</div>${x.kind === "gg" && x.replace && x.dates.length ? `<p class="res-bad" style="margin:4px 0 0">Replaces anything already in the portal for ${x.dates.length === 1 ? fmtD(x.dates[0]) : `${plural(x.dates.length, "date")}, ${fmtD(x.dates[0])} to ${fmtD(x.dates[x.dates.length - 1])}`}.</p>` : ""}${x.dup && x.dup.length ? `<p class="res-bad" style="margin:4px 0 0">Already imported ${x.dup.map(fmtD).join(", ")}. These replace them.</p>` : ""}${x.kind === "lines" && x.dates.some(d => UI.SD && UI.SD[d]) ? `<p class="res-bad" style="margin:4px 0 0">Some of these days already have logged sales. Importing adds to them.</p>` : ""}
+    : `<div class="impf"><b>${esc(x.file)}</b><div class="note-sm">${esc(x.text)}</div>${x.flags && x.flags.length ? `<p class="res-bad" style="margin:4px 0 0">Two figures for the same money. Check these:<br>${x.flags.map(esc).join("<br>")}</p>` : ""}${x.kind === "gg" && x.replace && x.dates.length ? `<p class="res-bad" style="margin:4px 0 0">Replaces anything already in the portal for ${x.dates.length === 1 ? fmtD(x.dates[0]) : `${plural(x.dates.length, "date")}, ${fmtD(x.dates[0])} to ${fmtD(x.dates[x.dates.length - 1])}`}.</p>` : ""}${x.dup && x.dup.length ? `<p class="res-bad" style="margin:4px 0 0">Already imported ${x.dup.map(fmtD).join(", ")}. These replace them.</p>` : ""}${x.kind === "lines" && x.dates.some(d => UI.SD && UI.SD[d]) ? `<p class="res-bad" style="margin:4px 0 0">Some of these days already have logged sales. Importing adds to them.</p>` : ""}
       ${x.kind === "items" ? `<div class="calbar" style="margin:6px 0 0"><label class="tw">Covers <input class="in txt" type="date" data-impd="${i}:from" value="${x.from}"></label><label class="tw">to <input class="in txt" type="date" data-impd="${i}:to" value="${x.to}"></label></div>` : ""}</div>`).join("")
     + (ok ? `<p style="margin-top:10px"><button class="btn" data-act="impAll">Import ${ok === 1 ? "it" : `all ${ok}`}</button> <button class="btn ghost" data-act="impCancel">Cancel</button></p>` : "");
 }
@@ -2320,11 +2358,13 @@ Use the most detailed level the data supports. Each date goes in **exactly one**
 
 1. **\`transactions\`**: each order with its items, one sale at a time. Use it whenever you can see which items were in which order.
 2. **\`daily\`**: how many of each item sold that day.
-3. **\`periods\`**: item totals for a range of days that can't be split by day.
+3. **\`periods\`**: item totals for a range of days that can't be split by day, with the range's orders and sales if known. The portal puts a period in the week and month of its last day.
 
 **Sales with no date** go in **\`undated\`**: item counts, a dollar total, or both, with no date attached (a semester tally, a lifetime item report, a pile of receipts with no dates). Individual sales with no date can also stay in \`transactions\` with the \`date\` left out; the portal adds them up the same way. Never guess a date. Sales with no date count toward revenue, drinks sold and the item tables in **All time**, but not in any week or month.
 
-**\`orders\`** holds order times and totals when the items aren't known. It can be the only data for a date, or sit beside \`daily\` for the same date (the portal then takes the money and the busy times from \`orders\`, and the drink counts from \`daily\`). Never put a date in both \`orders\` and \`transactions\`.
+**\`orders\`** holds order times and totals when the items aren't known. It can be the only data for a date, or sit beside \`daily\` for the same date (the portal then takes the money and the busy times from \`orders\`, and the drink counts from \`daily\`). Never put a date in both \`orders\` and \`transactions\`. Only days in \`orders\` or \`transactions\` have order times, so only they feed the busy-time curves; the average order leaves out days with no order count.
+
+**Two figures for one day's money** (a stated day total, the orders, the items at their prices): keep each where it belongs and don't adjust one to match the other. Revenue uses the orders, then the stated total, then the items. The preview shows both figures for any day where they're more than $1.00 apart.
 
 ## What the data might look like, and where it goes
 
@@ -2352,24 +2392,29 @@ Use the most detailed level the data supports. Each date goes in **exactly one**
 - **Times:** 24-hour \`HH:MM\` in New Haven local time (Eastern). "2:05 PM" becomes \`14:05\`. If an export is in UTC (the times end in Z or the header says UTC), convert to Eastern.
 - **Money:** plain numbers in dollars, no "$". Use what the customer paid after discounts. Leave out tips, and leave out tax if it's shown separately.
 - **Quantities:** whole numbers above 0.
-- **Leave out:** refunds (and the sale they refund), voided items, test orders and gift card sales. Free or comped drinks stay in, with a price of 0, since they used stock.
+- **Refunds:** a refund you can match to its sale: leave both out. A refund that doesn't say which sale it refunds: an \`orders\` line with a negative \`total\`, so the day's sales are net of it.
+- **Leave out:** voided items, test orders and gift card sales. Free or comped drinks stay in, with a price of 0, since they used stock.
 
 ## The menu
 
-Write each item's \`name\` exactly as in the Name column. Every baked good (croissant, muffin, cookie and so on) is **Pastry**.
+Write each item's \`name\` exactly as in the Name column.
+
+**Pastries:** every baked good is a pastry. Write its own name ("Coffee Cake Donut", "Apple Cake") with \`"cat": "pastry"\` and its \`price\` or \`revenue\` if the source gives one; only write "Pastry" when the source doesn't name it. A pastry with no price is counted at the menu's ${F.usd2(+S.pastry.price || 0)}: don't work a price out from a gap in the day's total, and say in \`notes\` if there is one.
+
+**Unspecified drink:** a drink rung up without saying which drink (a soft launch entry, an open-price key). Give its \`price\` or \`revenue\`. It counts toward drinks sold, but not toward any one drink.
 
 ${t(["Name", "Also called", "Served", "Price", "On the menu now"])}
 ${t([":--", ":--", ":--", "--:", ":--"])}
 ${drinks.map(d => t([d.name, [].concat(d.aliases || [], d.code ? [d.code] : []).filter((x, i, a) => norm(x) !== norm(d.name) && a.findIndex(y => norm(y) === norm(x)) === i).join(", "), serveTxt[d.serve] || d.serve, F.usd2(d.price), isOn(d) ? "yes" : "no"])).join("\n")}
 ${t(["Pastry", "any baked good", "", F.usd2(+S.pastry.price || 0), "yes"])}
 
-If an item doesn't match anything here, don't force it onto the closest drink. Keep it where it sold with its own name and its \`price\` or \`revenue\`: the portal counts its money in revenue and lists it as off the menu, but not as a drink. Only an off-menu item with no price at all goes in \`unmatched\`.
+If an item doesn't match anything here, don't force it onto the closest drink. Keep it where it sold with its own name and its \`price\` or \`revenue\`. The portal counts it as a drink off the menu: in revenue, drinks sold and the rankings, but with no recipe, so no ingredients. Once the drink is built in the portal under the same name, its sales match it. If it isn't a drink at all (merchandise, a fee), add \`"cat": "other"\` and it counts in revenue only. Only an off-menu item with no price at all goes in \`unmatched\`.
 
-**Milks:** \`dairy\` (2% or whole, the default), \`oat\`, \`almond\`.
+**Milks:** \`dairy\` (2% or whole, the default), \`oat\`, \`almond\`, or \`alt\` when the source says alt milk without saying which.
 
-**Syrups** a customer can add: ${syrupItems().map(i => syrupShort(i)).join(", ")}.
+**Syrups** a customer can add: ${syrupItems().map(i => syrupShort(i)).join(", ")}. If the source says a syrup was added but not which, use \`"syrup": true\`.
 
-**Add-on prices:** oat milk ${F.usd2(+A.altCharge || 0)}, almond milk ${F.usd2(+(A.almCharge ?? A.altCharge) || 0)}, added syrup ${F.usd2(+A.syrupCharge || 0)} (covers 2 pumps), cold foam ${F.usd2(+A.foamCharge || 0)}. An item's price includes its add-ons.
+**Add-on prices:** oat milk ${F.usd2(+A.altCharge || 0)}, almond milk ${F.usd2(+(A.almCharge ?? A.altCharge) || 0)}, added syrup ${F.usd2(+A.syrupCharge || 0)} (covers 2 pumps), cold foam ${F.usd2(+A.foamCharge || 0)}, extra espresso shot ${F.usd2(+A.shotCharge || 0)}. An item's price includes its add-ons.
 
 Signature and specialty drinks already include their own syrups and cold foam. Only set \`syrup\` or \`foam\` on an item when the customer added extra on top of the recipe.
 
@@ -2382,22 +2427,23 @@ Used inside \`transactions\`, \`daily\`, \`periods\` and \`undated\`.
 | \`name\` | yes | Exactly as in the menu table, or the item's own name if it's off the menu |
 | \`qty\` | yes | How many |
 | \`temp\` | no | \`"iced"\` or \`"hot"\`. Only matters for drinks served hot or iced. Leave it out if you don't know |
-| \`milk\` | no | \`"dairy"\`, \`"oat"\` or \`"almond"\`. Leave it out for dairy |
-| \`syrup\` | no | An added syrup from the list, by name |
+| \`cat\` | no | \`"pastry"\` for a baked good, \`"other"\` for something off the menu that isn't a drink. Leave it out for drinks |
+| \`milk\` | no | \`"dairy"\`, \`"oat"\`, \`"almond"\` or \`"alt"\`, for every one of the \`qty\`. Leave it out for dairy |
+| \`syrup\` | no | An added syrup from the list by name, or \`true\` if the flavor isn't known, for every one of the \`qty\` |
 | \`pumps\` | no | 1 or 2 (the default) |
-| \`foam\` | no | \`true\` when cold foam was added |
+| \`foam\` | no | \`true\` when every one of the \`qty\` had cold foam added |
 | \`price\` | no | What the customer paid for **one** of this item, add-ons included. Use it in \`transactions\` |
 | \`revenue\` | no | What was paid for **all** of this item together. Handy in \`daily\` and \`periods\` |
 
-In \`periods\` and \`undated\`, an item can also say how many of them had alt milk, an added syrup or cold foam: \`"alt": 4, "syrup": 7, "foam": 2\`.
+**Add-on counts.** When the source gives add-ons as totals ("Latte: Alt Milk $1.50, Flavor Syrup $1.25") rather than drink by drink, don't split the item into lines on a guess. Keep one item and give counts beside \`qty\`, in any section: \`"alt"\` (how many had alt milk), \`"syrup"\` (how many had an added syrup), \`"foam"\` (how many had cold foam) and \`"shot"\` (how many extra shots in all). Turn dollars into counts at the add-on prices above. In \`transactions\`, \`"shot": 1\` is how to write one extra shot.
 
 ## Sections
 
 - **\`transactions\`**: \`[{ "date", "time", "id", "total", "items": [item, ...] }]\`. \`id\` is the order or receipt number; make one up if there isn't one, unique within the file. \`total\` is what the order cost after discounts, without tips. Leave out \`date\` and \`time\` when the sale has none.
-- **\`daily\`**: \`[{ "date", "items": [item, ...], "orders", "sales" }]\`. \`orders\` is how many orders there were that day, and \`sales\` the day's total in dollars, if you know them. The portal spreads \`sales\` over the items.
-- **\`orders\`**: \`[{ "date", "time", "total" }]\`, one per order.
-- **\`periods\`**: \`[{ "from", "to", "items": [item, ...] }]\`.
-- **\`undated\`**: \`[{ "label", "items": [item, ...], "orders", "sales" }]\`, sales with no date. \`label\` says where they came from. \`items\`, \`orders\` and \`sales\` are each optional, but give at least items or sales. When both are given, the portal spreads \`sales\` over the items. Importing the same file again replaces its undated sales rather than adding them twice.
+- **\`daily\`**: \`[{ "date", "items": [item, ...], "orders", "sales" }]\`. \`orders\` is how many orders there were that day, and \`sales\` the day's total in dollars as the source states it, if you know them. Revenue uses \`sales\` (unless the day is also in \`orders\`); the items keep their own prices.
+- **\`orders\`**: \`[{ "date", "time", "total" }]\`, one per order. A negative \`total\` is a refund that couldn't be matched to its sale.
+- **\`periods\`**: \`[{ "from", "to", "items": [item, ...], "orders", "sales" }]\`. \`orders\` and \`sales\` are the range's totals, if known; without \`sales\`, revenue is the items at their prices.
+- **\`undated\`**: \`[{ "label", "items": [item, ...], "orders", "sales" }]\`, sales with no date. \`label\` says where they came from. \`items\`, \`orders\` and \`sales\` are each optional, but give at least items or sales. When both are given, revenue uses \`sales\`. Importing the same file again replaces its undated sales rather than adding them twice.
 - **\`unmatched\`**: \`[{ "date", "name", "qty" }]\`, off-menu items with no price. They aren't imported, but the portal lists them.
 - **\`notes\`**: a string for anything the manager should know.
 - **\`replace\`**: \`true\` (the default) replaces whatever the portal already has for the dates in this file, so redoing a week is safe. Use \`false\` only when told to add on top. It doesn't touch dated sales when the file only has undated ones.
@@ -2405,7 +2451,8 @@ In \`periods\` and \`undated\`, an item can also say how many of them had alt mi
 ## Checks before you hand it over
 
 - Each date is at one level (\`orders\` may sit beside \`daily\`).
-- Every item name matches the menu table exactly, or is off the menu with a price, or is in \`unmatched\`.
+- Every item name matches the menu table exactly, is a pastry by its own name, is "Unspecified drink", or is off the menu with a price; anything else is in \`unmatched\`.
+- No item is split into lines on a guess: add-ons given as totals are counts on one item.
 - No sale appears both with a date and in \`undated\`.
 - Where an order has a total, its item prices add up to it (within $0.05). If they don't, keep the item prices and say so in \`notes\`.
 - The counts and totals add up to the source's own totals.
@@ -2430,12 +2477,16 @@ In \`periods\` and \`undated\`, an item can also say how many of them had alt mi
   ],
   "daily": [
     { "date": "2026-10-18", "orders": 41, "sales": 212.50,
-      "items": [ { "name": "Latte", "qty": 14 }, { "name": "Chai Latte", "qty": 9, "temp": "iced" }, { "name": "Pastry", "qty": 6 } ] }
+      "items": [ { "name": "Latte", "qty": 14, "alt": 3, "syrup": 5, "shot": 1 }, { "name": "Chai Latte", "qty": 9, "temp": "iced" }, { "name": "Apple Cake", "cat": "pastry", "qty": 6 } ] }
   ],
   "orders": [
-    { "date": "2026-10-18", "time": "11:05", "total": 8.50 }
+    { "date": "2026-10-18", "time": "11:05", "total": 8.50 },
+    { "date": "2026-10-18", "time": "13:20", "total": -0.50 }
   ],
-  "periods": [],
+  "periods": [
+    { "from": "2026-10-03", "to": "2026-10-04", "orders": 51, "sales": 255.00,
+      "items": [ { "name": "Unspecified drink", "qty": 51, "revenue": 255.00 } ] }
+  ],
   "undated": [
     { "label": "Paper tally sheet, no date written", "orders": 12, "sales": 61.50,
       "items": [ { "name": "Latte", "qty": 7 }, { "name": "Hot cocoa", "qty": 2, "revenue": 7.00 }, { "name": "Pastry", "qty": 4 } ] }
@@ -2463,31 +2514,40 @@ function reportRow(name, u, rv, x){
 /* the file Claude writes, checked and turned into what the portal stores */
 function parseGG(j, file){
   if (+j.version !== 1) return {file, error:`This file says version ${String(j.version)}. Download the import guide again and redo it.`};
-  const skipped = [], lines = [], dayOrders = {}, orders = {}, periods = [], tDates = new Set(), off = new Set(), cnt = {tx:0, txItems:0, dItems:0, oN:0, oSum:0};
+  const skipped = [], flags = [], lines = [], dayOrders = {}, daySales = {}, orders = {}, periods = [], tDates = new Set(), off = new Set(), cnt = {tx:0, txItems:0, dItems:0, oN:0, oSum:0, ref:0, refSum:0};
   const U = {rows:{}, orders:0, sales:0, n:0};   // sales with no date
-  const syr = v => { if (!v) return false; const k = norm(String(v).replace(/syrup/i, "")); const hit = syrupItems().find(i => norm(syrupShort(i)) === k) || syrupItems().find(i => norm(i.name).includes(k)); return hit ? hit.id : false; };
+  const r2 = v => Math.round(v * 100) / 100, sumL = ls => ls.reduce((s, l) => s + l.p * l.q, 0);
+  // an added syrup: its flavor's id, or "-" when no flavor is recorded (true, "yes", or a flavor that isn't stocked)
+  const syr = v => { if (v == null || v === false || v === "" || typeof v === "number") return false; if (v === true || /^(y|yes|true|added|any|unflavored|syrup)$/i.test(String(v).trim())) return "-";
+    const k = norm(String(v).replace(/syrup/i, "")); const hit = syrupItems().find(i => norm(syrupShort(i)) === k) || syrupItems().find(i => norm(i.name).includes(k)); return hit ? hit.id : "-"; };
   const noDate = v => v == null || String(v).trim() === "";
-  // one item, as a sales line priced at what was paid for one (add-ons included). Off the menu: kept only with a price, for revenue
+  const FOOD = /pastr|croissant|muffin|scone|cookie|danish|bagel|donut|doughnut|cake|brownie|loaf|biscoff/i;
+  // one item, as a sales line priced at what was paid for one (add-ons included). Pastries keep their own name. An item off the
+  // menu needs a price, and counts as a drink with no recipe unless cat is "other"; "Unspecified drink" is a drink with no name
   const item = (x, d, tm, o, w) => {
-    const name = String((x || {}).name || "").trim(), q = Math.round(+(x || {}).qty || 0);
-    if (!(q > 0)){ skipped.push(`${w}: ${name || "an item"} with quantity ${(x || {}).qty}`); return null; }
-    const dr = findDrink(name), food = !dr && /^pastry$|pastr|croissant|muffin|scone|cookie|danish|bagel|donut|cake|brownie|loaf/i.test(name);
-    const paid = x.price != null && isFinite(+x.price) ? +x.price : x.revenue != null && isFinite(+x.revenue) ? +x.revenue / q : null, mk = String(x.milk || "").toLowerCase();
-    if (!dr && !food){ if (paid == null){ skipped.push(`${w}: "${name}" isn't on the menu and has no price`); return null; } off.add(name); }
-    const l = food ? {d, tm, k:"Pastry", id:"pastry", food:"pastry", q, p: paid != null ? paid : +S.pastry.price || 0}
-      : !dr ? {d, tm, k:name, q, p:Math.round(paid * 100) / 100, other:true}
-      : {d, tm, k:dr.name, id:dr.id, q, ice: dr.serve === "iced" ? true : dr.serve === "hot" ? false : /^ice/i.test(String(x.temp || "")), milk: dr.milk && /oat|almond/.test(mk) ? mk.match(/oat|almond/)[0] : "dairy", sy:syr(x.syrup), fo: x.foam === true || /^(y|yes|true|1)$/i.test(String(x.foam || ""))};
-    if (dr){ if (l.sy) l.pumps = +x.pumps === 1 ? 1 : 2; l.p = paid != null ? Math.round(paid * 100) / 100 : Math.round(lineRevenue(l, dr) * 100) / 100; }
-    if (paid != null) l.fix = true; if (o) l.o = o; return l; };
+    x = x || {}; const name = String(x.name || "").trim(), q = Math.round(+x.qty || 0), cat = String(x.cat || "").toLowerCase();
+    if (!(q > 0)){ skipped.push(`${w}: ${name || "an item"} with quantity ${x.qty}`); return null; }
+    const un = /^(unspecified( drink)?|soft launch( entry)?)$/i.test(name), dr = !un && !/^(pastry|food|other)$/.test(cat) && findDrink(name);
+    const food = !dr && !un && (/^(pastry|food)$/.test(cat) || (!cat && FOOD.test(name)));
+    const paid = x.price != null && isFinite(+x.price) ? +x.price : x.revenue != null && isFinite(+x.revenue) ? +x.revenue / q : null;
+    const milk = (String(x.milk || "").toLowerCase().match(/oat|almond|alt/) || ["dairy"])[0], sy = syr(x.syrup), fo = x.foam === true || /^(y|yes|true)$/i.test(String(x.foam || ""));
+    if (!dr && !food){ if (paid == null){ skipped.push(`${w}: "${name}" isn't on the menu and has no price`); return null; } if (!un && cat !== "other") off.add(name); }
+    const n = {}; [["alt","alt"],["syrup","sy"],["foam","fo"],["shot","sh"]].forEach(([f, k]) => { if (typeof x[f] === "number" && x[f] > 0) n[k] = Math.round(x[f]); });   // counts, as given
+    let l;
+    if (food) l = {d, tm, k: /^pastr(y|ies)$/i.test(name) ? "Pastry" : name, id:"pastry", food:"pastry", q, p: paid != null ? r2(paid) : +S.pastry.price || 0};
+    else if (!dr){ l = Object.assign({d, tm, k: un ? "Unspecified drink" : name, q, p:r2(paid)}, un ? {un:true} : cat === "other" ? {nd:true} : {});
+      if (milk !== "dairy" && !n.alt) n.alt = q; if (sy && !n.sy) n.sy = q; if (fo && !n.fo) n.fo = q; }   // no recipe to hang flags on: keep them as counts
+    else { l = {d, tm, k:dr.name, id:dr.id, q, ice: dr.serve === "iced" ? true : dr.serve === "hot" ? false : /^ice/i.test(String(x.temp || "")), milk: dr.milk ? milk : "dairy", sy, fo}; if (sy) l.pumps = +x.pumps === 1 ? 1 : 2; }
+    if (!food && Object.keys(n).length) l.n = n;
+    if (dr) l.p = r2(paid != null ? paid : lineRevenue(l, dr));
+    if (o) l.o = o; return l; };
   const items = v => Array.isArray(v) ? v : Object.entries(v || {}).map(([name, qty]) => ({name, qty}));   // {"Latte": 14} works too
-  // a stated total for the day goes over the items that came without their own price
-  const spread = (ls, total) => { const sum = f => ls.filter(f).reduce((s, l) => s + l.p * l.q, 0), fixed = sum(l => l.fix), t = sum(l => !l.fix);
-    if (+total > fixed && t > 0) ls.forEach(l => { if (!l.fix) l.p = Math.round(l.p * (total - fixed) / t * 100) / 100; }); ls.forEach(l => delete l.fix); return ls; };
-  // item totals for a range or for no date, as an item report row; the counts of alt milk, syrup and foam come along
-  const toRows = (ls, R, x) => { ls.forEach((l, i) => { const k = norm(l.k), r = R[k] || (R[k] = {name:l.k, cat: l.id === "pastry" ? "pastry" : l.other ? "other" : "drink", units:0, revenue:0, alt:0, syrup:0, foam:0}), src = (x || [])[i] || {};
-    r.units += l.q; r.revenue = Math.round((r.revenue + l.p * l.q) * 100) / 100; r.alt += +src.alt || (l.milk && l.milk !== "dairy" ? l.q : 0); r.syrup += +src.syrup || (l.sy ? l.q : 0); r.foam += +src.foam || (l.fo ? l.q : 0); }); return R; };
-  const undated = (its, tot, o) => { const ls = spread(its.map(x => item(x, "", "", "", "No date")).filter(Boolean), tot); toRows(ls, U.rows, its.filter(x => x && Math.round(+x.qty) > 0));
-    U.sales += +tot > 0 ? +tot : ls.reduce((s, l) => s + l.p * l.q, 0); U.orders += +o > 0 ? Math.round(+o) : 0; U.n++; };
+  // item totals for a range or for no date, as an item report row, with how many had alt milk, syrup, foam and extra shots
+  const toRows = (ls, R) => { ls.forEach(l => { const k = norm(l.k), c = f => l.n ? +l.n[f] || 0 : 0,
+      r = R[k] || (R[k] = {name:l.k, cat: isFood(l) ? "pastry" : l.un ? "unspec" : l.nd ? "other" : "drink", units:0, revenue:0, alt:0, syrup:0, foam:0, shot:0});
+    r.units += l.q; r.revenue = r2(r.revenue + l.p * l.q); r.alt += c("alt") + (l.milk && l.milk !== "dairy" ? l.q : 0); r.syrup += c("sy") + (l.sy ? l.q : 0); r.foam += c("fo") + (l.fo ? l.q : 0); r.shot += c("sh"); }); return R; };
+  const undated = (its, tot, o) => { const ls = its.map(x => item(x, "", "", "", "No date")).filter(Boolean); toRows(ls, U.rows);
+    U.sales += +tot > 0 ? +tot : sumL(ls); U.orders += +o > 0 ? Math.round(+o) : 0; U.n++; };
   const day = (v, what) => { const d = /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : parseDateVal(v); if (!d) skipped.push(`${what}: date "${v}" can't be read`); return d; };
   (j.transactions || []).forEach((t, i) => {
     if (noDate(t.date)){ undated(items(t.items), null, 1); return; }
@@ -2497,31 +2557,39 @@ function parseGG(j, file){
     if (noDate(dy.date)){ undated(items(dy.items), dy.sales, dy.orders); return; }
     const d = day(dy.date, `Daily entry ${i + 1}`); if (!d) return;
     if (tDates.has(d)){ skipped.push(`${fmtD(d)}: daily totals left out, the transactions already cover that day`); return; }
-    const ls = spread(items(dy.items).map(x => item(x, d, "", "", fmtD(d))).filter(Boolean), dy.sales); lines.push(...ls); cnt.dItems += ls.reduce((s, l) => s + l.q, 0);
-    if (+dy.orders > 0) dayOrders[d] = Math.round(+dy.orders); });
+    const ls = items(dy.items).map(x => item(x, d, "", "", fmtD(d))).filter(Boolean); lines.push(...ls); cnt.dItems += ls.reduce((s, l) => s + l.q, 0);
+    if (+dy.orders > 0) dayOrders[d] = Math.round(+dy.orders);
+    if (+dy.sales > 0) daySales[d] = r2(+dy.sales); });   // the day's stated total: revenue uses it, the items keep their own prices
   (j.undated || []).forEach(u => undated(items(u.items), u.sales, u.orders));
+  // one per order; a negative total is a refund that couldn't be matched to its sale, taken off that day's sales
   (j.orders || []).forEach((o, i) => { const d = day(o.date, `Order ${i + 1}`), tm = parseTimeVal(o.time), v = +o.total; if (!d) return;
     if (!tm || !isFinite(v)){ skipped.push(`Order ${i + 1} on ${fmtD(d)}: no readable time or total`); return; }
-    if (tDates.has(d)) return; (orders[d] || (orders[d] = [])).push([tm, Math.round(v * 100) / 100]); cnt.oN++; cnt.oSum += v; });
+    if (tDates.has(d)) return; (orders[d] || (orders[d] = [])).push([tm, r2(v)]); if (v < 0){ cnt.ref++; cnt.refSum -= v; } else { cnt.oN++; cnt.oSum += v; } });
   if ((j.orders || []).some(o => tDates.has(o.date))) skipped.push("Order totals on days with transactions were left out, the transactions cover them");
   (j.periods || []).forEach((p, i) => { const from = day(p.from, `Period ${i + 1}`), to = day(p.to, `Period ${i + 1}`); if (!from || !to) return;
-    const its = items(p.items), ls = its.map(x => item(x, "", "", "", `${fmtD(from)} to ${fmtD(to)}`)).filter(Boolean);
-    if (ls.length) periods.push({label:`${fmtD(from)} to ${fmtD(to)}`, from, to, rows:Object.values(toRows(ls, {}, its.filter(x => x && Math.round(+x.qty) > 0)))}); });
-  lines.forEach(l => delete l.fix);
-  const urows = Object.values(U.rows), und = U.n && (urows.length || U.sales > 0) ? {label:`No date: ${String(j.source || file).slice(0, 80)}`, from:"", to:"", undated:true, rows:urows, orders:U.orders, sales:Math.round(U.sales * 100) / 100} : null;
-  const dates = [...new Set(lines.map(l => l.d).concat(Object.keys(orders)))];
+    const label = `${fmtD(from)} to ${fmtD(to)}`, ls = items(p.items).map(x => item(x, "", "", "", label)).filter(Boolean), it = sumL(ls);
+    if (!ls.length && !(+p.sales > 0)) return;
+    if (+p.sales > 0 && ls.length && Math.abs(+p.sales - it) > 1) flags.push(`${label}: the stated total is ${F.usd2(+p.sales)} and the items add up to ${F.usd2(it)}. Revenue uses ${F.usd2(+p.sales)}`);
+    periods.push({label, from, to, rows:Object.values(toRows(ls, {})), orders: +p.orders > 0 ? Math.round(+p.orders) : 0, sales: r2(+p.sales > 0 ? +p.sales : it)}); });
+  // two figures for one day's money: show both when they're more than $1 apart
+  const itT = {}; lines.forEach(l => { if (!tDates.has(l.d)) itT[l.d] = (itT[l.d] || 0) + l.p * l.q; });
+  Object.keys(itT).sort().forEach(d => { const o = orders[d], st = o ? o.reduce((s, [, v]) => s + v, 0) : daySales[d]; if (st == null || Math.abs(st - itT[d]) <= 1) return;
+    flags.push(`${fmtD(d)}: ${o ? "the orders add up to" : "the stated day total is"} ${F.usd2(st)} and the items at their prices to ${F.usd2(itT[d])}, ${F.usd2(Math.abs(st - itT[d]))} apart. Revenue uses ${F.usd2(st)}`); });
+  const urows = Object.values(U.rows), und = U.n && (urows.length || U.sales > 0) ? {label:`No date: ${String(j.source || file).slice(0, 80)}`, from:"", to:"", undated:true, rows:urows, orders:U.orders, sales:r2(U.sales)} : null;
+  const dates = [...new Set(lines.map(l => l.d).concat(Object.keys(orders), Object.keys(daySales), Object.keys(dayOrders)))];
   periods.forEach(p => { for (let d = p.from; d <= p.to && dates.length < 2000; d = addDays(d, 1)) if (!dates.includes(d)) dates.push(d); }); dates.sort();
   if (!dates.length && !und) return {file, error:"Nothing in this file could be imported." + (skipped.length ? " " + skipped.slice(0, 3).join(". ") : "")};
   const um = j.unmatched || [], rng = ds => ds.length ? (ds.length > 1 ? `${fmtD(ds[0])} to ${fmtD(ds[ds.length - 1])}` : fmtD(ds[0])) : "";
   const dd = [...new Set(lines.filter(l => !l.o).map(l => l.d))].sort(), td = [...tDates].sort(), od = Object.keys(orders).sort();
   const text = [td.length ? `Transactions: ${plural(cnt.tx, "order")}, ${plural(cnt.txItems, "item line")}, ${rng(td)}` : "", dd.length ? `Daily totals: ${plural(dd.length, "day")}, ${F.int(cnt.dItems)} items, ${rng(dd)}` : "",
-    od.length ? `Order totals only: ${plural(od.length, "day")}, ${plural(cnt.oN, "order")}, ${F.usd2(cnt.oSum)}` : "", periods.length ? `Summaries: ${periods.map(p => p.label).join("; ")}` : "",
+    od.length ? `Order totals: ${plural(od.length, "day")}, ${plural(cnt.oN, "order")}, ${F.usd2(cnt.oSum)}${cnt.ref ? `, less ${plural(cnt.ref, "refund")} of ${F.usd2(cnt.refSum)}` : ""}` : "",
+    periods.length ? `Summaries: ${periods.map(p => `${p.label}, ${F.usd2(p.sales)}${p.orders ? `, ${plural(p.orders, "order")}` : ""}`).join("; ")}` : "",
     und ? `No date: ${F.int(urows.reduce((s, r) => s + r.units, 0))} items, ${F.usd2(und.sales)}${und.orders ? `, ${plural(und.orders, "order")}` : ""}. These count in All time only` : ""].filter(Boolean).join(". ")
-    + (off.size ? `. Off the menu, counted in revenue but not as drinks: ${[...off].slice(0, 5).join(", ")}${off.size > 5 ? "…" : ""}` : "")
+    + (off.size ? `. Off the menu, counted as drinks with no recipe until one is built under the same name: ${[...off].slice(0, 5).join(", ")}${off.size > 5 ? "…" : ""}` : "")
     + (um.length ? `. Not imported, not on the menu: ${um.slice(0, 5).map(x => `${x.name} (${x.qty || "?"})`).join(", ")}${um.length > 5 ? "…" : ""}` : "")
     + (skipped.length ? `. Skipped: ${skipped.slice(0, 4).join("; ")}${skipped.length > 4 ? ` and ${skipped.length - 4} more` : ""}` : "")
     + (j.notes ? `. Notes: ${String(j.notes).slice(0, 300)}` : "");
-  return {file, kind:"gg", lines, dayOrders, orders, periods, und, dates, replace: j.replace !== false, text};
+  return {file, kind:"gg", lines, dayOrders, daySales, orders, periods, und, dates, flags, replace: j.replace !== false, text};
 }
 /* clear what's stored for these dates before a file replaces them: sales entries (a sale with other days on it is saved again
    without these days), Clover days, and item reports that overlap */
@@ -2536,8 +2604,10 @@ async function clearDates(ds){
 async function importGG(x){
   if (x.replace) await clearDates(x.dates);
   const by = {}; x.lines.forEach(l => (by[l.d] || (by[l.d] = [])).push(l));   // one day per saved entry, so a day's orders count once
-  for (const [d, ls] of Object.entries(by)) for (let i = 0; i < ls.length; i += 700){
-    const doc = {kind:"upload", file:x.file, at:new Date().toISOString(), lines:ls.slice(i, i + 700)}; if (x.dayOrders[d] != null && i === 0) doc.dayOrders = {[d]: x.dayOrders[d]};
+  Object.keys(Object.assign({}, x.dayOrders, x.daySales)).forEach(d => by[d] || (by[d] = []));   // a day total with no items
+  for (const [d, ls] of Object.entries(by)) for (let i = 0; i < Math.max(ls.length, 1); i += 700){
+    const doc = {kind:"upload", file:x.file, at:new Date().toISOString(), lines:ls.slice(i, i + 700)};
+    if (i === 0 && x.dayOrders[d] != null) doc.dayOrders = {[d]: x.dayOrders[d]}; if (i === 0 && x.daySales && x.daySales[d] != null) doc.daySales = {[d]: x.daySales[d]};
     await Store.addSale(doc); }
   Object.entries(x.orders).forEach(([d, log]) => putCloverDay(d, log));
   x.periods.forEach(addReport);
@@ -2879,6 +2949,7 @@ document.addEventListener("change", e => {
   if (t.id === "useNow"){ UI.opt.now = t.checked; renderWhen(); renderDrinkGrid(); return; }
   if (t.id === "logDate"){ renderDrinkGrid(); return; }
   if (t.id === "mFoam"){ if (UI.mod){ UI.mod.fo = t.checked; renderMod(); } return; }
+  if (t.id === "mShot"){ if (UI.mod){ UI.mod.sh = t.checked; renderMod(); } return; }
   if (t.id === "bFoam"){ UI.bld.r.foam = t.checked ? {syrup:""} : null; renderBuilder(); return; }
   if (t.id === "bMix"){ const r = UI.bld.r; if (t.checked){ const other = BUILDER_BASES.concat((S.bases || []).map(x => x.id)).find(id => id !== r.bases[0]); r.bases = [r.bases[0], other]; } else r.bases = [r.bases[0]]; renderBuilder(); return; }
   if (t.id === "bShaken"){ UI.bld.r.shaken = t.checked; renderBuilder(); return; }
@@ -3017,6 +3088,7 @@ document.addEventListener("click", e => {
   if (a === "ckSave"){ saveCkEdit(); return; }
   if (a === "ckClose"){ $("ckDlg").close(); return; }
   if (a === "anCurve"){ UI.curve = t.dataset.v; renderAnalytics(); return; }
+  if (a === "anRecoup"){ UI.recoup = t.dataset.v; renderRecoup(UI.M || dayMoney()); return; }
   if (a === "addCharge"){ S.charges.push({name:"", amount:0, date:ymd(new Date())}); markDirty(); renderCharges(); recalc(); const f = document.querySelector(`[data-bind="charges.${S.charges.length - 1}.name"]`); if (f) f.focus(); return; }
   if (a === "delCharge"){ S.charges.splice(+t.dataset.i, 1); markDirty(); renderCharges(); recalc(); return; }
   // inventory
