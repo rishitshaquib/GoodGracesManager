@@ -212,9 +212,10 @@
     <p class="hint" style="margin-top:4px">Each week since the start: green is revenue, red is costs (every order and invoice, spending, fees and charity). Each day splits the week's revenue into a bar per day the cafe was open. The line is the running total; above zero, everything spent has been earned back.</p>
     <svg class="chart" id="anRecoup" viewBox="0 0 640 260"></svg>
     <p class="note-sm" id="anRecoupNote" style="margin:6px 0 0"></p>
-    <details class="fold2"><summary>Expenses: invoices, equipment and anything off the order list</summary>
+    <details class="fold2" open><summary>Expenses: invoices, equipment and anything off the order list</summary>
       <p class="note-sm" style="margin:8px 0 6px">Each imported invoice adds its full total here. Deliveries ticked Received and extra order items count on their own. Bought something in bulk elsewhere? Add the receipt total.</p>
       <div class="scroll"><table class="t" id="chargeBody"></table></div>
+      <p class="note-sm" id="chargeRecon" style="margin:6px 0 0"></p>
       <button class="add" data-act="addCharge">Add spending</button>
     </details>
   </div>

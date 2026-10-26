@@ -1196,9 +1196,10 @@ select.need{box-shadow:0 0 0 3px color-mix(in srgb, var(--red) 45%, transparent)
     <p class="hint" style="margin-top:4px">Each week since the start: green is revenue, red is costs (every order and invoice, spending, fees and charity). Each day splits the week's revenue into a bar per day the cafe was open. The line is the running total; above zero, everything spent has been earned back.</p>
     <svg class="chart" id="anRecoup" viewBox="0 0 640 260"></svg>
     <p class="note-sm" id="anRecoupNote" style="margin:6px 0 0"></p>
-    <details class="fold2"><summary>Expenses: invoices, equipment and anything off the order list</summary>
+    <details class="fold2" open><summary>Expenses: invoices, equipment and anything off the order list</summary>
       <p class="note-sm" style="margin:8px 0 6px">Each imported invoice adds its full total here. Deliveries ticked Received and extra order items count on their own. Bought something in bulk elsewhere? Add the receipt total.</p>
       <div class="scroll"><table class="t" id="chargeBody"></table></div>
+      <p class="note-sm" id="chargeRecon" style="margin:6px 0 0"></p>
       <button class="add" data-act="addCharge">Add spending</button>
     </details>
   </div>
@@ -2548,7 +2549,9 @@ async function saveInvoices(){
     if (pack > 0) evs.push({type:"receive", item:it.id, qty:pack * l.qty, ts, at, inv:v.order || ""});
   }); S.invoices.push({order:v.order, date:v.date, at});
     const desc = [...new Set(v.lines.filter(l => l.act !== "skip").map(l => l.desc.replace(/\s*-\s*[\d,]+\/Case$/i, "").trim()))].join(", ");
-    if (v.total > 0) S.charges.push({date:parseDateVal(v.date) || day, dated:true, name:`WebstaurantStore order ${v.order || v.file}`, amount:v.total, inv:v.order || v.file, desc}); });   // the invoice's full total is the cost
+    const row = {date:parseDateVal(v.date) || day, dated:true, name:`WebstaurantStore order ${v.order || v.file}`, amount:v.total, inv:v.order || v.file, desc, ship:+v.ship || 0, tax:+v.tax || 0};
+    const had = S.charges.find(c => c.inv && c.inv === row.inv);   // imported before: update its row, never add a second
+    if (v.total > 0){ if (had) Object.assign(had, row); else S.charges.push(row); } });   // the invoice's full total is the cost
   markDirty(); renderIngredients(); recalc();
   try { for (const e of evs) await Store.addStock(e); } catch(e){ toast("invResult", saveError(e)); return; }
   UI.inv = null; $("invIn").value = "";
@@ -3235,6 +3238,7 @@ function itemStats(from, to){
 }
 function renderAnalytics(){
   if (!$("anKpis")) return;
+  if (isAdmin() && fillInvoiceCharges()) markDirty();   // earlier invoices into Expenses before the money is added up
   const A = UI.an, M = UI.M = dayMoney(), R0 = anRangeOf(), from = R0.from, to = R0.to;
   const inR = d => !!d && d >= (from || "") && d <= (to || "9999-12-31");
   // compared with the same stretch just before: the week before, the 4 weeks before, or last month up to the same day
@@ -3411,23 +3415,36 @@ function lastCafeWeek(){
 /* one-off spending (equipment, supplies bought outside the order list, fees): each has a date so it lands in its week and month */
 function renderCharges(){
   const box = $("chargeBody"); if (!box || box.contains(document.activeElement)) return;
-  if (fillInvoiceCharges()) markDirty();
   const L = (S.charges || []).map((x, i) => ({x, i})).sort((a, b) => String(b.x.date || "").localeCompare(String(a.x.date || "")) || b.i - a.i);
   const tot = L.reduce((t, {x}) => t + (+x.amount || 0), 0);
   box.innerHTML = L.length ? `<thead><tr><th class="l">Date</th><th class="l">Invoice</th><th class="l">Description</th><th>Amount</th><th></th></tr></thead><tbody>`
     + L.map(({x, i}) => `<tr>
     <td style="width:150px"><input class="in txt" type="date" data-bind="charges.${i}.date" value="${esc(x.date || "")}" aria-label="Date"></td>
     <td class="l" style="width:130px">${x.inv ? esc(x.inv) : `<input class="in txt" data-bind="charges.${i}.ref" value="${esc(x.ref || "")}" placeholder="None" aria-label="Invoice or receipt number">`}</td>
-    <td class="l">${x.inv ? `${esc(x.name)}${x.desc ? `<div class="note-sm">${esc(x.desc)}</div>` : ""}` : `<input class="in txt" data-bind="charges.${i}.name" value="${esc(x.name)}" aria-label="What it was">`}</td>
+    <td class="l">${x.inv ? `<input class="in txt" data-bind="charges.${i}.desc" value="${esc(x.desc || "")}" placeholder="${esc(x.name)}" aria-label="Description"><div class="note-sm">${esc(x.name)}${x.ship || x.tax ? `, including ${[x.ship ? F.usd2(x.ship) + " shipping" : "", x.tax ? F.usd2(x.tax) + " tax" : ""].filter(Boolean).join(" and ")}` : ""}</div>` : `<input class="in txt" data-bind="charges.${i}.name" value="${esc(x.name)}" aria-label="What it was">`}</td>
     <td style="width:120px"><input class="in" type="number" min="0" step="0.01" data-bind="charges.${i}.amount" data-type="num" value="${+x.amount || 0}" aria-label="Amount"></td>
     <td style="width:40px"><button class="x" data-act="delCharge" data-i="${i}" aria-label="Remove">✕</button></td></tr>`).join("")
     + `<tr class="tot"><td class="l" colspan="3">Total</td><td>${F.usd2(tot)}</td><td></td></tr></tbody>`
     : `<tbody><tr><td class="l empty">Nothing yet. Add equipment and anything bought outside the order list.</td></tr></tbody>`;
+  // how these add up to the costs in the chart above
+  const M = UI.M || dayMoney(), A = sumDays(M, () => true), other = A.supplies + A.spent - tot, el = $("chargeRecon");
+  if (el) el.innerHTML = A.costs ? `Costs in the chart: <b>${F.usd2(A.costs)}</b> = these expenses ${F.usd2(tot)}`
+    + (Math.abs(other) >= 0.005 ? ` + deliveries ticked Received and extra order items not on an invoice ${F.usd2(other)}` : "")
+    + ` + card processing, fees and charity ${F.usd2(A.fees)}.` : "";
 }
 /* an imported WebstaurantStore order: dated by its invoice, described by what came in on it. Fills in orders imported before
    these were kept (dated the day they were uploaded); returns true if anything changed */
+/* WebstaurantStore orders from before invoices were imported here: their prices filled in the ingredient list, but their cost
+   never reached Expenses. Each goes in once (tracked in S.invoices, so a row deleted on purpose stays deleted) */
+const PREV_INVOICES = [
+  {inv:"131594691", date:"2026-09-29", amount:664.71, ship:150.26, tax:27.54, desc:"Choice 12 oz. double wall hot cups, Tazo Earl Grey tea bags, Tazo chai concentrate, Choice 16 oz. clear cold cups, Lavazza Gran Espresso beans 2.2 lb., Choice hot cup lids, EcoChoice 8 oz. cup sleeves"},
+  {inv:"132093933", date:"2026-10-11", amount:1650.23, ship:151.52, tax:21.83, desc:"Oatly Barista oat milk, Lavazza Gran Espresso beans 2.2 lb., Califia Barista almond milk, Monin pure cane syrup, Monin spiced brown sugar syrup, Tenzo matcha 500 g, Tazo chai concentrate, Monin syrup pump, Choice strawless sip lids, Cafe Delight sugar packets"},
+  {inv:"132115951", date:"2026-10-12", amount:47.98, ship:0, tax:0, desc:"Monin vanilla syrup 1 L, Monin lavender syrup 1 L"}];
 function fillInvoiceCharges(){
   let ch = false;
+  PREV_INVOICES.forEach(p => { if ((S.invoices || []).some(v => v.order === p.inv) || S.charges.some(c => c.inv === p.inv)) return;
+    S.invoices.push({order:p.inv, date:p.date, at:new Date().toISOString(), prev:true});
+    S.charges.push(Object.assign({name:`WebstaurantStore order ${p.inv}`, dated:true}, p)); ch = true; });
   (S.charges || []).forEach(c => { if (!c.inv) return;
     const iv = (S.invoices || []).find(v => v.order && v.order === c.inv), d = iv && parseDateVal(iv.date);
     if (!c.dated && d){ c.date = d; c.dated = true; ch = true; }
