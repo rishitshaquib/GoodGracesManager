@@ -209,11 +209,11 @@
 
   <div class="sec">
     <h2><span class="ic" style="--c:#34C759" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></span>Cost recuperation</h2>
-    <p class="hint" style="margin-top:4px">Each week since the start: green is what came in after fees and charity, red is what went out. The line is the running total; above zero, everything spent has been earned back.</p>
+    <p class="hint" style="margin-top:4px">Each week since the start: green is revenue, red is costs (every order and invoice, spending, fees and charity). The line is the running total; above zero, everything spent has been earned back.</p>
     <svg class="chart" id="anRecoup" viewBox="0 0 640 260"></svg>
     <p class="note-sm" id="anRecoupNote" style="margin:6px 0 0"></p>
-    <details class="fold2"><summary>Money spent: equipment and anything off the order list</summary>
-      <p class="note-sm" style="margin:8px 0 6px">Deliveries ticked Received or imported from an invoice count on their own.</p>
+    <details class="fold2"><summary>Money spent: invoices, equipment and anything off the order list</summary>
+      <p class="note-sm" style="margin:8px 0 6px">Each imported invoice adds its full total here. Deliveries ticked Received and extra order items count on their own. Bought something in bulk elsewhere? Add the receipt total.</p>
       <div class="scroll"><table class="t"><tbody id="chargeBody"></tbody></table></div>
       <button class="add" data-act="addCharge">Add spending</button>
     </details>
@@ -232,8 +232,8 @@
   </div>
 
   <div class="sec" style="margin-top:18px">
-    <h2><span class="ic" style="--c:#5856D6" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM4 9h16M9 3v4M15 3v4"/></svg></span>Profit by month</h2>
-    <p class="note-sm" style="margin:-4px 0 8px">All time. Profit is sales minus cost of goods, fees and charity; net takes off one-off spending.</p>
+    <h2><span class="ic" style="--c:#5856D6" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM4 9h16M9 3v4M15 3v4"/></svg></span>Revenue and costs by month</h2>
+    <p class="note-sm" style="margin:-4px 0 8px">All time. Net is revenue minus every cost.</p>
     <div class="scroll"><table class="t" id="anMonths"></table></div>
   </div>
   <div class="sec" style="margin-top:18px">
@@ -243,7 +243,7 @@
   </div>
   <div class="sec details" style="margin-top:18px">
     <h2><span class="ic" style="--c:#8E8E93" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>Details</h2>
-    <details class="fold2"><summary>How profit is worked out, for this range</summary><table class="t" id="anMoney" style="margin-top:6px"></table>
+    <details class="fold2"><summary>How the net is worked out, for this range</summary><table class="t" id="anMoney" style="margin-top:6px"></table>
       <h3>Fees and charity</h3>
       <div class="fields" style="margin-top:6px;max-width:520px">
         <label>Card processing, %</label><input class="in" type="number" min="0" step="0.1" data-bind="fees.cardPct" data-type="num" aria-label="Card processing percent">
@@ -254,13 +254,12 @@
     <details class="fold2" open><summary>Perishables by week</summary>
       <div class="scroll" style="margin-top:6px"><table class="t" id="anPerish"></table></div>
       <p class="note-sm" style="margin:6px 0 0">The forecast is the drinks per open day over the two weeks before, times that week's open days. Thrown out is counted at the last close of the week; over 15% shows red.</p></details>
-    <details class="fold2"><summary>Cost of goods by week</summary>
-      <div class="scroll" style="margin-top:6px"><table class="t" id="anCogs"></table></div>
-      <p class="note-sm" id="anCogsNote" style="margin:6px 0 0"></p></details>
+    <details class="fold2"><summary>By week</summary>
+      <div class="scroll" style="margin-top:6px"><table class="t" id="anWeeks"></table></div></details>
     <details class="fold2"><summary>Days</summary>
       <div class="scroll" style="margin-top:6px"><table class="t"><thead><tr><th class="l">Day</th><th>Orders</th><th>Drinks</th><th>Sales</th><th class="l">Top drink</th></tr></thead><tbody id="dayBody"></tbody></table></div>
       <h3>Clover days</h3>
-      <div class="scroll"><table class="t"><thead><tr><th class="l">Day</th><th>Orders</th><th>Sales</th><th>Avg order</th><th>Busiest 30 min</th><th>Before labor</th></tr></thead><tbody id="anCloverDays"></tbody></table></div>
+      <div class="scroll"><table class="t"><thead><tr><th class="l">Day</th><th>Orders</th><th>Sales</th><th>Avg order</th><th>Busiest 30 min</th></tr></thead><tbody id="anCloverDays"></tbody></table></div>
       <h3>Order size</h3>
       <table class="t rank" id="anOrderSize"></table></details>
     <details class="fold2"><summary>Syrups added</summary><table class="t" id="anSyr" style="margin-top:6px"></table></details>
@@ -272,10 +271,11 @@
 
   <div class="sec" style="margin-top:24px">
     <h2><span class="ic" style="--c:#8E8E93" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg></span>Import sales</h2>
-    <p class="hint">Sales come in two ways. <b>With Claude:</b> download the import guide, give it to Claude with the weekend's sales in whatever form they're in (Clover or Square exports, a sheet, a tally, photos), and import the JSON file Claude writes. It can hold each order and its drinks, or just the drinks sold per day. <b>Directly:</b> drop in Clover transactions, the Clover item sales report, or a sheet with one drink per row. Either way you check the preview before anything is saved.</p>
+    <p class="hint">Sales come in two ways. <b>With Claude:</b> download the import guide, give it to Claude with the weekend's sales in whatever form they're in (Clover or Square exports, a sheet, a tally, photos), and import the JSON file Claude writes. It can hold each order and its drinks, or just the drinks sold per day, with or without dates. <b>Directly:</b> drop in Clover transactions, the Clover item sales report, or a sheet with one drink per row. Either way you check the preview before anything is saved.</p>
     <p style="margin:0 0 10px"><button class="btn sm" data-act="impGuide">Download the import guide (.md)</button></p>
     <label class="dz">Choose files<input type="file" id="impIn" accept=".csv,.xlsx,.xls,.json" multiple aria-label="Sales files"></label>
     <div id="impResult" style="margin-top:10px"></div>
+    <div id="impUndated"></div>
   </div>
 </section>
 
